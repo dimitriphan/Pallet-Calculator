@@ -153,6 +153,20 @@ describe('buildSheetContent, variations', () => {
     expect(s.palletAndLoad[1]?.value).toBe('2.00 in total, 1.00 in each side');
   });
 
+  it('keys the two outlines when there is overhang', () => {
+    const s = build({ pallet: { length: 48, width: 40, height: 72 }, overhang: 2 });
+    expect(s.drawingKey).toEqual({
+      palletSize: '48.00 × 40.00 in',
+      limitSize: '50.00 × 42.00 in',
+      text: 'Solid line: pallet 48.00 × 40.00 in. Dashed line: limit with overhang 50.00 × 42.00 in.',
+    });
+  });
+
+  it('has no outline key without overhang', () => {
+    expect(build().drawingKey).toBeNull();
+    expect(build({ pallet: { length: 48, width: 40, height: 72 } }).drawingKey).toBeNull();
+  });
+
   it('stale flag', () => {
     expect(build({}, { stale: true }).stale).toBe(true);
   });

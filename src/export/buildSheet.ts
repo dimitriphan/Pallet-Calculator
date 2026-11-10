@@ -31,6 +31,12 @@ export interface SheetPattern {
   facts: SheetRow[];
   drawing: { footprint: { x: number; y: number }; pallet: SheetRect; cartons: SheetRect[] };
 }
+/** Says which outline in the layer drawings is the pallet and which the overhang limit. */
+export interface DrawingKey {
+  palletSize: string;
+  limitSize: string;
+  text: string;
+}
 export interface BuildSheet {
   title: 'Pallet build sheet';
   jobName: string | null;
@@ -40,6 +46,8 @@ export interface BuildSheet {
   carton: SheetRow[];
   palletAndLoad: SheetRow[];
   patterns: SheetPattern[];
+  /** Present only when the usable footprint differs from the pallet (overhang). */
+  drawingKey: DrawingKey | null;
   stacking: {
     layer: number;
     pattern: string;
@@ -182,6 +190,18 @@ export function buildSheetContent(a: {
     },
   ];
 
+  const sizeText = (x: number, y: number) => `${formatNumber(x)} × ${formatNumber(y)} in`;
+  const palletSize = sizeText(palletRect.dx, palletRect.dy);
+  const limitSize = sizeText(footprint.x, footprint.y);
+  const drawingKey: DrawingKey | null =
+    inputs.overhang > 0
+      ? {
+          palletSize,
+          limitSize,
+          text: `Solid line: pallet ${palletSize}. Dashed line: limit with overhang ${limitSize}.`,
+        }
+      : null;
+
   const sheet: BuildSheet = {
     title: 'Pallet build sheet',
     jobName: trimmed === '' ? null : trimmed,
@@ -205,6 +225,7 @@ export function buildSheetContent(a: {
     ],
     palletAndLoad,
     patterns,
+    drawingKey,
     stacking,
     footer:
       settingsSummary(inputs) +

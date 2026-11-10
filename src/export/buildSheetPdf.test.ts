@@ -106,6 +106,31 @@ describe('renderBuildSheetPdf', () => {
     expect(pageObjects(text)).toBe(2);
   });
 
+  it('prints the outline key only with overhang', async () => {
+    const inputs = {
+      ...DEFAULT_INPUTS,
+      pallet: { length: 48, width: 40, height: 72 },
+      overhang: 2,
+    };
+    const sheet = buildSheetContent({
+      inputs,
+      result: optimize(inputs),
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    const withOverhang = await pdfText(await renderBuildSheetPdf(sheet, null));
+    expect(withOverhang).toContain('Dashed line');
+    // The edge labels measure the pallet, not the overhang limit.
+    expect(withOverhang).toContain('(48.00 in)');
+    expect(withOverhang).toContain('(40.00 in)');
+    expect(withOverhang).not.toContain('(50.00 in)');
+    expect(withOverhang).not.toContain('(42.00 in)');
+    const without = await pdfText(await renderBuildSheetPdf(defaultSheet(), null));
+    expect(without).not.toContain('Dashed line');
+  });
+
   it('boxes the out-of-date line when stale', async () => {
     const text = await pdfText(await renderBuildSheetPdf(defaultSheet({ stale: true }), null));
     expect(text).toContain('Out of date: inputs changed after this calculation.');
