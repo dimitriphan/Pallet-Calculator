@@ -7,7 +7,7 @@ import { BUTTON, ModalDialog } from './ModalDialog';
 import { NamePrompt } from './NamePrompt';
 import { PresetDialog } from './PresetDialog';
 import { presetFieldsOf } from './presetFields';
-import { useInputs, usePresets, useStores } from './StoreContext';
+import { useInputs, usePrefs, usePresets, useStores } from './StoreContext';
 
 const NO_PRESET = '';
 
@@ -20,13 +20,17 @@ function coveredFieldsMatch(draft: InputsDraft, preset: Preset): boolean {
   return parsed.ok && inputsMatchPreset(parsed.inputs, preset);
 }
 
-/** Preset picker with "Modified" tracking, save actions, and a Manage dialog. */
+/**
+ * Preset picker with "Modified" tracking, save actions, and a Manage dialog. Basic mode shows
+ * the picker only.
+ */
 export function PresetMenu() {
   const { inputs, presets: presetsStore } = useStores();
   const presets = usePresets((s) => s.presets);
   const activeId = usePresets((s) => s.activePresetId);
   const draft = useInputs((s) => s.draft);
   const parsed = useInputs((s) => s.parsed);
+  const full = usePrefs((s) => s.viewMode) === 'full';
   const [managing, setManaging] = useState(false);
   const [naming, setNaming] = useState(false);
   const selectId = useId();
@@ -75,17 +79,17 @@ export function PresetMenu() {
           </option>
         ))}
       </select>
-      {modified && (
+      {full && modified && (
         <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-900 dark:text-amber-100">
           Modified
         </span>
       )}
-      {modified && (
+      {full && modified && (
         <button type="button" disabled={!parsed.ok} onClick={saveToPreset} className={BUTTON}>
           Save to preset
         </button>
       )}
-      {(modified || !active) && (
+      {full && (modified || !active) && (
         <button
           type="button"
           disabled={!parsed.ok}
@@ -95,9 +99,11 @@ export function PresetMenu() {
           Save as new
         </button>
       )}
-      <button type="button" onClick={() => setManaging(true)} className={BUTTON}>
-        Manage
-      </button>
+      {full && (
+        <button type="button" onClick={() => setManaging(true)} className={BUTTON}>
+          Manage
+        </button>
+      )}
       {managing && <PresetDialog onClose={() => setManaging(false)} />}
       {naming && (
         <ModalDialog title="Save as new preset" onClose={() => setNaming(false)}>

@@ -19,16 +19,15 @@ function usableHeightOf(text: string): number | null {
   return h > PALLET_HEIGHT ? h - PALLET_HEIGHT : null;
 }
 
-/** Every input the optimizer uses, grouped, with inline validation. */
-export function InputsPanel() {
+/** The pallet, product and maximum carton sizes, with the pallet notice; shared by both views. */
+export function SizeFieldsets() {
   const draft = useInputs((s) => s.draft);
   const errors = useInputs((s) => (s.parsed.ok ? NO_ERRORS : s.parsed.errors));
   const setField = useInputs((s) => s.setField);
   const usable = usableHeightOf(draft.pallet.height);
 
   return (
-    <form className="space-y-5 p-4" onSubmit={(e) => e.preventDefault()}>
-      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Inputs</h2>
+    <>
       <DimsFieldset
         legend="Pallet limitation"
         group="pallet"
@@ -66,19 +65,43 @@ export function InputsPanel() {
         errors={errors}
         onChange={setField}
       />
+    </>
+  );
+}
+
+/** The optional "Desired boxes per carton" field; shared by both views. */
+export function BoxesPerCartonField() {
+  const value = useInputs((s) => s.draft.boxesPerCarton);
+  const error = useInputs((s) => (s.parsed.ok ? undefined : s.parsed.errors.boxesPerCarton));
+  const setField = useInputs((s) => s.setField);
+  return (
+    <NumberField
+      id="field-boxesPerCarton"
+      label="Desired boxes per carton"
+      value={value}
+      placeholder="Blank = best fit"
+      suffix="boxes"
+      error={error}
+      onChange={(v) => setField('boxesPerCarton', v)}
+    />
+  );
+}
+
+/** Every input the optimizer uses, grouped, with inline validation. */
+export function InputsPanel() {
+  const draft = useInputs((s) => s.draft);
+  const errors = useInputs((s) => (s.parsed.ok ? NO_ERRORS : s.parsed.errors));
+  const setField = useInputs((s) => s.setField);
+
+  return (
+    <form className="space-y-5 p-4" onSubmit={(e) => e.preventDefault()}>
+      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Inputs</h2>
+      <SizeFieldsets />
       <fieldset className="space-y-2">
         <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Packing
         </legend>
-        <NumberField
-          id="field-boxesPerCarton"
-          label="Desired boxes per carton"
-          value={draft.boxesPerCarton}
-          placeholder="Blank = best fit"
-          suffix="boxes"
-          error={errors.boxesPerCarton}
-          onChange={(v) => setField('boxesPerCarton', v)}
-        />
+        <BoxesPerCartonField />
         <NumberField
           id="field-targetQuantity"
           label="Desired box quantity"

@@ -10,7 +10,7 @@ import { samplePresets } from '../data/samplePresets';
 import { presetSchema, scenarioSchema } from '../domain/schemas';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { createLocalStorageRepository } from '../persistence/localStorageRepository';
-import { createPrefsStore } from '../store/prefsStore';
+import { createPrefsStore, type ViewMode } from '../store/prefsStore';
 import { createPresetsStore } from '../store/presetsStore';
 import { createResultsStore } from '../store/resultsStore';
 import { createScenariosStore } from '../store/scenariosStore';
@@ -23,9 +23,15 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+export interface StoreOptions {
+  /** The view mode the prefs store starts in; tests default to Full. */
+  viewMode?: ViewMode;
+}
+
 /** Real stores around a runner that resolves optimize(inputs) immediately. */
 export function makeStores(
   run: RunOptimizer = (i: Inputs) => Promise.resolve(optimize(i)),
+  { viewMode = 'full' }: StoreOptions = {},
 ): ResolvedStores {
   const scene = createSceneStore();
   const inputs = createInputsStore(new FakeStorage());
@@ -49,7 +55,7 @@ export function makeStores(
     }),
     () => {},
   );
-  const prefs = createPrefsStore(new FakeStorage(), { viewMode: 'full', theme: 'light' });
+  const prefs = createPrefsStore(new FakeStorage(), { viewMode, theme: 'light' });
   return { inputs, results, scene, presets, scenarios, prefs };
 }
 
@@ -61,11 +67,11 @@ export async function flush(): Promise<void> {
 }
 
 /** Renders the whole app with fresh stores and fake timers, after the first calculation. */
-export async function renderApp(run?: RunOptimizer) {
+export async function renderApp(run?: RunOptimizer, options?: StoreOptions) {
   // shouldAdvanceTime lets Testing Library's own setTimeout(0) after each user event fire;
   // it only advances fake timers under Jest, so without it every user event would hang.
   vi.useFakeTimers({ shouldAdvanceTime: true });
-  const stores = makeStores(run);
+  const stores = makeStores(run, options);
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   render(<App stores={stores} />);
   await flush();

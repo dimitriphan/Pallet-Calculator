@@ -23,6 +23,19 @@ describe('SceneToolbar', () => {
     expect(screen.getByRole('button', { name: 'Show anyway' })).toBeInTheDocument();
   });
 
+  it('offers only Products, Measurements and Reset view in Basic mode', () => {
+    render(
+      <StoreProvider stores={makeStores(undefined, { viewMode: 'basic' })}>
+        <SceneToolbar totalProducts={260} />
+      </StoreProvider>,
+    );
+    expect(screen.getAllByRole('checkbox').map((c) => c.parentElement?.textContent)).toEqual([
+      'Products',
+      'Measurements',
+    ]);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Reset view']);
+  });
+
   it('refuses to draw more than 200,000 products individually', () => {
     renderToolbar(914000);
     expect(screen.getByText('Too many boxes to draw individually (914,000).')).toBeInTheDocument();

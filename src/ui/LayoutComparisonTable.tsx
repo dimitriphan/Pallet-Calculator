@@ -5,7 +5,7 @@ import {
   type TargetStatus,
 } from '../engine/analytics/analytics';
 import { formatDims, formatNumber } from '../engine/units/units';
-import { emptyMessage } from './emptyMessage';
+import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
 
 const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; className: string }> = {
@@ -23,52 +23,6 @@ const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; class
   },
 };
 
-function StatusLine() {
-  const status = useResults((s) => s.status);
-  const stale = useResults((s) => s.stale);
-  const error = useResults((s) => s.error);
-  const truncated = useResults((s) => s.result?.truncated ?? false);
-  const retry = useResults((s) => s.retry);
-
-  const lines: { key: string; text: string; tone: string }[] = [];
-  if (status === 'running')
-    lines.push({ key: 'running', text: 'Calculating…', tone: 'text-gray-600 dark:text-gray-300' });
-  if (stale)
-    lines.push({
-      key: 'stale',
-      text: 'Showing the last valid result. Fix the highlighted fields to update.',
-      tone: 'text-amber-800 dark:text-amber-300',
-    });
-  if (truncated && status !== 'running')
-    lines.push({
-      key: 'truncated',
-      text: 'Search was limited to keep it fast; results may not be the best possible.',
-      tone: 'text-amber-800 dark:text-amber-300',
-    });
-
-  return (
-    <div role="status" className="min-h-[1.25rem] space-y-1 text-sm">
-      {status === 'error' && error && (
-        <div className="flex items-center gap-3 rounded border border-red-200 bg-red-50 px-2 py-1 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
-          <span className="flex-1">{error}</span>
-          <button
-            type="button"
-            onClick={retry}
-            className="rounded border border-red-300 bg-white px-2 py-0.5 text-xs font-medium hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-600 dark:border-red-700 dark:bg-gray-900 dark:hover:bg-red-900 dark:focus-visible:outline-red-400"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-      {lines.map((l) => (
-        <p key={l.key} className={l.tone}>
-          {l.text}
-        </p>
-      ))}
-    </div>
-  );
-}
-
 /** Every returned layout side by side; a row click selects it everywhere. */
 export function LayoutComparisonTable() {
   const result = useResults((s) => s.result);
@@ -83,8 +37,6 @@ export function LayoutComparisonTable() {
         : [],
     [result, inputs],
   );
-
-  const message = result && inputs ? emptyMessage(result, inputs) : null;
 
   const onKeyDown = (e: KeyboardEvent, index: number) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -105,12 +57,7 @@ export function LayoutComparisonTable() {
           Layout comparison
         </h2>
       </div>
-      <StatusLine />
-      {message && (
-        <p className="rounded border border-gray-200 bg-white px-3 py-4 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-          {message}
-        </p>
-      )}
+      <StatusMessages />
       {rows.length > 0 && (
         <div className="overflow-x-auto rounded border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">

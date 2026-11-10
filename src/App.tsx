@@ -1,4 +1,5 @@
 import { SceneSlot } from './scene/SceneSlot';
+import { BasicInputs } from './ui/BasicInputs';
 import { DetailsPanel } from './ui/DetailsPanel';
 import { Header } from './ui/Header';
 import { InputsPanel } from './ui/InputsPanel';
@@ -6,13 +7,18 @@ import { LayoutComparisonTable } from './ui/LayoutComparisonTable';
 import { Notices } from './ui/Notices';
 import { StaleBadge } from './ui/StaleBadge';
 import { ProductionSummary } from './ui/ProductionSummary';
-import { StoreProvider, type AppStores } from './ui/StoreContext';
+import { StatusMessages } from './ui/StatusMessages';
+import { StoreProvider, usePrefs, type AppStores } from './ui/StoreContext';
 import { useAutoOptimize } from './ui/useAutoOptimize';
 import { useTheme } from './ui/useTheme';
+import { WhatToBuildCard } from './ui/WhatToBuildCard';
 
 function Workspace() {
   useAutoOptimize();
   useTheme();
+  // Both views share the shell and the scene slot's place in the tree, so switching
+  // never remounts the 3D view or changes its size.
+  const full = usePrefs((s) => s.viewMode) === 'full';
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <Header />
@@ -22,7 +28,7 @@ function Workspace() {
           aria-label="Inputs"
           className="overflow-y-auto border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
         >
-          <InputsPanel />
+          {full ? <InputsPanel /> : <BasicInputs />}
         </aside>
         <main className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto p-4">
           <div
@@ -32,13 +38,20 @@ function Workspace() {
             <SceneSlot />
             <StaleBadge className="pointer-events-none absolute bottom-2 left-2 z-10" />
           </div>
-          <LayoutComparisonTable />
+          {full && <LayoutComparisonTable />}
         </main>
         <aside
           aria-label="Details"
           className="overflow-y-auto border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
         >
-          <DetailsPanel />
+          {full ? (
+            <DetailsPanel />
+          ) : (
+            <div className="space-y-3 p-4">
+              <StatusMessages />
+              <WhatToBuildCard />
+            </div>
+          )}
         </aside>
       </div>
       <Notices />

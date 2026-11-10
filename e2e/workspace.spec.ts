@@ -29,6 +29,7 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
 
   await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
 
   const summary = page.getByRole('region', { name: 'Production summary' });
   const tile = (name: string) =>

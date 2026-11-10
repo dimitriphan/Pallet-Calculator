@@ -5,14 +5,19 @@ import { buildExportPayload, exportFilename } from '../export/exportData';
 import { composePng } from '../export/png';
 import { useNoticesStore } from '../store/noticesStore';
 import { BUTTON } from './ModalDialog';
-import { useResults, useScene } from './StoreContext';
+import type { ViewMode } from '../store/prefsStore';
+import { usePrefs, useResults, useScene } from './StoreContext';
 
 type Format = 'json' | 'csv' | 'png';
 
-const ITEMS: { format: Format; label: string }[] = [
-  { format: 'json', label: 'JSON' },
-  { format: 'csv', label: 'CSV' },
-  { format: 'png', label: 'PNG' },
+const BOTH: ViewMode[] = ['basic', 'full'];
+const FULL_ONLY: ViewMode[] = ['full'];
+
+/** The menu, in order; each item lists the view modes that offer it. */
+const ITEMS: { format: Format; label: string; modes: ViewMode[] }[] = [
+  { format: 'json', label: 'JSON', modes: FULL_ONLY },
+  { format: 'csv', label: 'CSV', modes: FULL_ONLY },
+  { format: 'png', label: 'PNG', modes: BOTH },
 ];
 
 const NO_LAYOUT = 'Run a calculation first';
@@ -22,13 +27,15 @@ const PNG_FAILED = 'PNG export failed. Try again after the 3D view has loaded.';
 const ITEM =
   'block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:text-gray-100 dark:hover:bg-gray-700 dark:focus:bg-gray-700 dark:disabled:text-gray-500 dark:disabled:hover:bg-gray-800';
 
-/** Export of the selected layout as JSON, CSV, or a three-view PNG. */
+/** Export of the selected layout as JSON, CSV, or a three-view PNG (PNG only in Basic mode). */
 export function ExportMenu() {
   const inputs = useResults((s) => s.inputs);
   const result = useResults((s) => s.result);
   const selectedIndex = useResults((s) => s.selectedIndex);
   const stale = useResults((s) => s.stale);
   const captureViews = useScene((s) => s.captureViews);
+  const viewMode = usePrefs((s) => s.viewMode);
+  const items = ITEMS.filter((item) => item.modes.includes(viewMode));
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -147,7 +154,7 @@ export function ExportMenu() {
           onKeyDown={onMenuKeyDown}
           className="absolute right-0 z-20 mt-1 w-56 rounded border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
         >
-          {ITEMS.map(({ format, label }) => (
+          {items.map(({ format, label }) => (
             <div key={format}>
               <button
                 type="button"
