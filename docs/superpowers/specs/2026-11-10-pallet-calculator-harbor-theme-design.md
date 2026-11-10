@@ -7,7 +7,7 @@ unless this document changes it.
 
 Source material: the "Harbor" design guide and asset package produced from
 the owner's brief (kept outside the repository), the owner's mascot design
-sheet, and the mascot's original sprite files. Where this spec and the guide
+sheet.  Where this spec and the guide
 disagree, this spec wins; the differences are listed in section 11.
 
 ## 1. Purpose
@@ -151,20 +151,21 @@ footer is added in this round. No other decoration.
 
 ### 7.1 Artwork
 
-The mascot is the owner's character, rebuilt from its original sprite so it
-matches the design sheet exactly: hollow ring head open through with two eye
-marks, triangular bandana at the neck, two arms and two legs ending bluntly
-on one ground line, a stem with two leaf tips at unequal heights, and one
-shoot outside the left shoulder.
+The mascot is the owner's character as drawn in the "existing key" on the
+mascot design sheet: a 17 × 22 pixel figure with a hollow ring head open
+through and two eye marks, a triangular bandana at the neck, two arms and two
+legs ending bluntly on one ground line, a stem with two leaf tips at unequal
+heights, and one shoot outside the left shoulder. (The mod's in-game sprite
+is a different, more compact drawing and is not used.)
 
-- **Idle** is the original key sprite, unaltered.
+- **Idle** is that key drawing traced pixel for pixel onto a 32 × 32 grid.
 - **Working** (three frames), **concerned**, the **header mark**, and the
   **tab icon** are derived from it by changing only the leaves, the shoulder
   shoot, and the head's tilt, following the poses in the design guide.
 - The **print illustration** is a clean flat version of the idle pose with
   leaves perked.
-- Colours are limited to the original sprite's palette: `#945743`,
-  `#79432F`, `#35403A`, `#7BCF80`, `#65AD69`, `#99E550`.
+- Colours are limited to the sheet's five: `#945743`, `#79432F`, `#35403A`,
+  `#7BCF80`, `#99E550`.
 - Sprites are 32 × 32 pixel drawings shown only at whole-number scales with
   hard edges.
 - The guide's "pleased" pose is not used anywhere.
@@ -243,8 +244,8 @@ motif, and mascot changes.
 - A small set of shared pieces carries the identity: `Mascot` (pose prop),
   `SproutProgress`, a `root-divider` and `bracket` class, and the focus-tick
   style. Components use these and do not restyle them.
-- Mascot sprites are small PNG files in `src/assets/mascot/`, produced once
-  from the original sprite by a script kept in the repository
+- Mascot sprites are small PNG files in `src/assets/mascot/`, produced from
+  a pixel map of the key drawing by a script kept in the repository
   (`tools/mascot/`) so they can be regenerated; the script and its source
   frame are the record of how each pose was derived.
 - Fonts come from bundled font packages; only the needed weights are
@@ -255,7 +256,7 @@ motif, and mascot changes.
 
 | Guide | This spec | Why |
 |---|---|---|
-| Mascot sprites generated from the sheet | Rebuilt from the original sprite | The generated set drifted from the character (ring thickness, legs) |
+| Mascot sprites generated from the sheet | Traced from the sheet's key drawing, poses derived from it | The generated set drifted from the key (ring thickness, legs) |
 | "Pleased" pose with cartons delivered | Not used | No placement was ever authorised for it; the print version covers the build sheet |
 | Light recoloured to grey and charcoal | Light keeps current colours | Owner decision |
 | One coral element per view; neutral field messages plus a summary block | Every invalid field shows a coral-text message with a coral edge | Owner decision; clearer when several fields are wrong |
@@ -270,7 +271,7 @@ motif, and mascot changes.
   stored values; the pre-paint script agrees with the store for each.
 - **Mascot assets:** every sprite is on its pixel grid, uses only the
   allowed colours, has fully opaque or fully transparent pixels, and the
-  idle sprite equals the original key frame.
+  idle sprite occupies 17 × 22 pixels with the features of the key drawing.
 - **Placements:** each pose appears in its state and nowhere else; hidden
   from the accessibility tree; reduced motion shows a static frame.
 - **No leftovers:** a check over the source finds no `rounded-`, `shadow-`,
