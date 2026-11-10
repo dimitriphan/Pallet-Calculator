@@ -28,8 +28,10 @@ export function explainRanking(
     return `${head} fits ${extra} additional ${extra === 1 ? 'unit' : 'units'} ${tail}`;
   }
   if (current.score.total - next.score.total > SCORE_TIE) {
-    const x = current.score.total.toFixed(2);
-    const y = next.score.total.toFixed(2);
+    // Two decimals unless they would print the same number for both.
+    const digits = current.score.total.toFixed(2) === next.score.total.toFixed(2) ? 4 : 2;
+    const x = current.score.total.toFixed(digits);
+    const y = next.score.total.toFixed(digits);
     return `${head} has a higher overall score (${x} vs ${y}) at the same quantity.`;
   }
   if (current.layout.totalCartons < next.layout.totalCartons) {

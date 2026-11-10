@@ -64,6 +64,12 @@ describe('explainRanking', () => {
     );
   });
 
+  it('shows 4 decimals when the 2-decimal scores would look equal', () => {
+    expect(explainRanking(ranked(1, 52, 80, 85.1304), ranked(2, 52, 80, 85.1251), 5)).toBe(
+      'Layout #1 ranked above Layout #2 because it has a higher overall score (85.1304 vs 85.1251) at the same quantity.',
+    );
+  });
+
   it('explains fewer cartons when products and score are the same', () => {
     expect(explainRanking(ranked(4, 52, 80, 80, 13), ranked(5, 52, 80, 80, 26), 5)).toBe(
       'Layout #4 ranked above Layout #5 because it uses fewer cartons for the same result.',

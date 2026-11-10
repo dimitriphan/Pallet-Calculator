@@ -1,6 +1,8 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type { Inputs } from '../domain/types';
 import { computeAnalytics } from '../engine/analytics/analytics';
+import { optimize } from '../engine/optimize';
 import { flush, renderApp, summaryTile } from './testUtils';
 
 function tableRows() {
@@ -26,6 +28,8 @@ describe('LayoutComparisonTable', () => {
     await user.click(rows[1] as HTMLElement);
     expect(tableRows()[1]).toHaveAttribute('aria-selected', 'true');
     expect(tableRows()[0]).toHaveAttribute('aria-selected', 'false');
+    expect(tableRows()[1]).toHaveAttribute('aria-current', 'true');
+    expect(tableRows()[0]).not.toHaveAttribute('aria-current');
 
     const s = stores.results.getState();
     const expected = computeAnalytics(s.result!.layouts[1]!.layout, s.inputs!).summary;
@@ -70,5 +74,13 @@ describe('LayoutComparisonTable', () => {
       'Remaining volume (in³)',
       'Score',
     ]);
+  });
+
+  it('says the search was limited without blaming the time limit', async () => {
+    await renderApp((i: Inputs) => Promise.resolve({ ...optimize(i), truncated: true }));
+    expect(
+      screen.getByText('Search was limited to keep it fast; results may not be the best possible.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/time limit/)).not.toBeInTheDocument();
   });
 });

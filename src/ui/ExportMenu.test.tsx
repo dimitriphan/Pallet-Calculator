@@ -131,6 +131,17 @@ describe('ExportMenu', () => {
     }
   });
 
+  it('closes with Escape even when every item is disabled', async () => {
+    const { user, stores } = await renderApp();
+    act(() => stores.results.setState({ result: null, inputs: null }));
+    screen.getByRole('button', { name: 'Export' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export' })).toHaveFocus();
+  });
+
   it('opens with Enter, moves with arrows, and closes with Escape', async () => {
     const { user } = await renderApp();
     screen.getByRole('button', { name: 'Export' }).focus();

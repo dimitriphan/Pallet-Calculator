@@ -39,7 +39,7 @@ function StatusLine() {
   if (truncated && status !== 'running')
     lines.push({
       key: 'truncated',
-      text: 'Search stopped at the time limit; results may not be the best possible.',
+      text: 'Search was limited to keep it fast; results may not be the best possible.',
       tone: 'text-amber-800',
     });
 
@@ -144,6 +144,7 @@ export function LayoutComparisonTable() {
                     key={ranked.layout.id}
                     tabIndex={0}
                     aria-selected={selected ? 'true' : 'false'}
+                    aria-current={selected ? 'true' : undefined}
                     onClick={() => select(index)}
                     onKeyDown={(e) => onKeyDown(e, index)}
                     className={`cursor-pointer border-b border-gray-100 last:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 ${

@@ -74,12 +74,15 @@ export function ExportMenu() {
     }
   };
 
-  const onMenuKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
+  // On the wrapper, so Escape works from the trigger too (all items may be disabled).
+  const onRootKeyDown = (e: KeyboardEvent) => {
+    if (open && e.key === 'Escape') {
       e.preventDefault();
       close(true);
-      return;
     }
+  };
+
+  const onMenuKeyDown = (e: KeyboardEvent) => {
     const items = enabledItems();
     if (items.length === 0) return;
     const at = items.indexOf(document.activeElement as HTMLButtonElement);
@@ -118,7 +121,7 @@ export function ExportMenu() {
   };
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className="relative" onKeyDown={onRootKeyDown}>
       <button
         ref={trigger}
         type="button"

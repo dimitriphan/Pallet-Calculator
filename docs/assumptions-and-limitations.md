@@ -49,7 +49,7 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 ## Search limits
 
-- **4 second limit.** The tool stops searching after 4 seconds. This applies only once at least one layout has been found, so you never get a false "nothing fits". If the limit is reached you see "Search stopped at the time limit; results may not be the best possible." Treat the result as good but possibly not the best.
+- **4 second limit.** The tool stops searching after 4 seconds. This applies only once at least one layout has been found, so you never get a false "nothing fits". If the limit is reached, or the number of carton sizes tried was capped (very small boxes), you see "Search was limited to keep it fast; results may not be the best possible." Treat the result as good but possibly not the best.
 - **8000 candidate cartons.** For very small products there can be a huge number of possible cartons. Only the 8000 largest-capacity candidates are tried. The result is marked as stopped early.
 - **Very small cartons.** When a carton is smaller than roughly 2 inches on a full-size pallet, the exact layer search would be too slow. The tool then uses a simpler search with a single cut per rectangle. The answer is still a valid, buildable layer, but it may not be the best possible.
 
