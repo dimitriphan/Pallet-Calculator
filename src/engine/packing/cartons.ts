@@ -14,14 +14,34 @@ function descending(values: [number, number, number]): [number, number, number] 
 }
 
 /** Physical identity of a carton: the multiset of (product size, count) pairs. */
-function physicalKey(size: Record<ProductAxis, number>, counts: Record<ProductAxis, number>): string {
+function physicalKey(
+  size: Record<ProductAxis, number>,
+  counts: Record<ProductAxis, number>,
+): string {
   return AXES.map((a) => `${size[a]}:${counts[a]}`)
     .sort()
     .join('|');
 }
 
+/** At most this many candidates are kept (those with the most boxes per carton). */
+export const MAX_CARTON_CANDIDATES = 8000;
+
+/** Enumeration stops after this many valid count triples; only very small products reach it. */
+const MAX_VALID_TRIPLES = 500000;
+
 /** Every carton that can be built from the product within the maximum carton size. */
 export function generateCartonCandidates(i: Inputs): CartonCandidate[] {
+  return generateCartonCandidatesWithInfo(i).candidates;
+}
+
+/**
+ * Candidates sorted by boxes per carton (descending) then key, and whether the list was cut
+ * short: by the enumeration limit, or by keeping only the MAX_CARTON_CANDIDATES biggest.
+ */
+export function generateCartonCandidatesWithInfo(i: Inputs): {
+  candidates: CartonCandidate[];
+  truncated: boolean;
+} {
   const size = productSize(i);
   const productVolume = volumeOf(size);
   const { leeway, wallThickness } = i;
@@ -32,14 +52,40 @@ export function generateCartonCandidates(i: Inputs): CartonCandidate[] {
     W: fitsCount(bound, size.W),
     H: fitsCount(bound, size.H),
   };
+  const outerOf = (count: number, axisSize: number): number =>
+    count * axisSize + leeway + 2 * wallThickness;
 
   const seen = new Set<string>();
   const result: CartonCandidate[] = [];
+  let validTriples = 0;
+  let truncated = false;
 
-  for (let l = 1; l <= limit.L; l++) {
+  // Growing any count only makes the carton larger, so once a count no longer fits, every
+  // larger count on that axis is skipped too (and the enclosing loop stops if even 1 fails).
+  enumerate: for (let l = 1; l <= limit.L; l++) {
+    let anyW = false;
     for (let w = 1; w <= limit.W; w++) {
+      let anyH = false;
       for (let h = 1; h <= limit.H; h++) {
+        const outerSorted = descending([
+          outerOf(l, size.L),
+          outerOf(w, size.W),
+          outerOf(h, size.H),
+        ]);
+        if (!outerSorted.every((v, idx) => fitsWithin(v, maxSorted[idx] as number))) break;
+        anyH = true;
+        if (++validTriples > MAX_VALID_TRIPLES) {
+          truncated = true;
+          break enumerate;
+        }
+
         const counts = { L: l, W: w, H: h };
+        if (i.rotationMode === 'full') {
+          const key = physicalKey(size, counts);
+          if (seen.has(key)) continue;
+          seen.add(key);
+        }
+
         const inner = {
           L: l * size.L + leeway,
           W: w * size.W + leeway,
@@ -50,15 +96,6 @@ export function generateCartonCandidates(i: Inputs): CartonCandidate[] {
           W: inner.W + 2 * wallThickness,
           H: inner.H + 2 * wallThickness,
         };
-        const outerSorted = descending([outer.L, outer.W, outer.H]);
-        if (!outerSorted.every((v, idx) => fitsWithin(v, maxSorted[idx] as number))) continue;
-
-        if (i.rotationMode === 'full') {
-          const key = physicalKey(size, counts);
-          if (seen.has(key)) continue;
-          seen.add(key);
-        }
-
         const boxesPerCarton = l * w * h;
         const cartonProductVolume = boxesPerCarton * productVolume;
         const outerVolume = volumeOf(outer);
@@ -71,13 +108,17 @@ export function generateCartonCandidates(i: Inputs): CartonCandidate[] {
           emptyVolume: outerVolume - cartonProductVolume,
         });
       }
+      if (!anyH) break;
+      anyW = true;
     }
+    if (!anyW) break;
   }
 
-  return result.sort((a, b) => {
-    if (b.boxesPerCarton !== a.boxesPerCarton) return b.boxesPerCarton - a.boxesPerCarton;
-    const ka = cartonKey(a);
-    const kb = cartonKey(b);
-    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  const keyed = result.map((c) => ({ c, key: cartonKey(c) }));
+  keyed.sort((a, b) => {
+    if (b.c.boxesPerCarton !== a.c.boxesPerCarton) return b.c.boxesPerCarton - a.c.boxesPerCarton;
+    return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
   });
+  if (keyed.length > MAX_CARTON_CANDIDATES) truncated = true;
+  return { candidates: keyed.slice(0, MAX_CARTON_CANDIDATES).map((k) => k.c), truncated };
 }

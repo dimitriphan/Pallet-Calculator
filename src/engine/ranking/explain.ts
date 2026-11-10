@@ -1,0 +1,36 @@
+import type { RankedLayout } from '../../domain/types';
+
+/** Score differences at or below this count as the same score (matches compareRanked). */
+const SCORE_TIE = 1e-9;
+
+/** One sentence saying why `current` ranks above `next` (null when it is the last shown). */
+export function explainRanking(
+  current: RankedLayout,
+  next: RankedLayout | null,
+  total: number,
+): string {
+  const a = `Layout #${current.rank}`;
+  if (next === null) {
+    return total === 1
+      ? `${a} is the only distinct layout found.`
+      : `${a} is the lowest-ranked of the ${total} layouts shown.`;
+  }
+  const head = `${a} ranked above Layout #${next.rank} because it`;
+  const extra = current.layout.totalProducts - next.layout.totalProducts;
+  if (extra > 0) {
+    const u = current.score.utilization - next.score.utilization;
+    const tail =
+      u >= 1
+        ? 'with higher utilization.'
+        : u <= -1
+          ? 'despite lower utilization.'
+          : 'while maintaining similar utilization.';
+    return `${head} fits ${extra} additional ${extra === 1 ? 'unit' : 'units'} ${tail}`;
+  }
+  if (current.score.total - next.score.total > SCORE_TIE) {
+    const x = current.score.total.toFixed(2);
+    const y = next.score.total.toFixed(2);
+    return `${head} has a higher overall score (${x} vs ${y}) at the same quantity.`;
+  }
+  return `${head} uses fewer cartons for the same result.`;
+}
