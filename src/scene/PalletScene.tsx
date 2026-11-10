@@ -6,6 +6,7 @@ import { useScene, useStores } from '../ui/StoreContext';
 import { useResolvedTheme } from '../ui/useTheme';
 import { CameraRig } from './CameraRig';
 import { CaptureBridge } from './CaptureBridge';
+import { CAPTURE_UNIFORM_COLORS, captureGridColors } from './captureVisibility';
 import { Cartons } from './Cartons';
 import { Envelope } from './Envelope';
 import { Labels } from './Labels';
@@ -66,6 +67,7 @@ function SceneContents() {
           infiniteGrid
           fadeDistance={900}
           fadeStrength={1.5}
+          userData={{ [CAPTURE_UNIFORM_COLORS]: captureGridColors }}
         />
       )}
       {inputs && (

@@ -1,8 +1,11 @@
-import { Group, Mesh, MeshBasicMaterial, Object3D } from 'three';
+import { Color, Group, Mesh, MeshBasicMaterial, Object3D, ShaderMaterial } from 'three';
 import { describe, expect, it } from 'vitest';
+import { sceneTheme } from './sceneTheme';
 import {
   applyCaptureColors,
   CAPTURE_COLOR,
+  CAPTURE_UNIFORM_COLORS,
+  captureGridColors,
   HIDE_IN_ORTHO_CAPTURE,
   withHiddenForOrthoCapture,
 } from './captureVisibility';
@@ -60,5 +63,37 @@ describe('applyCaptureColors', () => {
     restore();
     expect(line.material.color.getHexString()).toBe('d1d5db');
     expect(carton.material.color.getHexString()).toBe('c8a26b');
+  });
+});
+
+describe('capture grid colours', () => {
+  it('sets colour uniforms of flagged shader materials until restored', () => {
+    const root = new Group();
+    const material = new ShaderMaterial({
+      uniforms: {
+        cellColor: { value: new Color('#4b5563') },
+        sectionColor: { value: new Color('#9ca3af') },
+      },
+    });
+    const grid = new Mesh(undefined, material);
+    grid.userData[CAPTURE_UNIFORM_COLORS] = { cellColor: '#d1d5db', sectionColor: '#9ca3af' };
+    root.add(grid);
+    const cell = material.uniforms.cellColor!.value as Color;
+
+    const restore = applyCaptureColors(root);
+    expect(cell.getHexString()).toBe('d1d5db');
+    restore();
+    expect(cell.getHexString()).toBe('4b5563');
+    // The same Color object: the material keeps the uniform it was given.
+    expect(material.uniforms.cellColor!.value).toBe(cell);
+  });
+
+  it('captures the grid in the light theme colours', () => {
+    const light = sceneTheme('light');
+    expect(captureGridColors).toEqual({
+      cellColor: light.gridCell,
+      sectionColor: light.gridSection,
+    });
+    expect(sceneTheme('dark').gridCell).not.toBe(light.gridCell);
   });
 });
