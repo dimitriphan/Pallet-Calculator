@@ -131,4 +131,11 @@ describe('presets store', () => {
     const text = JSON.stringify({ version: 1, presets: [good, { id: 'x', name: 'bad' }] });
     expect(store.getState().importJson(text)).toEqual({ imported: 1, skipped: 1 });
   });
+
+  it('skips an imported preset with custom rotation and no orientations', () => {
+    const { store } = setup();
+    const bad = { ...store.getState().presets[0]!, rotationMode: 'custom', customOrientations: [] };
+    const text = JSON.stringify({ version: 1, presets: [bad] });
+    expect(store.getState().importJson(text)).toEqual({ imported: 0, skipped: 1 });
+  });
 });

@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import { createMemoryRepository, type Repository } from './repository';
 
 const UNREADABLE = 'Saved data could not be read.';
+const KEPT_BACKUP = ' A backup copy was kept.';
 const NOT_SAVED = 'Could not save: browser storage is full or unavailable.';
 
 /** The browser's Local Storage, or null when it is missing or access throws. */
@@ -23,7 +24,7 @@ export function createDefaultRepository<T extends { id: string }>(opts: {
   const storage = getBrowserStorage();
   return storage
     ? createLocalStorageRepository({ ...opts, storage })
-    : createMemoryRepository(opts.seed);
+    : createMemoryRepository(opts.seed, () => opts.onNotice?.(NOT_SAVED));
 }
 
 /**
@@ -41,10 +42,13 @@ export function createLocalStorageRepository<T extends { id: string }>(opts: {
   const { key, schema, onNotice } = opts;
   const storage = opts.storage ?? getBrowserStorage();
   let items: T[] | null = null;
+  // Original text of data that could not be fully read; copied aside before the first write.
+  let pendingBackup: string | null = null;
 
   const load = (): T[] => {
+    let raw: string | null = null;
     try {
-      const raw = storage?.getItem(key) ?? null;
+      raw = storage?.getItem(key) ?? null;
       if (raw === null) return [...(opts.seed ?? [])];
       const data: unknown = JSON.parse(raw);
       if (
@@ -53,7 +57,8 @@ export function createLocalStorageRepository<T extends { id: string }>(opts: {
         (data as { version?: unknown }).version !== 1 ||
         !Array.isArray((data as { items?: unknown }).items)
       ) {
-        onNotice?.(UNREADABLE);
+        pendingBackup = raw;
+        onNotice?.(UNREADABLE + KEPT_BACKUP);
         return [];
       }
       const valid: T[] = [];
@@ -63,10 +68,14 @@ export function createLocalStorageRepository<T extends { id: string }>(opts: {
         if (parsed.success) valid.push(parsed.data);
         else skipped += 1;
       }
-      if (skipped > 0) onNotice?.(`${skipped} saved item(s) could not be read and were skipped.`);
+      if (skipped > 0) {
+        pendingBackup = raw;
+        onNotice?.(`${skipped} saved item(s) could not be read and were skipped.${KEPT_BACKUP}`);
+      }
       return valid;
     } catch {
-      onNotice?.(UNREADABLE);
+      if (raw !== null) pendingBackup = raw;
+      onNotice?.(raw === null ? UNREADABLE : UNREADABLE + KEPT_BACKUP);
       return [];
     }
   };
@@ -74,6 +83,14 @@ export function createLocalStorageRepository<T extends { id: string }>(opts: {
   const current = (): T[] => (items ??= load());
 
   const persist = (): void => {
+    if (pendingBackup !== null) {
+      try {
+        storage?.setItem(`${key}.backup`, pendingBackup);
+      } catch {
+        // the main write below still gets its chance
+      }
+      pendingBackup = null;
+    }
     try {
       if (!storage) throw new Error('no storage');
       storage.setItem(key, JSON.stringify({ version: 1, items }));

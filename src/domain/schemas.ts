@@ -41,20 +41,25 @@ export const inputsSchema: z.ZodType<Inputs> = z
     error: CUSTOM_MSG,
   });
 
-export const presetSchema: z.ZodType<Preset> = z.object({
-  id: z.string().min(1),
-  name: z.string(),
-  pallet: inputsShape.pallet,
-  maxCarton: inputsShape.maxCarton,
-  leeway: inputsShape.leeway,
-  wallThickness: inputsShape.wallThickness,
-  overhang: inputsShape.overhang,
-  targetQuantity: inputsShape.targetQuantity,
-  rotationMode: inputsShape.rotationMode,
-  customOrientations: inputsShape.customOrientations,
-  keepCartonsUpright: inputsShape.keepCartonsUpright,
-  advanced: z.record(z.string(), z.unknown()),
-});
+export const presetSchema: z.ZodType<Preset> = z
+  .object({
+    id: z.string().min(1),
+    name: z.string(),
+    pallet: inputsShape.pallet,
+    maxCarton: inputsShape.maxCarton,
+    leeway: inputsShape.leeway,
+    wallThickness: inputsShape.wallThickness,
+    overhang: inputsShape.overhang,
+    targetQuantity: inputsShape.targetQuantity,
+    rotationMode: inputsShape.rotationMode,
+    customOrientations: inputsShape.customOrientations,
+    keepCartonsUpright: inputsShape.keepCartonsUpright,
+    advanced: z.record(z.string(), z.unknown()),
+  })
+  .refine((v) => v.rotationMode !== 'custom' || v.customOrientations.length > 0, {
+    path: ['customOrientations'],
+    error: CUSTOM_MSG,
+  });
 
 export const scenarioSchema: z.ZodType<Scenario> = z.object({
   id: z.string().min(1),
