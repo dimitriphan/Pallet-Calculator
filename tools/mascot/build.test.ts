@@ -100,11 +100,40 @@ describe('mascot poses', () => {
     expect(filled(TAB_ICON).filter((c) => c.ch === 'E')).toHaveLength(2);
   });
 
-  it('the idle figure occupies 17 x 22 with its feet on row 30', () => {
+  it('the idle figure is 17 wide, 26 to 30 tall, feet on row 30, with room above the leaves', () => {
     const box = boundingBox(idle);
     expect(box.right - box.left + 1).toBe(17);
-    expect(box.bottom - box.top + 1).toBe(22);
+    expect(box.bottom - box.top + 1).toBeGreaterThanOrEqual(26);
+    expect(box.bottom - box.top + 1).toBeLessThanOrEqual(30);
     expect(box.bottom).toBe(30);
+    expect(box.top).toBeGreaterThanOrEqual(2);
+  });
+
+  it('every leaf and shoot pixel touches another figure pixel along an edge', () => {
+    const grids: [string, Grid][] = [...Object.entries(POSES), ['tab icon', TAB_ICON]];
+    for (const [name, grid] of grids) {
+      for (const c of filled(grid).filter((p) => p.ch === 'G')) {
+        const neighbours = [
+          grid[c.y - 1]?.[c.x],
+          grid[c.y + 1]?.[c.x],
+          grid[c.y]?.[c.x - 1],
+          grid[c.y]?.[c.x + 1],
+        ];
+        const isShoot = neighbours.every((n) => n === undefined || n === '.');
+        if (isShoot) {
+          // the shoulder shoot is a single detached pixel below the head
+          expect(
+            grid.findIndex((row) => row.includes('E')),
+            `${name} ${c.x},${c.y}`,
+          ).toBeLessThan(c.y);
+        } else {
+          expect(
+            neighbours.some((n) => n !== undefined && n !== '.'),
+            name,
+          ).toBe(true);
+        }
+      }
+    }
   });
 
   it('idle has exactly two eye pixels, on the same row', () => {

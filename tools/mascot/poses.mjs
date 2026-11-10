@@ -1,9 +1,11 @@
 // Pixel maps for the Harbor mascot. One character per pixel, keyed by PALETTE.
 // The idle map is a trace of the "Existing key — construction study" drawing
-// on the owner's design sheet (17 x 22 occupied, feet on row 30). Every other
-// pose is derived from it in code, so the body stays identical across poses.
-// Edit single characters of IDLE freely; the helpers below check that the
-// leaf and shoot pixels they move are still where they expect them.
+// on the owner's design sheet, on that drawing's own pixel grid: 17 x 27
+// occupied, feet on row 30. (The sheet's footer says 17 x 22, but its drawing
+// is taller; the drawing is what was traced.) Every other pose is derived from
+// it in code, so the body stays identical across poses. Edit single characters
+// of IDLE freely; the helpers below check that the leaf and shoot pixels they
+// change are still where they expect them.
 
 export const PALETTE = {
   B: '#945743', // brown main
@@ -20,51 +22,54 @@ const IDLE = [
   '................................', // 1
   '................................', // 2
   '................................', // 3
-  '................................', // 4
-  '................................', // 5
-  '................................', // 6
-  '................................', // 7
-  '................................', // 8
-  '.............GG.................', // 9   left leaf (higher tip)
-  '..............G.GG..............', // 10  right leaf
-  '...............SG...............', // 11  stem
-  '...............S................', // 12
-  '...............S................', // 13
-  '.............BBSBBB.............', // 14  head ring
-  '............BBBBBBBB............', // 15
-  '...........BBBBBBBBBB...........', // 16
-  '...........BBBB..BBBB...........', // 17  opening, open through
-  '...........SBE....EBB...........', // 18  eye marks at the inner edges
-  '...........SBB...BBBB...........', // 19
-  '............SBBBBBBB............', // 20
-  '.............SBBBBB.............', // 21
-  '..........G.BBKKKKB.............', // 22  shoulders, bandana, shoulder shoot
-  '...........BBBKKKBBB............', // 23
-  '..........BBBBBKBBBBB...........', // 24
-  '.........BBSBBBBBBBBBBB.........', // 25
-  '........BBB.SBBBBBB.BBB.........', // 26
-  '.......BBB...SBSSBB..BBB........', // 27
-  '.......BB....SB..BB...BB........', // 28  two arms, two legs
+  '............GGG.................', // 4  left leaf (higher tip)
+  '.............GG.GG..............', // 5  right leaf
+  '..............SSG...............', // 6  stem, two pixels wide
+  '..............SS................', // 7
+  '..............SS................', // 8
+  '.............BSSBBB.............', // 9  head ring
+  '............BBBBBBBB............', // 10
+  '...........BBBBBBBBBB...........', // 11
+  '...........BBBB..BBBB...........', // 12  opening, open through
+  '...........SBE....EBB...........', // 13  eye marks at the inner edges
+  '...........SBB...BBBB...........', // 14
+  '............SBBBBBBB............', // 15
+  '.............SBBBBB.............', // 16
+  '..........G.BBKKKKB.............', // 17  shoulders, bandana, shoulder shoot
+  '...........BBBKKKKBB............', // 18
+  '..........BBBBBKKBBBB...........', // 19
+  '.........BBSBBBBBBBBBBB.........', // 20  arms arch out from the shoulders
+  '........BBB.SBBBBBBBBBB.........', // 21
+  '........BBB.SBBBBBB.BBB.........', // 22
+  '.......BBB...SBSSBB..BBB........', // 23
+  '.......BB....SB..BB...BB........', // 24  two arms, two legs
+  '.......BB....SB..BB...BB........', // 25
+  '.......BB....SB..BB...BB........', // 26
+  '.......BB....BB..SB...BB........', // 27
+  '.......BB....BB..SB...BB........', // 28
   '.......BB....BB..SB...BB........', // 29
-  '.......BB....BB..SB...BB........', // 30  ground line
+  '.......BB....SS..SS...BB........', // 30  ground line
   '................................', // 31
 ];
 
-/** Pixel positions in IDLE, as [x, y]. */
-const LEFT_LEAF = [
-  [13, 9],
-  [14, 9],
-  [14, 10],
-]; // tip, bar, base at the stem
-const RIGHT_LEAF = [
-  [16, 10],
-  [17, 10],
-  [16, 11],
-]; // bar, tip, base at the stem
-const LEFT_LEAF_TIP = LEFT_LEAF[0];
-const RIGHT_LEAF_TIP = RIGHT_LEAF[1];
-const SHOULDER_SHOOT = [10, 22];
-const SHOULDER_ROW = 22;
+/** Leaf pixels in IDLE as [x, y], each leaf's tip, and its hanging shape. */
+const LEFT_LEAF = {
+  // prettier-ignore
+  pixels: [[12, 4], [13, 4], [14, 4], [13, 5], [14, 5]],
+  tip: [12, 4],
+  // keeps its base over the stem, reaches out along row 5, tip hangs at the end
+  // prettier-ignore
+  drooped: [[14, 5], [13, 5], [12, 5], [11, 5], [11, 6]],
+};
+const RIGHT_LEAF = {
+  // prettier-ignore
+  pixels: [[16, 5], [17, 5], [16, 6]],
+  tip: [17, 5],
+  // prettier-ignore
+  drooped: [[16, 6], [17, 6], [18, 6], [18, 7]],
+};
+const SHOULDER_SHOOT = [10, 17];
+const SHOULDER_ROW = 17;
 
 function at(grid, [x, y]) {
   return grid[y][x];
@@ -83,34 +88,36 @@ function paint(grid, pixels) {
   return rows.map((row) => row.join(''));
 }
 
-/** Moves single leaf or shoot pixels; each source must be 'G' and each target empty. */
-function movePixels(grid, moves) {
-  for (const [from, to] of moves) {
-    expectPixel(grid, from, 'G');
-    if (at(grid, to) !== '.' && !moves.some(([f]) => f[0] === to[0] && f[1] === to[1])) {
-      throw new Error(`mascot: target ${to.join(',')} is not empty`);
-    }
-  }
-  return paint(grid, [
-    ...moves.map(([[x, y]]) => [x, y, '.']),
-    ...moves.map(([, [x, y]]) => [x, y, 'G']),
-  ]);
+/** Replaces the 'G' pixels `from` with `to`; every new pixel must land on empty space. */
+function replaceGreen(grid, from, to) {
+  for (const xy of from) expectPixel(grid, xy, 'G');
+  const cleared = paint(
+    grid,
+    from.map(([x, y]) => [x, y, '.']),
+  );
+  for (const xy of to) expectPixel(cleared, xy, '.');
+  return paint(
+    cleared,
+    to.map(([x, y]) => [x, y, 'G']),
+  );
 }
 
-const up = ([x, y], n = 1) => [x, y - n];
+const up = ([x, y]) => [x, y - 1];
+const shiftX =
+  (dx) =>
+  ([x, y]) => [x + dx, y];
 
-/** Both leaf tips raised one pixel. */
+/** Both leaf tips raised one pixel: each tip grows one pixel upward, so it stays joined to its leaf. */
 function perkLeaves(grid) {
-  return movePixels(grid, [
-    [LEFT_LEAF_TIP, up(LEFT_LEAF_TIP)],
-    [RIGHT_LEAF_TIP, up(RIGHT_LEAF_TIP)],
-  ]);
+  const tips = [LEFT_LEAF.tip, RIGHT_LEAF.tip];
+  for (const tip of tips) expectPixel(grid, tip, 'G');
+  return replaceGreen(grid, [], tips.map(up));
 }
 
 /** The shoulder shoot moved `dx` pixels sideways. */
 function shiftShoot(grid, dx) {
   if (dx === 0) return grid;
-  return movePixels(grid, [[SHOULDER_SHOOT, [SHOULDER_SHOOT[0] + dx, SHOULDER_SHOOT[1]]]]);
+  return replaceGreen(grid, [SHOULDER_SHOOT], [shiftX(dx)(SHOULDER_SHOOT)]);
 }
 
 /** Head, stem and leaves (every row above the shoulders) shifted one pixel left. */
@@ -123,26 +130,17 @@ function tiltHeadLeft(grid) {
 }
 
 /**
- * Leaves hanging: each leaf keeps the pixel that meets the stem and bends
- * outward and down, so its tip ends two pixels lower than before.
- * Expects the leaves already shifted by `dx`.
+ * Leaves hanging: each leaf keeps its base at the stem and reaches outward,
+ * its tip two pixels lower and one pixel further out than before.
+ * Expects the leaves already shifted sideways by `dx`.
  */
 function droopLeaves(grid, dx) {
-  const shift = ([x, y]) => [x + dx, y];
-  const [lTip, lBar, lBase] = LEFT_LEAF.map(shift);
-  const [rBar, rTip, rBase] = RIGHT_LEAF.map(shift);
-  for (const xy of [lTip, lBar, lBase, rBar, rTip, rBase]) expectPixel(grid, xy, 'G');
-  const cleared = paint(
-    grid,
-    [lTip, lBar, rBar, rTip].map(([x, y]) => [x, y, '.']),
-  );
-  return paint(cleared, [
-    // each leaf keeps its base, then one pixel out, then the tip out and down
-    [lBase[0] - 1, lBase[1], 'G'],
-    [lBase[0] - 2, lBase[1] + 1, 'G'],
-    [rBase[0] + 1, rBase[1], 'G'],
-    [rBase[0] + 2, rBase[1] + 1, 'G'],
-  ]);
+  const move = shiftX(dx);
+  let out = grid;
+  for (const leaf of [LEFT_LEAF, RIGHT_LEAF]) {
+    out = replaceGreen(out, leaf.pixels.map(move), leaf.drooped.map(move));
+  }
+  return out;
 }
 
 /** Keeps the rows above the shoulders (head ring, stem, leaves) only. */
