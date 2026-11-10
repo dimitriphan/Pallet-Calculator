@@ -1,0 +1,55 @@
+import type { ReactNode } from 'react';
+import type { Dims } from '../domain/types';
+import { NumberField } from './NumberField';
+
+const KEYS = ['length', 'width', 'height'] as const satisfies readonly (keyof Dims)[];
+
+interface DimsFieldsetProps {
+  legend: string;
+  /** Draft group name, e.g. "pallet"; fields are addressed as `${group}.length`. */
+  group: 'pallet' | 'product' | 'maxCarton';
+  labels: Record<keyof Dims, string>;
+  values: Record<keyof Dims, string>;
+  errors: Record<string, string>;
+  onChange(path: string, value: string): void;
+  /** Help shown under the height field. */
+  heightHint?: ReactNode;
+}
+
+/** Length, width and height of one object, side by side. */
+export function DimsFieldset({
+  legend,
+  group,
+  labels,
+  values,
+  errors,
+  onChange,
+  heightHint,
+}: DimsFieldsetProps) {
+  const heightHintId = `field-${group}-height-help`;
+  return (
+    <fieldset className="space-y-2">
+      <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {legend}
+      </legend>
+      <div className="grid grid-cols-3 gap-2">
+        {KEYS.map((key) => (
+          <NumberField
+            key={key}
+            id={`field-${group}-${key}`}
+            label={labels[key]}
+            value={values[key]}
+            error={errors[`${group}.${key}`]}
+            onChange={(v) => onChange(`${group}.${key}`, v)}
+            describedBy={key === 'height' && heightHint ? heightHintId : undefined}
+          />
+        ))}
+      </div>
+      {heightHint && (
+        <div id={heightHintId} className="text-xs text-gray-600">
+          {heightHint}
+        </div>
+      )}
+    </fieldset>
+  );
+}
