@@ -1,6 +1,11 @@
-import { Group, Object3D } from 'three';
+import { Group, Mesh, MeshBasicMaterial, Object3D } from 'three';
 import { describe, expect, it } from 'vitest';
-import { HIDE_IN_ORTHO_CAPTURE, withHiddenForOrthoCapture } from './captureVisibility';
+import {
+  applyCaptureColors,
+  CAPTURE_COLOR,
+  HIDE_IN_ORTHO_CAPTURE,
+  withHiddenForOrthoCapture,
+} from './captureVisibility';
 
 describe('withHiddenForOrthoCapture', () => {
   it('hides flagged objects while the callback runs and restores them afterwards', () => {
@@ -37,5 +42,23 @@ describe('withHiddenForOrthoCapture', () => {
       }),
     ).toThrow('lost context');
     expect(outline.visible).toBe(true);
+  });
+});
+
+describe('applyCaptureColors', () => {
+  it('sets flagged materials to their capture colour until restored', () => {
+    const root = new Group();
+    const line = new Mesh(undefined, new MeshBasicMaterial({ color: '#d1d5db' }));
+    line.userData[CAPTURE_COLOR] = '#111827';
+    const carton = new Mesh(undefined, new MeshBasicMaterial({ color: '#c8a26b' }));
+    root.add(line, carton);
+
+    const restore = applyCaptureColors(root);
+    expect(line.material.color.getHexString()).toBe('111827');
+    expect(carton.material.color.getHexString()).toBe('c8a26b');
+
+    restore();
+    expect(line.material.color.getHexString()).toBe('d1d5db');
+    expect(carton.material.color.getHexString()).toBe('c8a26b');
   });
 });

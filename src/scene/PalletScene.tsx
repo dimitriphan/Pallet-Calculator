@@ -3,6 +3,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { PRODUCT_FORCE_LIMIT, PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
 import { useScene, useStores } from '../ui/StoreContext';
+import { useResolvedTheme } from '../ui/useTheme';
 import { CameraRig } from './CameraRig';
 import { CaptureBridge } from './CaptureBridge';
 import { Cartons } from './Cartons';
@@ -14,6 +15,7 @@ import { Products } from './Products';
 import { SceneErrorBoundary } from './SceneErrorBoundary';
 import { SceneToolbar } from './SceneToolbar';
 import { selectionBounds, withMeasurements } from './sceneGeometry';
+import { sceneTheme } from './sceneTheme';
 import { SelectionOutline } from './SelectionOutline';
 import { useSceneData } from './useSceneData';
 import { WEBGL_UNAVAILABLE } from './webgl';
@@ -23,6 +25,8 @@ function SceneContents() {
   const { layout, inputs, cartons, bounds, measured } = useSceneData();
   const s = useScene((st) => st);
   const invalidate = useThree((st) => st.invalidate);
+  const dark = useResolvedTheme() === 'dark';
+  const theme = sceneTheme(dark ? 'dark' : 'light');
 
   const productsShown =
     !!layout &&
@@ -42,12 +46,12 @@ function SceneContents() {
   // The canvas renders on demand: draw a new frame whenever what it shows changes.
   useEffect(() => {
     invalidate();
-  }, [invalidate, layout, inputs, s]);
+  }, [invalidate, layout, inputs, s, theme]);
 
   const select = s.setSelection;
   return (
     <>
-      <color attach="background" args={['#f3f4f6']} />
+      <color attach="background" args={[theme.background]} />
       <ambientLight intensity={1.4} />
       <directionalLight position={[80, 160, 120]} intensity={1.6} />
       <directionalLight position={[-120, 90, -80]} intensity={0.5} />
@@ -55,8 +59,8 @@ function SceneContents() {
         <Grid
           cellSize={12}
           sectionSize={60}
-          cellColor="#d1d5db"
-          sectionColor="#9ca3af"
+          cellColor={theme.gridCell}
+          sectionColor={theme.gridSection}
           cellThickness={0.8}
           sectionThickness={1.2}
           infiniteGrid
@@ -92,9 +96,16 @@ function SceneContents() {
         />
       )}
       {layout && inputs && s.showLabels && cartons[0] && (
-        <Labels layout={layout} inputs={inputs} first={cartons[0]} />
+        <Labels layout={layout} inputs={inputs} first={cartons[0]} theme={theme} />
       )}
-      {s.showMeasurements && inputs && <Measurements bounds={measured} clear={bounds} />}
+      {s.showMeasurements && inputs && (
+        <Measurements
+          bounds={measured}
+          clear={bounds}
+          line={theme.measureLine}
+          chip={dark ? { backgroundColor: theme.chipBg, color: theme.chipText } : undefined}
+        />
+      )}
       {selected && <SelectionOutline bounds={selected} />}
       <CameraRig
         load={framed}
@@ -108,7 +119,7 @@ function SceneContents() {
 }
 
 const Unavailable = () => (
-  <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-600">
+  <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-600 dark:text-gray-300">
     {WEBGL_UNAVAILABLE}
   </div>
 );

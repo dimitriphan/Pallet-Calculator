@@ -59,14 +59,14 @@ export function PresetMenu() {
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor={selectId} className="text-sm text-gray-700">
+      <label htmlFor={selectId} className="text-sm text-gray-700 dark:text-gray-300">
         Preset
       </label>
       <select
         id={selectId}
         value={active ? active.id : NO_PRESET}
         onChange={(e) => choose(e.target.value)}
-        className="max-w-56 rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
+        className="max-w-56 rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
       >
         <option value={NO_PRESET}>No preset</option>
         {presets.map((p) => (
@@ -76,7 +76,7 @@ export function PresetMenu() {
         ))}
       </select>
       {modified && (
-        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900">
+        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-900 dark:text-amber-100">
           Modified
         </span>
       )}

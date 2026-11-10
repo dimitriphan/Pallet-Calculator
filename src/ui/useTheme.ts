@@ -12,10 +12,10 @@ function systemMedia(): MediaQueryList | null {
 const systemIsDark = () => systemMedia()?.matches ?? false;
 
 /**
- * Applies the "dark" class on <html> for the resolved theme and returns it. While the preference
- * is "system" it follows the operating system live.
+ * The theme in effect, without touching the DOM. While the preference is "system" it follows the
+ * operating system live.
  */
-export function useTheme(): 'light' | 'dark' {
+export function useResolvedTheme(): 'light' | 'dark' {
   const pref = usePrefs((s) => s.theme);
   const subscribe = useCallback(
     (onChange: () => void) => {
@@ -27,7 +27,15 @@ export function useTheme(): 'light' | 'dark' {
     [pref],
   );
   const systemDark = useSyncExternalStore(subscribe, systemIsDark);
-  const resolved = resolveTheme(pref, systemDark);
+  return resolveTheme(pref, systemDark);
+}
+
+/**
+ * Applies the "dark" class on <html> for the resolved theme and returns it. Call it once, at the
+ * top of the app; everything else reads the theme with `useResolvedTheme`.
+ */
+export function useTheme(): 'light' | 'dark' {
+  const resolved = useResolvedTheme();
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', resolved === 'dark');

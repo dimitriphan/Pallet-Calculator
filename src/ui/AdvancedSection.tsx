@@ -3,7 +3,7 @@ export function AdvancedSection() {
   return (
     <details
       aria-disabled="true"
-      className="rounded border border-dashed border-gray-300 bg-gray-50 text-gray-500"
+      className="rounded border border-dashed border-gray-300 bg-gray-50 text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
       onToggle={(e) => {
         if (e.currentTarget.open) e.currentTarget.open = false;
       }}

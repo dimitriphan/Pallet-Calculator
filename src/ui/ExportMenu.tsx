@@ -20,7 +20,7 @@ const NO_3D = '3D view is unavailable, so PNG export is disabled.';
 const PNG_FAILED = 'PNG export failed. Try again after the 3D view has loaded.';
 
 const ITEM =
-  'block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white';
+  'block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:text-gray-100 dark:hover:bg-gray-700 dark:focus:bg-gray-700 dark:disabled:text-gray-500 dark:disabled:hover:bg-gray-800';
 
 /** Export of the selected layout as JSON, CSV, or a three-view PNG. */
 export function ExportMenu() {
@@ -145,7 +145,7 @@ export function ExportMenu() {
           aria-label="Export"
           tabIndex={-1}
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-20 mt-1 w-56 rounded border border-gray-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-20 mt-1 w-56 rounded border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
         >
           {ITEMS.map(({ format, label }) => (
             <div key={format}>
@@ -161,7 +161,7 @@ export function ExportMenu() {
                 {label}
               </button>
               {format === 'png' && hasLayout && !captureViews && (
-                <p className="px-3 pb-1.5 text-xs text-gray-600">{NO_3D}</p>
+                <p className="px-3 pb-1.5 text-xs text-gray-600 dark:text-gray-300">{NO_3D}</p>
               )}
             </div>
           ))}

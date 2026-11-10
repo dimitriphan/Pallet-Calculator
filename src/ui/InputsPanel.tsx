@@ -28,7 +28,7 @@ export function InputsPanel() {
 
   return (
     <form className="space-y-5 p-4" onSubmit={(e) => e.preventDefault()}>
-      <h2 className="text-sm font-semibold text-gray-900">Inputs</h2>
+      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Inputs</h2>
       <DimsFieldset
         legend="Pallet limitation"
         group="pallet"
@@ -38,11 +38,11 @@ export function InputsPanel() {
         onChange={setField}
         heightHint={
           <>
-            <p className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-amber-900">
+            <p className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
               A 5-inch pallet is automatically included. Available stacking height has been reduced
               by 5 inches.
             </p>
-            <p className="mt-1 tabular-nums text-gray-700">
+            <p className="mt-1 tabular-nums text-gray-700 dark:text-gray-300">
               {usable === null
                 ? 'Usable stacking height: —'
                 : `Usable stacking height: ${formatNumber(usable)} in`}
@@ -67,7 +67,7 @@ export function InputsPanel() {
         onChange={setField}
       />
       <fieldset className="space-y-2">
-        <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Packing
         </legend>
         <NumberField

@@ -32,7 +32,7 @@ export function DimsFieldset({
   const heightHintId = `${idPrefix}-${group}-height-help`;
   return (
     <fieldset className="space-y-2">
-      <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {legend}
       </legend>
       <div className="grid grid-cols-3 gap-2">
@@ -49,7 +49,7 @@ export function DimsFieldset({
         ))}
       </div>
       {heightHint && (
-        <div id={heightHintId} className="text-xs text-gray-600">
+        <div id={heightHintId} className="text-xs text-gray-600 dark:text-gray-300">
           {heightHint}
         </div>
       )}

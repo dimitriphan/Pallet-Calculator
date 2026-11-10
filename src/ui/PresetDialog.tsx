@@ -74,24 +74,24 @@ export function PresetDialog({ onClose }: { onClose(): void }) {
               }}
             />
           </div>
-          <p role="status" className="text-sm text-gray-800 empty:hidden">
+          <p role="status" className="text-sm text-gray-800 empty:hidden dark:text-gray-200">
             {importMessage}
           </p>
           {presets.length === 0 ? (
-            <p className="text-sm text-gray-600">No presets yet.</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">No presets yet.</p>
           ) : (
-            <ul className="divide-y divide-gray-200 rounded border border-gray-200">
+            <ul className="divide-y divide-gray-200 rounded border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
               {presets.map((p) => (
                 <li key={p.id} className="space-y-2 px-3 py-2">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{p.name}</p>
-                    <p className="text-xs tabular-nums text-gray-600">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.name}</p>
+                    <p className="text-xs tabular-nums text-gray-600 dark:text-gray-300">
                       Pallet {formatDims(p.pallet)} in · leeway {formatNumber(p.leeway)} in
                     </p>
                   </div>
                   {pending(p) ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm text-gray-900">{`Delete preset “${p.name}”?`}</p>
+                      <p className="text-sm text-gray-900 dark:text-gray-100">{`Delete preset “${p.name}”?`}</p>
                       <button
                         type="button"
                         onClick={() => {

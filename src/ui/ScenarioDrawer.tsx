@@ -70,9 +70,9 @@ function Drawer({ onClose }: { onClose(): void }) {
           </button>
         )}
         {scenarios.length === 0 ? (
-          <p className="text-sm text-gray-600">No saved scenarios yet.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">No saved scenarios yet.</p>
         ) : (
-          <ul className="divide-y divide-gray-200 rounded border border-gray-200">
+          <ul className="divide-y divide-gray-200 rounded border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
             {scenarios.map((s) => (
               <li key={s.id} className="space-y-2 px-3 py-2">
                 {mode.kind === 'rename' && mode.id === s.id ? (
@@ -87,15 +87,17 @@ function Drawer({ onClose }: { onClose(): void }) {
                 ) : (
                   <>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{s.name}</p>
-                      <p className="text-xs tabular-nums text-gray-600">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {s.name}
+                      </p>
+                      <p className="text-xs tabular-nums text-gray-600 dark:text-gray-300">
                         {new Date(s.savedAt).toLocaleString()}
                         {totalProducts(s) !== null && ` · ${totalProducts(s)} products`}
                       </p>
                     </div>
                     {mode.kind === 'delete' && mode.id === s.id ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm text-gray-900">{`Delete scenario “${s.name}”?`}</p>
+                        <p className="text-sm text-gray-900 dark:text-gray-100">{`Delete scenario “${s.name}”?`}</p>
                         <button
                           type="button"
                           onClick={() => {

@@ -14,24 +14,30 @@ function Workspace() {
   useAutoOptimize();
   useTheme();
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gray-100 text-gray-900">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-100 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <Header />
       <ProductionSummary />
       <div className="grid min-h-0 flex-1 grid-cols-[320px_minmax(0,1fr)_360px]">
-        <aside aria-label="Inputs" className="overflow-y-auto border-r border-gray-200 bg-white">
+        <aside
+          aria-label="Inputs"
+          className="overflow-y-auto border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+        >
           <InputsPanel />
         </aside>
         <main className="min-w-0 space-y-4 overflow-y-auto p-4">
           <div
             data-testid="scene-slot"
-            className="relative h-[420px] overflow-hidden rounded border border-gray-300 bg-white"
+            className="relative h-[420px] overflow-hidden rounded border border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-900"
           >
             <SceneSlot />
             <StaleBadge className="pointer-events-none absolute bottom-2 left-2 z-10" />
           </div>
           <LayoutComparisonTable />
         </main>
-        <aside aria-label="Details" className="overflow-y-auto border-l border-gray-200 bg-white">
+        <aside
+          aria-label="Details"
+          className="overflow-y-auto border-l border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+        >
           <DetailsPanel />
         </aside>
       </div>

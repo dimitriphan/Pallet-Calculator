@@ -13,7 +13,7 @@ const TOGGLES: [ToggleKey, string][] = [
 ];
 
 const BUTTON =
-  'rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600';
+  'rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus-visible:outline-blue-400';
 
 /** View toggles and camera buttons for the 3D workspace. */
 export function SceneToolbar({ totalProducts }: { totalProducts: number }) {
@@ -22,7 +22,7 @@ export function SceneToolbar({ totalProducts }: { totalProducts: number }) {
     scene.showProducts && totalProducts > PRODUCT_RENDER_THRESHOLD && !scene.forceProducts;
 
   return (
-    <div className="border-b border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700">
+    <div className="border-b border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {TOGGLES.map(([key, label]) => (
           <label key={key} className="flex items-center gap-1">
@@ -40,7 +40,10 @@ export function SceneToolbar({ totalProducts }: { totalProducts: number }) {
         </span>
       </div>
       {productsHidden && (
-        <p role="status" className="mt-1 flex items-center gap-2 text-amber-800">
+        <p
+          role="status"
+          className="mt-1 flex items-center gap-2 text-amber-800 dark:text-amber-300"
+        >
           {totalProducts > PRODUCT_FORCE_LIMIT ? (
             `Too many boxes to draw individually (${totalProducts.toLocaleString('en-US')}).`
           ) : (
