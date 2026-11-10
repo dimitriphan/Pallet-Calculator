@@ -1,0 +1,269 @@
+# Pallet Calculator Round 2: Design
+
+Date: 2026-11-10
+Status: awaiting review
+Builds on: `2026-11-10-pallet-calculator-design.md` (Round 1). Everything in
+that spec still holds unless this document changes it.
+
+## 1. Purpose
+
+Round 1 gave the owner a correct optimizer with a full analytical screen.
+Round 2 makes the result easy to hand to other people:
+
+- a **Basic mode** that shows staff only the answer and what they need to
+  build it,
+- a **PDF build sheet** for the team stacking the pallet,
+- a **dark mode**, and
+- a **larger 3D view** that fills the space the screen currently wastes.
+
+No optimizer, ranking, or analytics behaviour changes in this round.
+
+Success means:
+
+- A person who has never seen the tool opens it, enters three sizes, and can
+  read off the carton to use and how to stack it without meeting a score,
+  a utilization figure, or a settings field.
+- The build sheet, printed, is enough to build the pallet without the screen.
+- Every screen and dialog is legible in both themes; exports always print on
+  white.
+- The 3D view uses all the height the centre column has.
+
+## 2. Scope
+
+### In scope
+
+Basic mode, view-mode and theme preferences, dark theme, 3D view sizing,
+PDF build sheet, and the tests and documentation for them.
+
+### Not in scope (still deferred)
+
+Advanced optimization (weight, stability, pinwheel and interlocked patterns),
+unused-space overlays, unit switching, shareable links, company branding on
+exports, a target-quantity field in Basic mode.
+
+## 3. Preferences
+
+A new preferences record is kept per browser.
+
+| Preference | Values | Default |
+|---|---|---|
+| View mode | `basic`, `full` | `basic` |
+| Theme | `system`, `light`, `dark` | `system` |
+
+- Stored in Local Storage under `pc.prefs.v1`, validated on read; an
+  unreadable value falls back to the defaults without a notice.
+- Storage failures are ignored (the preference simply does not persist).
+- Both controls live in the header and take effect immediately.
+
+## 4. Basic mode
+
+### 4.1 Header
+
+App name; preset selector (choose only); Export menu with "Build sheet (PDF)"
+and "PNG"; the "Basic | Full" switch; the theme control. Hidden in Basic:
+preset "Save to preset", "Save as new", "Manage"; Scenarios; JSON and CSV
+export.
+
+### 4.2 Inputs
+
+- Pallet limitation, product box, and maximum carton, each with length,
+  width, and height, with the same validation and messages as Full view.
+- The 5-inch pallet notice and the usable stacking height line.
+- A read-only line stating the other settings in effect, built from the
+  current valid inputs, for example: "Using 0.50 in leeway, 0.25 in carton
+  walls, no overhang, fully rotatable. Change in Full view." It also states a
+  target quantity when one is set and "cartons kept upright" when that is on.
+- Desired quantity, leeway, wall thickness, overhang, rotation, keep-upright,
+  and the Advanced section are not shown. Their values are unchanged and
+  still used.
+- If one of those hidden fields is invalid (possible only if it was left
+  invalid in Full view), the line reads "A setting in Full view needs fixing
+  before results can update." and links to Full view.
+
+### 4.3 Results
+
+- The production summary bar (unchanged).
+- The 3D view, with a reduced toolbar: Products, Measurements, Reset view.
+  The other toggles keep whatever state they have.
+- A "What to build" card in place of the details tabs:
+  - **Carton:** outer size, inner size, boxes per carton, how boxes sit
+    inside ("1 × 1 × 5 along the box's length × width × height").
+  - **Stack, from the bottom:** one line per run of identical layers, for
+    example "Layer 1: 10 cartons, product length side up" and "Layers 2–7:
+    7 cartons each, product width side up".
+  - **Finished load:** length × width × height including the pallet.
+- Not shown: the layout comparison table, scores and contributions,
+  utilization and volume figures, the Explanation and Selection tabs.
+  Clicking objects in the 3D view still highlights them but opens no panel.
+- Status messages stay: "Calculating…", the out-of-date notice and badges,
+  the two "nothing fits" messages, the limited-search note, and the error
+  with Retry. In Basic they appear above the "What to build" card.
+
+### 4.4 Which layout is shown
+
+Basic mode shows the selected layout. A new calculation always selects
+layout 1, so normally that is the best answer. If a different layout is
+selected (chosen in Full view, or restored from a scenario), Basic shows it
+with the note "Showing layout N, chosen in Full view. Layout 1 fits X
+boxes." and a "Use layout 1" button.
+
+### 4.5 Switching modes
+
+Switching never recalculates and never changes inputs, the selected layout,
+presets, or scenarios. It changes only what is displayed.
+
+## 5. Dark mode
+
+- Tailwind class strategy: a `dark` class on the root element, set from the
+  theme preference; `system` follows `prefers-color-scheme` live.
+- The class is applied before first paint (inline script in `index.html`
+  reading `pc.prefs.v1`) so the page does not flash light.
+- Every surface is themed: header, summary bar, inputs, notices, tables,
+  tabs, badges, menus, dialogs, drawer, focus rings, and the scene toolbar.
+  Text contrast meets WCAG AA in both themes.
+- 3D view: background, floor grid, label and measurement chips follow the
+  theme. Pallet, carton, product, envelope, and selection colours do not
+  change, so a load looks the same in either theme.
+- Exports ignore the theme: the PNG panels and the PDF are always rendered
+  with the light scene background and dark text on white.
+
+## 6. 3D view sizing
+
+- The centre column becomes a vertical flex layout. The 3D view takes all
+  remaining height (minimum 320 px); in Full view the comparison table sits
+  below it at its natural height. If the window is too short for both, the
+  column scrolls and the 3D view stays at its minimum.
+- In Basic mode there is no table, so the 3D view fills the column.
+- The camera re-fits when the view's aspect ratio changes by more than 10%,
+  so the load stays framed after a resize or a mode switch. A user's manual
+  orbit is otherwise preserved.
+
+## 7. PDF build sheet
+
+### 7.1 Export
+
+- "Build sheet (PDF)" in the Export menu, in both modes. Disabled with the
+  same title as the other items when there is no layout.
+- Choosing it opens a small dialog with an optional "Job name" (up to 80
+  characters) and "Save PDF" / "Cancel".
+- File name `pallet-build-sheet-YYYYMMDD-HHmmss.pdf`.
+- Generated in the browser with jsPDF, loaded on demand so it adds nothing
+  to the initial page load. Text is real text; diagrams are vector drawings.
+- If the 3D view is unavailable, the sheet is still produced without the two
+  pictures and says "3D pictures unavailable". A generation failure shows the
+  notice "Build sheet could not be created. Try again." and never throws.
+
+### 7.2 Layout
+
+US Letter, portrait, 0.5 in margins, inches throughout, black text on white.
+
+**Page 1, overview**
+
+1. Title "Pallet build sheet", the job name if given, and the local date and
+   time.
+2. If the result is out of date: a boxed line "Out of date: inputs changed
+   after this calculation."
+3. The five production-summary figures.
+4. "Carton": outer size, inner size, boxes per carton, how boxes sit inside.
+5. "Pallet and load": pallet size, overhang if any, finished load length ×
+   width × height including the pallet.
+6. Two pictures side by side: the 3D view as currently framed and the side
+   view, both rendered light.
+
+**Page 2 onward, layer plan**
+
+1. One block per distinct layer pattern, in bottom-to-top order of first
+   use: a heading ("Pattern A: layers 2–7"), a top-down drawing to scale
+   showing the pallet outline, the usable footprint when there is overhang,
+   and every carton as an outlined rectangle; beside it, cartons in the
+   layer, carton footprint as placed, layer height, and which product side
+   faces up. Rotated blocks are visibly distinguishable by their proportions
+   and each block is labelled "rows × columns".
+2. A "Stacking order" table, bottom to top: layer number, pattern letter,
+   cartons, layer height, height to the top of that layer including the
+   pallet.
+3. Patterns flow onto further pages as needed; a pattern block is never
+   split across pages.
+
+**Every page footer:** the settings used (leeway, wall thickness, overhang,
+rotation, keep-upright), "Layout N of M" and "Page X of Y".
+
+### 7.3 Content model
+
+The sheet's content is produced by a pure function of the selected layout,
+the inputs it was computed from, its analytics, the job name, the stale
+flag, and a date. Rendering to PDF is a separate step. All numbers come from
+the existing analytics and position functions, so the sheet cannot disagree
+with the screen.
+
+Two layers share a pattern when they have the same vertical axis and the
+same blocks.
+
+## 8. Architecture
+
+```
+src/
+  store/prefsStore.ts          view mode and theme, persisted
+  ui/
+    ViewModeSwitch.tsx  ThemeControl.tsx  useTheme.ts
+    BasicInputs.tsx     SettingsSummary.tsx  WhatToBuildCard.tsx
+    BuildSheetDialog.tsx
+    settingsSummary.ts         pure: inputs -> sentence
+    stackDescription.ts        pure: layout -> layer-run lines
+  export/
+    buildSheet.ts              pure: content model
+    buildSheetPdf.ts           jsPDF rendering (lazy-loaded)
+  scene/sceneTheme.ts          theme -> scene colours
+```
+
+`App.tsx` chooses between the Full and Basic arrangements from the view
+mode. Existing Full-view components are reused unchanged apart from dark
+variants and the centre-column sizing. `stackDescription.ts` is shared by
+the "What to build" card and the build sheet.
+
+## 9. Error handling
+
+- Corrupt preferences: defaults.
+- jsPDF chunk fails to load, or rendering throws: the notice in 7.1; the
+  dialog closes; nothing else is affected.
+- No layout: PDF and PNG items disabled.
+- Hidden invalid setting in Basic mode: the message in 4.2.
+
+## 10. Testing
+
+- **Preferences:** defaults, persistence, corrupt value, storage failure.
+- **Pure helpers:** settings sentence for each rotation mode and for target,
+  overhang, and keep-upright combinations; stack description for single and
+  mixed stacks, including the default winner ("Layer 1: 10 cartons…",
+  "Layers 2–7: 7 cartons each…"); build-sheet content for the default winner
+  and for a layout with overhang, with every number checked against
+  analytics; pattern grouping.
+- **Basic mode UI:** first render is Basic; hidden things are absent and
+  kept things present; the settings line; the non-default-layout note and
+  "Use layout 1"; status messages; switching modes does not call the
+  optimizer or change selection.
+- **Theme:** `system` follows the media query; explicit choices set and
+  remove the root class; exports request light rendering.
+- **Layout:** the centre column gives the 3D view the remaining height in
+  both modes (checked in the browser).
+- **End to end:** a fresh visit opens in Basic; switch to Full and back;
+  dark mode applies the root class; the PDF downloads, starts with `%PDF`,
+  has at least two pages, and its text contains the job name, "Pallet build
+  sheet", and the total boxes figure. Existing end-to-end steps switch to
+  Full view first.
+- **By eye:** screenshots of Basic and Full in both themes at 1440 × 900 and
+  1280 × 720; the PDF rendered to images and read page by page.
+
+## 11. Documentation
+
+README and `docs/` are updated for Basic mode, themes, and the build sheet;
+`docs/assumptions-and-limitations.md` lists what Basic mode hides and that
+hidden settings still apply.
+
+## 12. Known limitations (Round 2)
+
+- The build sheet is US Letter, inches, English only, with no company name
+  or logo.
+- Basic mode cannot edit leeway, walls, overhang, rotation, or target
+  quantity.
+- The layer drawings show carton outlines, not individual product boxes.
