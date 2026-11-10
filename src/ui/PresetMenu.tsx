@@ -66,19 +66,21 @@ export function PresetMenu() {
       <label htmlFor={selectId} className="text-sm text-gray-700 dark:text-harbor-mist">
         Preset
       </label>
-      <select
-        id={selectId}
-        value={active ? active.id : NO_PRESET}
-        onChange={(e) => choose(e.target.value)}
-        className="max-w-56 border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:focus:border-harbor-teal-text dark:focus:ring-harbor-teal-text"
-      >
-        <option value={NO_PRESET}>No preset</option>
-        {presets.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+      <span className="focus-ticks-within flex">
+        <select
+          id={selectId}
+          value={active ? active.id : NO_PRESET}
+          onChange={(e) => choose(e.target.value)}
+          className="max-w-56 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+        >
+          <option value={NO_PRESET}>No preset</option>
+          {presets.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </span>
       {full && modified && (
         <span className="bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900 dark:bg-harbor-sand dark:text-harbor-deep">
           Modified

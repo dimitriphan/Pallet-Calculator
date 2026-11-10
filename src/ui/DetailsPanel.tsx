@@ -68,7 +68,7 @@ export function DetailsPanel() {
                 aria-controls={isActive ? `details-panel-${tab}` : undefined}
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setActive(tab)}
-                className={`-mb-px border-b-2 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-harbor-teal-text ${
+                className={`focus-ticks-inset -mb-px border-b-2 px-3 py-2 text-sm ${
                   isActive
                     ? 'border-blue-600 text-blue-700 dark:border-harbor-teal dark:text-harbor-teal-text'
                     : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-harbor-mist dark:hover:text-harbor-foam'
@@ -86,7 +86,7 @@ export function DetailsPanel() {
         id={`details-panel-${active}`}
         aria-labelledby={`details-tab-${active}`}
         tabIndex={0}
-        className="flex-1 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-harbor-teal-text"
+        className="focus-ticks-inset flex-1 p-4"
       >
         {content}
       </div>

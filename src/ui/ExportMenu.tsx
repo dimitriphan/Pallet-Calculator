@@ -30,7 +30,7 @@ const PNG_FAILED = 'PNG export failed. Try again after the 3D view has loaded.';
 const PDF_FAILED = 'Build sheet could not be created. Try again.';
 
 const ITEM =
-  'block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:text-harbor-foam dark:hover:bg-harbor-raised dark:focus:bg-harbor-raised dark:disabled:text-harbor-mist dark:disabled:hover:bg-harbor-panel';
+  'focus-ticks-inset block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:text-harbor-foam dark:hover:bg-harbor-raised dark:focus:bg-harbor-raised dark:disabled:text-harbor-mist dark:disabled:hover:bg-harbor-panel';
 
 /**
  * Export of the selected layout as a PDF build sheet, JSON, CSV, or a three-view PNG

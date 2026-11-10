@@ -24,15 +24,17 @@ export function NamePrompt({ initial, onSave, onCancel }: NamePromptProps) {
         <label htmlFor={id} className="mb-0.5 block text-xs text-gray-700 dark:text-harbor-mist">
           Name
         </label>
-        <input
-          id={id}
-          type="text"
-          value={name}
-          autoFocus
-          autoComplete="off"
-          onChange={(e) => setName(e.target.value)}
-          className="w-full border border-gray-300 px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:focus:border-harbor-teal-text dark:focus:ring-harbor-teal-text"
-        />
+        <div className="focus-ticks-within flex">
+          <input
+            id={id}
+            type="text"
+            value={name}
+            autoFocus
+            autoComplete="off"
+            onChange={(e) => setName(e.target.value)}
+            className="w-full border border-gray-300 px-2 py-1 text-sm focus:outline-none dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+          />
+        </div>
       </div>
       <button type="submit" disabled={!trimmed} className={PRIMARY_BUTTON}>
         Save

@@ -77,18 +77,20 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
         >
           Name
         </label>
-        <input
-          id={nameId}
-          type="text"
-          value={name}
-          autoComplete="off"
-          aria-invalid={nameError ? 'true' : 'false'}
-          onChange={(e) => setName(e.target.value)}
-          className={`w-full border border-gray-300 px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:bg-harbor-raised dark:text-harbor-foam dark:focus:border-harbor-teal-text dark:focus:ring-harbor-teal-text ${
-            // Light shows the name error as text only; Harbor also gives the field its coral edge.
-            nameError ? 'dark:border-l-[3px] dark:border-harbor-coral' : 'dark:border-harbor-foam'
-          }`}
-        />
+        <div className="focus-ticks-within flex">
+          <input
+            id={nameId}
+            type="text"
+            value={name}
+            autoComplete="off"
+            aria-invalid={nameError ? 'true' : 'false'}
+            onChange={(e) => setName(e.target.value)}
+            className={`w-full border border-gray-300 px-2 py-1 text-sm focus:outline-none dark:bg-harbor-raised dark:text-harbor-foam ${
+              // Light shows the name error as text only; Harbor also gives the field its coral edge.
+              nameError ? 'dark:border-l-[3px] dark:border-harbor-coral' : 'dark:border-harbor-foam'
+            }`}
+          />
+        </div>
         {nameError && (
           <p className="mt-0.5 text-xs text-red-700 dark:text-harbor-coral-text">{nameError}</p>
         )}

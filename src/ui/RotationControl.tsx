@@ -52,7 +52,7 @@ export function RotationFields({
           {MODES.map((m) => (
             <label
               key={m.value}
-              className="flex items-center gap-1.5 text-sm text-gray-800 dark:text-harbor-foam"
+              className="focus-ticks-within flex w-fit items-center gap-1.5 text-sm text-gray-800 dark:text-harbor-foam"
             >
               <input
                 type="radio"
@@ -60,7 +60,7 @@ export function RotationFields({
                 value={m.value}
                 checked={mode === m.value}
                 onChange={() => chooseMode(m.value)}
-                className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:accent-harbor-teal-fill dark:focus-visible:outline-harbor-teal-text"
+                className="h-3.5 w-3.5 accent-blue-600 dark:accent-harbor-teal-fill"
               />
               {m.label}
             </label>
@@ -81,14 +81,14 @@ export function RotationFields({
               {CODES.map((code) => (
                 <label
                   key={code}
-                  className="flex items-center gap-1.5 font-mono text-sm text-gray-800 dark:text-harbor-foam"
+                  className="focus-ticks-within flex w-fit items-center gap-1.5 font-mono text-sm text-gray-800 dark:text-harbor-foam"
                 >
                   <input
                     type="checkbox"
                     checked={custom.includes(code)}
                     onChange={() => toggleOrientation(code)}
                     aria-invalid={error ? 'true' : 'false'}
-                    className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:accent-harbor-teal-fill dark:focus-visible:outline-harbor-teal-text"
+                    className="h-3.5 w-3.5 accent-blue-600 dark:accent-harbor-teal-fill"
                   />
                   {code}
                 </label>
@@ -102,12 +102,12 @@ export function RotationFields({
           </div>
         )}
       </fieldset>
-      <label className="flex items-center gap-1.5 text-sm text-gray-800 dark:text-harbor-foam">
+      <label className="focus-ticks-within flex w-fit items-center gap-1.5 text-sm text-gray-800 dark:text-harbor-foam">
         <input
           type="checkbox"
           checked={keepUpright}
           onChange={(e) => setKeepCartonsUpright(e.target.checked)}
-          className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:accent-harbor-teal-fill dark:focus-visible:outline-harbor-teal-text"
+          className="h-3.5 w-3.5 accent-blue-600 dark:accent-harbor-teal-fill"
         />
         Keep cartons upright
       </label>

@@ -19,7 +19,10 @@ function usableHeightOf(text: string): number | null {
   return h > PALLET_HEIGHT ? h - PALLET_HEIGHT : null;
 }
 
-/** The pallet, product and maximum carton sizes, with the pallet notice; shared by both views. */
+/**
+ * The pallet, product and maximum carton sizes, with the pallet notice and a root divider
+ * between them; shared by both views.
+ */
 export function SizeFieldsets() {
   const draft = useInputs((s) => s.draft);
   const errors = useInputs((s) => (s.parsed.ok ? NO_ERRORS : s.parsed.errors));
@@ -49,6 +52,7 @@ export function SizeFieldsets() {
           </>
         }
       />
+      <div className="root-divider" aria-hidden="true" />
       <DimsFieldset
         legend="Product box"
         group="product"
@@ -57,6 +61,7 @@ export function SizeFieldsets() {
         errors={errors}
         onChange={setField}
       />
+      <div className="root-divider" aria-hidden="true" />
       <DimsFieldset
         legend="Maximum carton"
         group="maxCarton"
@@ -97,6 +102,7 @@ export function InputsPanel() {
     <form className="space-y-5 p-4" onSubmit={(e) => e.preventDefault()}>
       <h2 className="heading text-sm text-gray-900 dark:text-harbor-foam">Inputs</h2>
       <SizeFieldsets />
+      <div className="root-divider" aria-hidden="true" />
       <fieldset className="space-y-2">
         <legend className="mb-1 text-xs heading text-gray-500 dark:text-harbor-mist">
           Packing
@@ -134,6 +140,7 @@ export function InputsPanel() {
           onChange={(v) => setField('overhang', v)}
         />
       </fieldset>
+      <div className="root-divider" aria-hidden="true" />
       <RotationControl />
       <AdvancedSection />
     </form>

@@ -15,7 +15,7 @@ function visibleInBasic(errorKey: string): boolean {
 }
 
 const LINK_BUTTON =
-  'text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-harbor-teal-text dark:hover:text-harbor-teal-text dark:focus-visible:outline-harbor-teal-text';
+  'focus-ticks text-blue-700 underline underline-offset-2 hover:text-blue-900 dark:text-harbor-teal-text dark:hover:text-harbor-teal-text';
 
 /**
  * Basic mode's one line about the settings it does not show: what will be used, or that a

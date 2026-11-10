@@ -37,10 +37,8 @@ export function NumberField({
         {label}
       </label>
       <div
-        className={`flex items-center border bg-white focus-within:ring-2 dark:bg-harbor-raised ${
-          error
-            ? 'field-invalid focus-within:ring-red-200 dark:focus-within:ring-harbor-teal-text'
-            : 'border-gray-300 focus-within:border-blue-600 focus-within:ring-blue-200 dark:border-harbor-foam dark:focus-within:border-harbor-teal-text dark:focus-within:ring-harbor-teal-text'
+        className={`focus-ticks-within flex items-center border bg-white dark:bg-harbor-raised ${
+          error ? 'field-invalid' : 'border-gray-300 dark:border-harbor-foam'
         }`}
       >
         <input

@@ -100,7 +100,7 @@ export function LayoutComparisonTable() {
                     aria-current={selected ? 'true' : undefined}
                     onClick={() => select(index)}
                     onKeyDown={(e) => onKeyDown(e, index)}
-                    className={`cursor-pointer border-b border-gray-100 last:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:border-harbor-foam/40 dark:border-l-[3px] dark:focus-visible:outline-harbor-teal-text ${
+                    className={`focus-ticks-row cursor-pointer border-b border-gray-100 last:border-b-0 dark:border-harbor-foam/40 dark:border-l-[3px] ${
                       selected
                         ? 'bg-blue-50 text-blue-950 dark:border-l-harbor-green dark:bg-harbor-raised dark:font-semibold dark:text-harbor-foam'
                         : 'hover:bg-gray-50 dark:border-l-transparent dark:text-harbor-foam dark:hover:bg-harbor-raised'

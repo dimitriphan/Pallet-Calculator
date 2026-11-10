@@ -21,7 +21,7 @@ export function Notices() {
           <button
             type="button"
             onClick={() => dismiss(n.id)}
-            className="px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:text-harbor-foam dark:focus-visible:outline-harbor-teal-text"
+            className="focus-ticks px-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:text-harbor-foam"
             aria-label="Dismiss"
           >
             ×

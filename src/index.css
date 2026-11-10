@@ -5,10 +5,13 @@
 /* Native controls (selects, checkboxes, scrollbars, dialog backdrops) follow the theme. */
 :root {
   color-scheme: light;
+  /* Keyboard focus ticks: the existing focus blue in Light, teal-text in Harbor. */
+  --focus-tick: theme('colors.blue.600');
 }
 
 .harbor {
   color-scheme: dark;
+  --focus-tick: theme('colors.harbor.teal-text');
   /* Checkboxes and radios: checked boxes are teal-fill with a light mark. */
   accent-color: theme('colors.harbor.teal-fill');
 }
@@ -73,4 +76,140 @@ button {
     border-color: theme('colors.harbor.coral');
     border-left-width: 3px;
   }
+}
+
+/*
+ * Focus ticks: keyboard focus shows four 6 x 6 px open corners, 1 px stroke, 2 px outside the
+ * control; the control keeps its own border. Each corner is two solid bars painted as
+ * background layers of one pseudo-element (single-colour layers, not visual gradients).
+ *   .focus-ticks         on the focusable element itself (buttons, tabs, summaries);
+ *   .focus-ticks-inset   the same, drawn 2 px inside, where a scrolling parent would clip;
+ *   .focus-ticks-within  on the wrapper of an input, select, checkbox or radio, which
+ *                        cannot carry a pseudo-element; shown when what it holds has
+ *                        keyboard focus;
+ *   .focus-ticks-row     on a table row: the first and last cells draw the corners inside.
+ */
+@layer components {
+  .focus-ticks,
+  .focus-ticks-inset,
+  .focus-ticks-within,
+  .focus-ticks-row > :first-child,
+  .focus-ticks-row > :last-child {
+    position: relative;
+  }
+}
+
+.focus-ticks:focus-visible,
+.focus-ticks-inset:focus-visible,
+.focus-ticks-row:focus-visible,
+.focus-ticks-within :focus-visible {
+  outline: none;
+}
+
+.focus-ticks:focus-visible::after,
+.focus-ticks-inset:focus-visible::after,
+.focus-ticks-within:has(:focus-visible)::after,
+.focus-ticks-row:focus-visible > :first-child::after,
+.focus-ticks-row:focus-visible > :last-child::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--focus-tick), var(--focus-tick)) left top / 6px 1px no-repeat,
+    linear-gradient(var(--focus-tick), var(--focus-tick)) left top / 1px 6px no-repeat,
+    linear-gradient(var(--focus-tick), var(--focus-tick)) right top / 6px 1px no-repeat,
+    linear-gradient(var(--focus-tick), var(--focus-tick)) right top / 1px 6px no-repeat,
+    linear-gradient(var(--focus-tick), var(--focus-tick)) left bottom / 6px 1px no-repeat,
+    linear-gradient(var(--focus-tick), var(--focus-tick)) left bottom / 1px 6px no-repeat,
+    linear-gradient(var(--focus-tick), var(--focus-tick)) right bottom / 6px 1px no-repeat,
+    linear-gradient(var(--focus-tick), var(--focus-tick)) right bottom / 1px 6px no-repeat;
+}
+
+.focus-ticks-inset:focus-visible::after {
+  inset: 2px;
+}
+
+/* A row: the left corners in its first cell, the right corners in its last, 2 px inside. */
+.focus-ticks-row:focus-visible > :first-child::after {
+  inset: 2px auto 2px 2px;
+  width: 6px;
+  background-size:
+    6px 1px,
+    1px 6px,
+    0 0,
+    0 0,
+    6px 1px,
+    1px 6px,
+    0 0,
+    0 0;
+}
+
+.focus-ticks-row:focus-visible > :last-child::after {
+  inset: 2px 2px 2px auto;
+  width: 6px;
+  background-size:
+    0 0,
+    0 0,
+    6px 1px,
+    1px 6px,
+    0 0,
+    0 0,
+    6px 1px,
+    1px 6px;
+}
+
+/*
+ * Sprout: the calculation progress line. Its visible length sweeps from 30% to 100% and back
+ * over 1.6 s, growing out of the leaf tips; with reduced motion it stands still, fully drawn.
+ */
+.sprout-line {
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 0;
+  animation: sprout-sweep 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes sprout-sweep {
+  from {
+    stroke-dashoffset: 70;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprout-line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/*
+ * Root divider: a 1 px line at 22% opacity across the content width, with one 7 px fork
+ * rising 4 px near its right end. #595959 in Light, foam in Harbor.
+ */
+.root-divider {
+  position: relative;
+  height: 5px;
+  border-bottom: 1px solid #595959;
+  opacity: 0.22;
+}
+
+.root-divider::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  width: 7px;
+  height: 4px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4' shape-rendering='crispEdges' fill='%23595959'%3E%3Cpath d='M0 3h2v1H0zM2 2h2v1H2zM4 1h2v1H4zM6 0h1v1H6z'/%3E%3C/svg%3E");
+}
+
+.harbor .root-divider {
+  border-bottom-color: theme('colors.harbor.foam');
+}
+
+.harbor .root-divider::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4' shape-rendering='crispEdges' fill='%23E9F1EE'%3E%3Cpath d='M0 3h2v1H0zM2 2h2v1H2zM4 1h2v1H4zM6 0h1v1H6z'/%3E%3C/svg%3E");
 }

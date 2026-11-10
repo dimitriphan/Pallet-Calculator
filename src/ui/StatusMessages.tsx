@@ -1,10 +1,13 @@
 import { emptyMessage } from './emptyMessage';
+import { SproutProgress } from './SproutProgress';
 import { useResults } from './StoreContext';
 
 interface StatusLine {
   key: string;
   text: string;
   tone: string;
+  /** Shows the sprout progress line right after the text. */
+  progress?: boolean;
 }
 
 /** What the status area would show right now; shared so callers can avoid repeating it. */
@@ -28,6 +31,7 @@ export function useStatusContent(): {
       key: 'running',
       text: 'Calculating…',
       tone: 'text-gray-600 dark:text-harbor-foam',
+      progress: true,
     });
   // After a failed run the error (with Retry) explains why the result is out of date.
   if (stale && status !== 'error')
@@ -68,15 +72,16 @@ export function StatusMessages() {
             <button
               type="button"
               onClick={retry}
-              className="border border-red-300 bg-white px-2 py-0.5 text-xs hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-600 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline dark:focus-visible:outline-harbor-teal-text"
+              className="focus-ticks border border-red-300 bg-white px-2 py-0.5 text-xs hover:bg-red-100 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline"
             >
               Retry
             </button>
           </div>
         )}
         {lines.map((l) => (
-          <p key={l.key} className={l.tone}>
+          <p key={l.key} className={l.progress ? `flex items-center gap-2 ${l.tone}` : l.tone}>
             {l.text}
+            {l.progress && <SproutProgress />}
           </p>
         ))}
       </div>

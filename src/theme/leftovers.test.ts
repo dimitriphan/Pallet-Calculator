@@ -29,6 +29,30 @@ const literalsOf = (text: string) => text.match(/"[^"\n]*"|'[^'\n]*'|`[^`]*`/g) 
 const offendersBy = (match: (text: string) => string[]) =>
   components.flatMap(([path, text]) => match(text).map((hit) => `${path}: ${hit}`));
 
+describe('focus ticks only', () => {
+  it('no ring utility is left', () => {
+    const rings = (text: string) =>
+      tokensOf(text).filter((token) => /(?:^|:)ring(?:-|$)/.test(token));
+    expect(offendersBy(rings)).toEqual([]);
+  });
+
+  it('no focus state changes a border', () => {
+    const borders = (text: string) =>
+      tokensOf(text).filter((token) => /(?:^|:)focus(?:-visible|-within)?:border-/.test(token));
+    expect(offendersBy(borders)).toEqual([]);
+  });
+
+  it('no focus state draws a coloured or sized outline', () => {
+    const outlines = (text: string) =>
+      tokensOf(text).filter(
+        (token) =>
+          /(?:^|:)focus(?:-visible|-within)?:-?outline/.test(token) &&
+          !/:outline-none$/.test(token),
+      );
+    expect(offendersBy(outlines)).toEqual([]);
+  });
+});
+
 describe('Harbor colours', () => {
   it('no dark: utility uses a default Tailwind palette colour', () => {
     const OLD =

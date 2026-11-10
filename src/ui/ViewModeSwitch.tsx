@@ -61,7 +61,7 @@ export function ViewModeSwitch() {
             tabIndex={selected ? 0 : -1}
             onClick={() => choose(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-harbor-teal-text ${
+            className={`focus-ticks px-3 py-1 text-sm ${
               selected
                 ? 'bg-blue-600 text-white dark:bg-harbor-teal-fill dark:text-harbor-foam'
                 : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline'

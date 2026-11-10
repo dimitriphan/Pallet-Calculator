@@ -35,7 +35,7 @@ export function SceneSlot({ load = loadPalletScene }: { load?: () => Promise<Sce
       <button
         type="button"
         onClick={retry}
-        className="border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline dark:focus-visible:outline-harbor-teal-text"
+        className="focus-ticks border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline"
       >
         Retry
       </button>

@@ -68,7 +68,7 @@ export function WhatToBuildCard() {
             <button
               type="button"
               onClick={showBest}
-              className="border border-blue-300 bg-white px-2 py-1 text-sm text-blue-800 hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline dark:focus-visible:outline-harbor-teal-text"
+              className="focus-ticks border border-blue-300 bg-white px-2 py-1 text-sm text-blue-800 hover:bg-blue-100 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline"
             >
               Use layout 1
             </button>
@@ -86,6 +86,7 @@ export function WhatToBuildCard() {
             ))}
           </dl>
         </Part>
+        <div className="root-divider" aria-hidden="true" />
         <Part title="Stack, from the bottom">
           {/* role="list" keeps list semantics in Safari, which drops them with list-style none. */}
           <ol role="list" className="space-y-1.5">
@@ -99,6 +100,7 @@ export function WhatToBuildCard() {
             ))}
           </ol>
         </Part>
+        <div className="root-divider" aria-hidden="true" />
         <Part title="Finished load">
           <p className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
             {`${formatNumber(p.loadLength)} × ${formatNumber(p.loadWidth)} × ${formatNumber(p.totalLoadHeight)} in (including pallet)`}
