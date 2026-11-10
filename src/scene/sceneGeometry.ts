@@ -39,6 +39,12 @@ export function palletParts(length: number, width: number): PalletPart[] {
 const DIM_OFFSET = 6;
 const DIM_TICK = 2;
 
+export interface DimensionLineOptions {
+  offset?: number;
+  tick?: number;
+  clearOf?: SceneBounds;
+}
+
 export interface DimensionLines {
   /** Pairs of points, each pair one line segment. */
   segments: Vec3[];
@@ -47,17 +53,18 @@ export interface DimensionLines {
 
 /**
  * Dimension lines with end ticks for the overall length (along X, in front), width (along Z,
- * at the right) and height (up the front-right corner) of the bounds.
+ * at the right) and height (up the front-right corner) of the bounds. With `clearOf` (bounds
+ * that contain `b`, such as the load with its pallet) the lines stand off those bounds instead,
+ * so they never run through the pallet, while still measuring `b`.
  */
 export function dimensionLines(
   b: SceneBounds,
-  offset = DIM_OFFSET,
-  tick = DIM_TICK,
+  { offset = DIM_OFFSET, tick = DIM_TICK, clearOf = b }: DimensionLineOptions = {},
 ): DimensionLines {
   const [x0, y0, z0] = b.min;
   const [x1, y1, z1] = b.max;
-  const front = z1 + offset;
-  const right = x1 + offset;
+  const front = Math.max(z1, clearOf.max[2]) + offset;
+  const right = Math.max(x1, clearOf.max[0]) + offset;
   // prettier-ignore
   const segments: Vec3[] = [
     // Length along X, ticks along Z.
@@ -84,7 +91,10 @@ export function dimensionLines(
   };
 }
 
-/** The bounds grown to hold the dimension lines, ticks and label anchors drawn for them. */
+/**
+ * The bounds grown to hold the dimension lines, ticks and label anchors drawn for them
+ * (or for any bounds inside them drawn with `clearOf` set to them).
+ */
 export function withMeasurements(b: SceneBounds): SceneBounds {
   const reach = DIM_OFFSET + DIM_TICK * 2;
   return { min: [...b.min], max: [b.max[0] + reach, b.max[1], b.max[2] + reach] };

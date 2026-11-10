@@ -84,6 +84,27 @@ export function loadBounds(l: Layout | null, i: Inputs | null): SceneBounds {
   return { min, max };
 }
 
+/**
+ * What the measurement lines measure: the cartons' extent along X and Z (the load itself, as
+ * the analytics report it) and from the floor to the top of the load along Y, so the height
+ * equals the total load height. The pallet alone when there is no layout.
+ */
+export function measuredBounds(l: Layout | null, i: Inputs | null): SceneBounds {
+  const cartons = l && i ? cartonPlacements(l, i) : [];
+  if (cartons.length === 0 || !i) return palletBounds(i);
+  const min: Vec3 = [Infinity, 0, Infinity];
+  const max: Vec3 = [-Infinity, PALLET_HEIGHT, -Infinity];
+  for (const c of cartons) {
+    const b = toSceneBounds(c, i);
+    for (const k of [0, 2] as const) {
+      min[k] = Math.min(min[k], b.min[k]);
+      max[k] = Math.max(max[k], b.max[k]);
+    }
+    max[1] = Math.max(max[1], b.max[1]);
+  }
+  return { min, max };
+}
+
 /** The 12 corner pairs of a box, as indices into its 8 corners (bit 0: x, bit 1: y, bit 2: z). */
 // prettier-ignore
 const EDGES: [number, number][] = [

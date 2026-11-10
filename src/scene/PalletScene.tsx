@@ -20,7 +20,7 @@ import { WEBGL_UNAVAILABLE } from './webgl';
 
 /** Everything inside the canvas, drawn from the selected layout and the inputs it came from. */
 function SceneContents() {
-  const { layout, inputs, cartons, bounds } = useSceneData();
+  const { layout, inputs, cartons, bounds, measured } = useSceneData();
   const s = useScene((st) => st);
   const invalidate = useThree((st) => st.invalidate);
 
@@ -93,7 +93,7 @@ function SceneContents() {
       {layout && inputs && s.showLabels && cartons[0] && (
         <Labels layout={layout} inputs={inputs} first={cartons[0]} />
       )}
-      {s.showMeasurements && inputs && <Measurements bounds={bounds} />}
+      {s.showMeasurements && inputs && <Measurements bounds={measured} clear={bounds} />}
       {selected && <SelectionOutline bounds={selected} />}
       <CameraRig
         load={framed}

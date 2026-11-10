@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs, Layout } from '../domain/types';
 import { cartonPlacements } from '../engine/packing/positions';
+import { computeAnalytics } from '../engine/analytics/analytics';
+import { optimize } from '../engine/optimize';
+import { formatNumber } from '../engine/units/units';
 import { dimensionLines, palletParts, selectionBounds, withMeasurements } from './sceneGeometry';
+import { loadBounds, measuredBounds, type SceneBounds } from './transforms';
 
 const I: Inputs = {
   ...DEFAULT_INPUTS,
@@ -106,5 +110,40 @@ describe('selectionBounds', () => {
     });
     expect(selectionBounds(null, LAYOUT, I, cartons)).toBeNull();
     expect(selectionBounds({ kind: 'carton', cartonIndex: 9 }, LAYOUT, I, cartons)).toBeNull();
+  });
+});
+
+describe('measurement lines agree with the analytics', () => {
+  it.each([0, 2])('labels the load length, width and height (overhang %s)', (overhang) => {
+    const inputs = { ...DEFAULT_INPUTS, overhang };
+    const layout = optimize(inputs).layouts[0]!.layout;
+    const a = computeAnalytics(layout, inputs);
+    const d = dimensionLines(measuredBounds(layout, inputs), {
+      clearOf: loadBounds(layout, inputs),
+    });
+    expect(d.labels.map((l) => l.text)).toEqual([
+      `${formatNumber(a.pallet.loadLength)} in`,
+      `${formatNumber(a.pallet.loadWidth)} in`,
+      `${formatNumber(a.pallet.totalLoadHeight)} in`,
+    ]);
+  });
+
+  it('measures the load from the floor and draws the lines clear of a larger pallet', () => {
+    const measured = { min: [-20, 0, -18], max: [20, 40, 18] } as SceneBounds;
+    const clear = { min: [-25, 0, -21], max: [25, 40, 21] } as SceneBounds;
+    const d = dimensionLines(measured, { clearOf: clear });
+    expect(d.labels.map((l) => l.text)).toEqual(['40.00 in', '36.00 in', '40.00 in']);
+    const grown = withMeasurements(clear);
+    for (const p of [...d.segments, ...d.labels.map((l) => l.position)]) {
+      expect(p[0] <= -25 || p[0] >= 25 || p[2] <= -21 || p[2] >= 21).toBe(true);
+      for (let k = 0; k < 3; k++) {
+        expect(p[k]).toBeGreaterThanOrEqual(grown.min[k]!);
+        expect(p[k]).toBeLessThanOrEqual(grown.max[k]!);
+      }
+    }
+  });
+
+  it('measures the pallet alone when there is no layout', () => {
+    expect(measuredBounds(null, I)).toEqual({ min: [-20, 0, -20], max: [20, 5, 20] });
   });
 });

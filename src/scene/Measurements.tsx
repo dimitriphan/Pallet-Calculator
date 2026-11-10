@@ -5,9 +5,12 @@ import type { SceneBounds } from './transforms';
 
 const INK = '#111827';
 
-/** Overall length, width and height of the load including the pallet. */
-export function Measurements({ bounds }: { bounds: SceneBounds }) {
-  const d = useMemo(() => dimensionLines(bounds), [bounds]);
+/**
+ * Length and width of the load (the cartons) and its height from the floor, drawn clear of
+ * `clear` (the load with its pallet).
+ */
+export function Measurements({ bounds, clear }: { bounds: SceneBounds; clear: SceneBounds }) {
+  const d = useMemo(() => dimensionLines(bounds, { clearOf: clear }), [bounds, clear]);
   return (
     <>
       <Line points={d.segments} segments color={INK} lineWidth={1.5} />
