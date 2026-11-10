@@ -56,6 +56,9 @@ describe('ProductionSummary', () => {
     // The old result stays on screen, dimmed.
     expect(summaryTile('Total boxes per pallet')).toBe('260');
     expect(summary.querySelector('dl')).toHaveClass('opacity-50');
+    // Harbor never fades text: the values turn mist instead.
+    expect(summary.querySelector('dl')).toHaveClass('dark:opacity-100');
+    expect(summary.querySelector('dd')).toHaveClass('dark:text-harbor-mist');
 
     await user.clear(length);
     await user.type(length, '50');

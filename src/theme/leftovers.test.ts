@@ -56,7 +56,7 @@ describe('focus ticks only', () => {
 describe('Harbor colours', () => {
   it('no dark: utility uses a default Tailwind palette colour', () => {
     const OLD =
-      /dark:(?:[a-z-]+:)*(?:bg|text|border|ring|divide|outline|placeholder|accent|fill|stroke|decoration|from|via|to)-(?:gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d{2,3})?\b/g;
+      /dark:(?:[a-z-]+:)*(?:bg|text|border|ring|divide|outline|placeholder|accent|fill|stroke|decoration|from|via|to)(?:-[xytrblse])?-(?:gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d{2,3})?\b/g;
     expect(offendersBy((text) => text.match(OLD) ?? [])).toEqual([]);
   });
 
@@ -72,6 +72,20 @@ describe('Harbor colours', () => {
     const dimmed = (text: string) =>
       tokensOf(text).filter((token) => /(?:^|:)text-harbor-[a-z-]+\/\d+/.test(token));
     expect(offendersBy(dimmed)).toEqual([]);
+  });
+
+  it('Harbor text is never faded with an opacity utility', () => {
+    // Class strings that may fade in Light but not in Harbor; none are exempt today.
+    const EXEMPT: string[] = [];
+    const faded = ([path, text]: [string, string]) =>
+      path === '/src/App.tsx' || path.startsWith('/src/ui/')
+        ? literalsOf(text)
+            .filter((literal) => /(?:^|[\s:'])opacity-(?!100\b)\d+/.test(literal))
+            .filter((literal) => !/(?:^|\s)dark:opacity-100\b/.test(literal))
+            .filter((literal) => !EXEMPT.includes(literal))
+            .map((literal) => `${path}: ${literal}`)
+        : [];
+    expect(components.flatMap(faded)).toEqual([]);
   });
 
   it('green is never text on a raised background', () => {

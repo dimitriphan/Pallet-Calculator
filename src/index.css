@@ -44,8 +44,8 @@ button {
    */
   .bracket {
     position: relative;
-    border-top: 1px solid theme('colors.gray.300');
-    border-left: 1px solid theme('colors.gray.300');
+    border-top: 1px solid theme('colors.gray.200');
+    border-left: 1px solid theme('colors.gray.200');
   }
 
   .bracket::after {
@@ -55,7 +55,7 @@ button {
     right: 0;
     width: 1px;
     height: 6px;
-    background-color: theme('colors.gray.300');
+    background-color: theme('colors.gray.200');
     pointer-events: none;
   }
 
@@ -212,4 +212,72 @@ button {
 
 .harbor .root-divider::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4' shape-rendering='crispEdges' fill='%23E9F1EE'%3E%3Cpath d='M0 3h2v1H0zM2 2h2v1H2zM4 1h2v1H4zM6 0h1v1H6z'/%3E%3C/svg%3E");
+}
+
+/*
+ * Mascot, working pose: three stacked frames switched on and off (no fades) in the order
+ * 1-2-3-2, 180 ms each, a 720 ms loop. With reduced motion nothing runs and only frame 2 shows.
+ */
+.mascot-frame {
+  opacity: 0;
+  animation: 0.72s steps(1, end) infinite;
+}
+
+.mascot-frame-1 {
+  animation-name: mascot-frame-1;
+}
+
+.mascot-frame-2 {
+  animation-name: mascot-frame-2;
+}
+
+.mascot-frame-3 {
+  animation-name: mascot-frame-3;
+}
+
+@keyframes mascot-frame-1 {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0;
+  }
+}
+
+@keyframes mascot-frame-2 {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  75% {
+    opacity: 1;
+  }
+}
+
+@keyframes mascot-frame-3 {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-frame {
+    animation: none;
+    opacity: 0;
+  }
+
+  .mascot-frame-2 {
+    opacity: 1;
+  }
 }
