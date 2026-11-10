@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { unitLabel, useUnit, validationMessage } from './format';
+import { unitLabel, validationMessage } from './format';
+import { useUnit } from './useUnit';
 
 interface NumberFieldProps {
   id: string;

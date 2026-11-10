@@ -8,7 +8,7 @@ import { loadPrintMascot } from '../export/mascotImage';
 import { composePng } from '../export/png';
 import { useNoticesStore } from '../store/noticesStore';
 import { BuildSheetDialog } from './BuildSheetDialog';
-import { useUnit } from './format';
+import { useUnit } from './useUnit';
 import { BUTTON } from './ModalDialog';
 import type { ViewMode } from '../store/prefsStore';
 import { usePrefs, useResults, useScene } from './StoreContext';

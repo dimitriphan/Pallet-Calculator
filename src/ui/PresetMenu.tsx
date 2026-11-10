@@ -77,8 +77,11 @@ export function PresetMenu() {
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor={selectId} className="text-sm text-gray-700 dark:text-harbor-mist">
+    <div className="flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
+      <label
+        htmlFor={selectId}
+        className="sr-only text-sm text-gray-700 xl:not-sr-only dark:text-harbor-mist"
+      >
         Preset
       </label>
       <span className="focus-ticks-within flex">
@@ -86,7 +89,7 @@ export function PresetMenu() {
           id={selectId}
           value={active ? active.id : NO_PRESET}
           onChange={(e) => choose(e.target.value)}
-          className="max-w-32 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none xl:max-w-56 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+          className="max-w-24 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none xl:max-w-32 2xl:max-w-56 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
         >
           <option value={NO_PRESET}>No preset</option>
           {presets.map((p) => (

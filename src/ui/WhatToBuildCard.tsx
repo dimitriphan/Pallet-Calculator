@@ -1,7 +1,8 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
 import { describeRun, stackRuns } from '../engine/analytics/stack';
-import { dimsText, useUnit } from './format';
+import { dimsText } from './format';
+import { useUnit } from './useUnit';
 import { Mascot } from './Mascot';
 import { StaleBadge } from './StaleBadge';
 import { useStatusContent } from './StatusMessages';

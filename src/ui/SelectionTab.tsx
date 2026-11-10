@@ -4,7 +4,8 @@ import type { Analytics } from '../engine/analytics/analytics';
 import { cartonPlacements, productsInCarton } from '../engine/packing/positions';
 import type { Selection } from '../store/sceneStore';
 import { DetailRows } from './DetailRows';
-import { dimsText, fmtPct, lengthText, useUnit } from './format';
+import { dimsText, fmtPct, lengthText } from './format';
+import { useUnit } from './useUnit';
 
 const NOTHING = 'Click an object in the 3D view to see its details.';
 

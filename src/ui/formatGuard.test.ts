@@ -92,4 +92,17 @@ describe('display formatting guard', () => {
     );
     expect(offenders).toEqual([]);
   });
+
+  it('keeps the formatters, exports and scene geometry free of the stores', () => {
+    const pure = Object.entries(sources).filter(
+      ([path]) =>
+        path === '/src/ui/format.ts' ||
+        path === '/src/scene/sceneGeometry.ts' ||
+        (path.startsWith('/src/export/') && !/\.test\.tsx?$/.test(path)),
+    );
+    expect(pure.length).toBeGreaterThan(5);
+    const storeImport =
+      /^import (?!type )[^;]*from '[./]*(?:ui\/)?(?:StoreContext|useUnit|store\/[^']+)'/m;
+    expect(pure.filter(([, text]) => storeImport.test(text)).map(([p]) => p)).toEqual([]);
+  });
 });

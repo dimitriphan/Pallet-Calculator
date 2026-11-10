@@ -1,4 +1,4 @@
-import { useUnit } from './format';
+import { useUnit } from './useUnit';
 import { settingsSummary } from './settingsSummary';
 import { useInputs, useResults, useStores } from './StoreContext';
 import { focusViewModeRadio } from './ViewModeSwitch';

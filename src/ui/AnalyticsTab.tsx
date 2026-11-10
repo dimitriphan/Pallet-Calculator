@@ -5,7 +5,8 @@ import {
   type LayerOrientation,
 } from '../engine/analytics/analytics';
 import { DetailRows } from './DetailRows';
-import { areaText, dimsText, fmtPct, lengthText, pairText, useUnit, volumeText } from './format';
+import { areaText, dimsText, fmtPct, lengthText, pairText, volumeText } from './format';
+import { useUnit } from './useUnit';
 
 const TARGET_LABEL = {
   met: 'Target met',

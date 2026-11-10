@@ -240,21 +240,45 @@ test('the header fits one 48 px row in Full view at 1100 x 600', async ({ page }
   const banner = page.getByRole('banner');
   await expect(banner.getByRole('heading', { name: 'Pallet Calculator' })).toBeVisible();
 
-  for (const theme of ['harbor', 'light']) {
-    await page.getByLabel('Theme', { exact: true }).selectOption(theme);
-    const result = await banner.evaluate((header) => {
-      const box = header.getBoundingClientRect();
-      const h1 = header.querySelector('h1') as HTMLElement;
-      const lineHeight = parseFloat(getComputedStyle(h1).lineHeight);
-      const outside = [...header.querySelectorAll('button, select, label, h1, [data-mascot-box]')]
-        .filter((el) => {
-          const r = el.getBoundingClientRect();
-          return r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5 || r.right > box.right + 0.5;
-        })
-        .map((el) => `${el.tagName} ${el.textContent ?? ''}`.trim());
-      return { outside, h1Height: h1.getBoundingClientRect().height, lineHeight };
-    });
-    expect(result.outside, theme).toEqual([]);
-    expect(result.h1Height, theme).toBeLessThan(result.lineHeight * 1.6);
-  }
+  const expectOneRow = async (state: string) => {
+    for (const theme of ['harbor', 'light']) {
+      await page.getByLabel('Theme', { exact: true }).selectOption(theme);
+      const result = await banner.evaluate((header) => {
+        const box = header.getBoundingClientRect();
+        const h1 = header.querySelector('h1') as HTMLElement;
+        const lineHeight = parseFloat(getComputedStyle(h1).lineHeight);
+        const outside = [...header.querySelectorAll('button, select, label, h1, [data-mascot-box]')]
+          .filter((el) => {
+            const r = el.getBoundingClientRect();
+            return (
+              r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5 || r.right > box.right + 0.5
+            );
+          })
+          .map((el) => `${el.tagName} ${el.textContent ?? ''}`.trim());
+        return {
+          outside,
+          h1Height: h1.getBoundingClientRect().height,
+          lineHeight,
+          overflow: header.scrollWidth - header.clientWidth,
+          pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
+        };
+      });
+      expect(result.outside, `${state}, ${theme}`).toEqual([]);
+      expect(result.h1Height, `${state}, ${theme}`).toBeLessThan(result.lineHeight * 1.6);
+      expect(result.overflow, `${state}, ${theme}`).toBe(0);
+      expect(result.pageOverflow, `${state}, ${theme}`).toBe(0);
+    }
+  };
+
+  await expectOneRow('default');
+
+  // A chosen preset whose settings were then changed shows the most header controls:
+  // "Modified", "Save to preset", "Save as new" and "Manage".
+  await page
+    .getByLabel('Preset', { exact: true })
+    .selectOption({ label: 'Standard GMA 48 × 40 × 72' });
+  await page.getByRole('textbox', { name: 'Box leeway' }).fill('1');
+  await expect(banner.getByText('Modified')).toBeVisible();
+  await expect(banner.getByRole('button', { name: 'Save to preset' })).toBeVisible();
+  await expectOneRow('modified preset');
 });

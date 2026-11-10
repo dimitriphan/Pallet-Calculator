@@ -71,8 +71,8 @@ function fromCanonical(kind: FieldKind, value: number, unit: Unit): number {
 }
 
 /**
- * The text the store writes for a canonical value: the display precision of the unit, without
- * trailing zeros (so the defaults read "50" and "0.5" in inches, as they always have).
+ * The text a canonical value shows as in a unit other than the one it was written or typed in:
+ * the display precision of that unit, without trailing zeros ("127", not "127.0").
  */
 export function fieldText(kind: FieldKind, canonical: number, unit: Unit): string {
   const decimals =
@@ -87,9 +87,19 @@ export function typedOrigin(kind: FieldKind, text: string, unit: Unit): FieldOri
   return { text, unit, canonical: typeof n === 'number' ? toCanonical(kind, n, unit) : null };
 }
 
-/** Origin of a stored canonical value the store writes in `unit`. */
-export function writtenOrigin(kind: FieldKind, canonical: number, unit: Unit): FieldOrigin {
-  return { text: fieldText(kind, canonical, unit), unit, canonical };
+/**
+ * Unit whose text is the canonical value itself: inches for lengths and, since `in` goes with
+ * pounds, also for weights.
+ */
+const CANONICAL_UNIT: Unit = 'in';
+
+/**
+ * Origin of a stored canonical value (inputs, presets, scenarios, defaults): the exact value as
+ * text in the canonical unit, as `draftFromInputs` writes it. Shown in another unit it is
+ * rounded; shown in inches it is exactly what was stored ("0.125", never "0.13").
+ */
+export function writtenOrigin(canonical: number): FieldOrigin {
+  return { text: String(canonical), unit: CANONICAL_UNIT, canonical };
 }
 
 /** The text the store would show for an origin in `unit`. */
@@ -184,9 +194,9 @@ export function draftInUnit(
   for (const path of CONVERTED_PATHS) {
     const value = readPath(inputs, path);
     if (typeof value !== 'number') continue;
-    const o = writtenOrigin(NUMERIC_FIELDS[path], value, unit);
+    const o = writtenOrigin(value);
     origins[path] = o;
-    draft = withDraftText(draft, path, o.text);
+    draft = withDraftText(draft, path, originText(NUMERIC_FIELDS[path], o, unit));
   }
   return { draft, origins };
 }

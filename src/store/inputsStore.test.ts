@@ -328,4 +328,77 @@ describe('inputsStore units', () => {
     const s = createInputsStore(storage).getState();
     expect(s.parsed).toEqual({ ok: true, inputs: DEFAULT_INPUTS });
   });
+
+  describe('values the store writes keep their exact inch text', () => {
+    const FINE: Inputs = {
+      ...DEFAULT_INPUTS,
+      pallet: { length: 48.125, width: 40, height: 72 },
+      wallThickness: 0.125,
+      leeway: 0.0625,
+    };
+    const fineFields = (): Omit<Inputs, 'product'> =>
+      Object.fromEntries(Object.entries(FINE).filter(([k]) => k !== 'product')) as Omit<
+        Inputs,
+        'product'
+      >;
+
+    it('replaceInputs in inches writes String(value), as main did', () => {
+      const store = fresh();
+      store.getState().replaceInputs(FINE);
+      const d = store.getState().draft;
+      expect(d.pallet.length).toBe('48.125');
+      expect(d.wallThickness).toBe('0.125');
+      expect(d.leeway).toBe('0.0625');
+      expect(d).toEqual(draftFromInputs(FINE));
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: FINE });
+    });
+
+    it('applyPreset in inches writes the exact text', () => {
+      const store = fresh();
+      store.getState().applyPreset(fineFields());
+      const d = store.getState().draft;
+      expect([d.pallet.length, d.wallThickness, d.leeway]).toEqual(['48.125', '0.125', '0.0625']);
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: FINE });
+    });
+
+    it('keeps the exact text across a reload', () => {
+      const storage = new FakeStorage();
+      createInputsStore(storage).getState().replaceInputs(FINE);
+      const s = createInputsStore(storage).getState();
+      expect([s.draft.pallet.length, s.draft.wallThickness, s.draft.leeway]).toEqual([
+        '48.125',
+        '0.125',
+        '0.0625',
+      ]);
+      expect(s.parsed).toEqual({ ok: true, inputs: FINE });
+    });
+
+    it('rounds in cm and restores the exact inch text on the way back', () => {
+      const store = fresh();
+      store.getState().replaceInputs(FINE);
+      store.getState().setUnit('cm');
+      const d = store.getState().draft;
+      expect([d.pallet.length, d.wallThickness, d.leeway]).toEqual(['122.2', '0.3', '0.2']);
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: FINE });
+      store.getState().setUnit('in');
+      expect(store.getState().draft).toEqual(draftFromInputs(FINE));
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: FINE });
+    });
+
+    it('a value written while in cm shows its exact inch text after switching to inches', () => {
+      const store = fresh();
+      store.getState().setUnit('mm');
+      store.getState().replaceInputs(FINE);
+      expect(store.getState().draft.wallThickness).toBe('3');
+      store.getState().setUnit('in');
+      expect(store.getState().draft.wallThickness).toBe('0.125');
+    });
+
+    it('retyping the shown inch text keeps the value', () => {
+      const store = fresh();
+      store.getState().replaceInputs(FINE);
+      store.getState().setField('wallThickness', store.getState().draft.wallThickness);
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: FINE });
+    });
+  });
 });

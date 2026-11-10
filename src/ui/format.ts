@@ -21,7 +21,6 @@ import {
   type Unit,
   type WeightUnit,
 } from '../engine/units/units';
-import { useInputs } from './StoreContext';
 
 export {
   areaLabel,
@@ -36,11 +35,6 @@ export {
   weightUnitFor,
 };
 export type { Unit, WeightUnit };
-
-/** The unit the workspace is shown in. */
-export function useUnit(): Unit {
-  return useInputs((s) => s.unit);
-}
 
 /** The short label of a length unit, as used after numbers and in column titles. */
 export function unitLabel(unit: Unit): Unit {

@@ -2,7 +2,7 @@ import { Grid } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { PRODUCT_FORCE_LIMIT, PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
-import { useUnit } from '../ui/format';
+import { useUnit } from '../ui/useUnit';
 import { useScene, useStores } from '../ui/StoreContext';
 import { useResolvedTheme } from '../ui/useTheme';
 import { CameraRig } from './CameraRig';

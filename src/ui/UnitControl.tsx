@@ -1,7 +1,7 @@
 import { useEffect, useId } from 'react';
 import type { Unit } from '../engine/units/units';
 import { useStores } from './StoreContext';
-import { useUnit } from './format';
+import { useUnit } from './useUnit';
 
 const OPTIONS: Unit[] = ['in', 'cm', 'mm'];
 
@@ -19,7 +19,10 @@ export function UnitControl() {
   };
   return (
     <div className="flex items-center gap-1 xl:gap-2">
-      <label htmlFor={id} className="text-sm text-gray-700 dark:text-harbor-mist">
+      <label
+        htmlFor={id}
+        className="sr-only text-sm text-gray-700 xl:not-sr-only dark:text-harbor-mist"
+      >
         Units
       </label>
       <span className="focus-ticks-within flex">
@@ -27,7 +30,7 @@ export function UnitControl() {
           id={id}
           value={unit}
           onChange={(e) => choose(e.target.value as Unit)}
-          className="border border-gray-300 bg-white px-1 py-1 text-sm focus:outline-none xl:px-2 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+          className="border border-gray-300 bg-white px-1 py-1 text-sm focus:outline-none 2xl:px-2 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
         >
           {OPTIONS.map((u) => (
             <option key={u} value={u}>

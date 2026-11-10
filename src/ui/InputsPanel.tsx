@@ -4,7 +4,8 @@ import { AdvancedSection } from './AdvancedSection';
 import { DimsFieldset } from './DimsFieldset';
 import { NumberField } from './NumberField';
 import { RotationControl } from './RotationControl';
-import { lengthText, palletNotice, useUnit } from './format';
+import { lengthText, palletNotice } from './format';
+import { useUnit } from './useUnit';
 import { useInputs } from './StoreContext';
 
 const NO_ERRORS: Record<string, string> = {};

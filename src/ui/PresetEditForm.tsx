@@ -11,7 +11,7 @@ import {
   withDraftText,
 } from '../store/unitFields';
 import { DimsFieldset } from './DimsFieldset';
-import { useUnit } from './format';
+import { useUnit } from './useUnit';
 import { BUTTON, PRIMARY_BUTTON } from './ModalDialog';
 import { NumberField } from './NumberField';
 import { presetFieldsOf } from './presetFields';

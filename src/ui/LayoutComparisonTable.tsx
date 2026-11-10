@@ -10,10 +10,10 @@ import {
   formatDims,
   formatVolume,
   unitLabel,
-  useUnit,
   volumeLabel,
   withUnit,
 } from './format';
+import { useUnit } from './useUnit';
 import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
 

@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { downloadBlob } from '../export/download';
 import type { Preset } from '../domain/types';
 import { BUTTON, ModalDialog, PRIMARY_BUTTON } from './ModalDialog';
-import { dimsText, lengthText, useUnit } from './format';
+import { dimsText, lengthText } from './format';
+import { useUnit } from './useUnit';
 import { PresetEditForm } from './PresetEditForm';
 import { usePresets, useStores } from './StoreContext';
 
