@@ -12,6 +12,8 @@ interface DimsFieldsetProps {
   values: Record<keyof Dims, string>;
   errors: Record<string, string>;
   onChange(path: string, value: string): void;
+  /** Prefix of the field ids, so two fieldsets for the same group can be on screen at once. */
+  idPrefix?: string;
   /** Help shown under the height field. */
   heightHint?: ReactNode;
 }
@@ -24,9 +26,10 @@ export function DimsFieldset({
   values,
   errors,
   onChange,
+  idPrefix = 'field',
   heightHint,
 }: DimsFieldsetProps) {
-  const heightHintId = `field-${group}-height-help`;
+  const heightHintId = `${idPrefix}-${group}-height-help`;
   return (
     <fieldset className="space-y-2">
       <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -36,7 +39,7 @@ export function DimsFieldset({
         {KEYS.map((key) => (
           <NumberField
             key={key}
-            id={`field-${group}-${key}`}
+            id={`${idPrefix}-${group}-${key}`}
             label={labels[key]}
             value={values[key]}
             error={errors[`${group}.${key}`]}

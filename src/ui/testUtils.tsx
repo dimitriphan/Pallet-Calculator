@@ -6,10 +6,16 @@ import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
 import { FakeStorage } from '../persistence/testStorage';
 import { createInputsStore } from '../store/inputsStore';
+import { samplePresets } from '../data/samplePresets';
+import { presetSchema, scenarioSchema } from '../domain/schemas';
+import { STORAGE_KEYS } from '../persistence/keys';
+import { createLocalStorageRepository } from '../persistence/localStorageRepository';
+import { createPresetsStore } from '../store/presetsStore';
 import { createResultsStore } from '../store/resultsStore';
+import { createScenariosStore } from '../store/scenariosStore';
 import { createSceneStore } from '../store/sceneStore';
 import type { RunOptimizer } from '../worker/optimizerClient';
-import type { AppStores } from './StoreContext';
+import type { ResolvedStores } from './StoreContext';
 
 afterEach(() => {
   cleanup();
@@ -19,13 +25,30 @@ afterEach(() => {
 /** Real stores around a runner that resolves optimize(inputs) immediately. */
 export function makeStores(
   run: RunOptimizer = (i: Inputs) => Promise.resolve(optimize(i)),
-): AppStores {
+): ResolvedStores {
   const scene = createSceneStore();
   const inputs = createInputsStore(new FakeStorage());
   const results = createResultsStore(run, {
     onSelectionReset: () => scene.getState().setSelection(null),
   });
-  return { inputs, results, scene };
+  const presets = createPresetsStore(
+    createLocalStorageRepository({
+      key: STORAGE_KEYS.presets,
+      schema: presetSchema,
+      seed: samplePresets,
+      storage: new FakeStorage(),
+    }),
+    () => {},
+  );
+  const scenarios = createScenariosStore(
+    createLocalStorageRepository({
+      key: STORAGE_KEYS.scenarios,
+      schema: scenarioSchema,
+      storage: new FakeStorage(),
+    }),
+    () => {},
+  );
+  return { inputs, results, scene, presets, scenarios };
 }
 
 /** Lets the debounce elapse and any optimizer run settle. */

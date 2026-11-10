@@ -10,16 +10,31 @@ const MODES: { value: RotationMode; label: string }[] = [
 
 const CODES: OrientationCode[] = ['LWH', 'LHW', 'WLH', 'WHL', 'HLW', 'HWL'];
 
-/** Product rotation mode, the custom orientation checkboxes, and "Keep cartons upright". */
-export function RotationControl() {
-  const mode = useInputs((s) => s.draft.rotationMode);
-  const custom = useInputs((s) => s.draft.customOrientations);
-  const keepUpright = useInputs((s) => s.draft.keepCartonsUpright);
-  const error = useInputs((s) => (s.parsed.ok ? undefined : s.parsed.errors.customOrientations));
-  const setRotationMode = useInputs((s) => s.setRotationMode);
-  const toggleOrientation = useInputs((s) => s.toggleOrientation);
-  const setKeepCartonsUpright = useInputs((s) => s.setKeepCartonsUpright);
+interface RotationFieldsProps {
+  mode: RotationMode;
+  custom: OrientationCode[];
+  keepUpright: boolean;
+  error?: string;
+  /** Prefix of ids and the radio group name, so two instances can be on screen at once. */
+  idPrefix?: string;
+  setRotationMode(m: RotationMode): void;
+  toggleOrientation(c: OrientationCode): void;
+  setKeepCartonsUpright(v: boolean): void;
+}
 
+/** Product rotation mode, the custom orientation checkboxes, and "Keep cartons upright". */
+export function RotationFields({
+  mode,
+  custom,
+  keepUpright,
+  error,
+  idPrefix = '',
+  setRotationMode,
+  toggleOrientation,
+  setKeepCartonsUpright,
+}: RotationFieldsProps) {
+  const helpId = `${idPrefix}custom-orientations-help`;
+  const errorId = `${idPrefix}custom-orientations-error`;
   const chooseMode = (next: RotationMode) => {
     // Custom starts with every orientation ticked (the same as fully rotatable), so the
     // user narrows it down rather than meeting an error straight away.
@@ -38,7 +53,7 @@ export function RotationControl() {
             <label key={m.value} className="flex items-center gap-1.5 text-sm text-gray-800">
               <input
                 type="radio"
-                name="rotation-mode"
+                name={`${idPrefix}rotation-mode`}
                 value={m.value}
                 checked={mode === m.value}
                 onChange={() => chooseMode(m.value)}
@@ -50,16 +65,12 @@ export function RotationControl() {
         </div>
         {mode === 'custom' && (
           <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2">
-            <p id="custom-orientations-help" className="mb-1 text-xs text-gray-600">
+            <p id={helpId} className="mb-1 text-xs text-gray-600">
               Product length, width and height along the carton's length, width and height.
             </p>
             <div
               className="grid grid-cols-3 gap-1"
-              aria-describedby={
-                error
-                  ? 'custom-orientations-help custom-orientations-error'
-                  : 'custom-orientations-help'
-              }
+              aria-describedby={error ? `${helpId} ${errorId}` : helpId}
             >
               {CODES.map((code) => (
                 <label
@@ -78,7 +89,7 @@ export function RotationControl() {
               ))}
             </div>
             {error && (
-              <p id="custom-orientations-error" className="mt-1 text-xs text-red-700">
+              <p id={errorId} className="mt-1 text-xs text-red-700">
                 {error}
               </p>
             )}
@@ -95,5 +106,27 @@ export function RotationControl() {
         Keep cartons upright
       </label>
     </div>
+  );
+}
+
+/** The rotation fields bound to the inputs being edited in the workspace. */
+export function RotationControl() {
+  const mode = useInputs((s) => s.draft.rotationMode);
+  const custom = useInputs((s) => s.draft.customOrientations);
+  const keepUpright = useInputs((s) => s.draft.keepCartonsUpright);
+  const error = useInputs((s) => (s.parsed.ok ? undefined : s.parsed.errors.customOrientations));
+  const setRotationMode = useInputs((s) => s.setRotationMode);
+  const toggleOrientation = useInputs((s) => s.toggleOrientation);
+  const setKeepCartonsUpright = useInputs((s) => s.setKeepCartonsUpright);
+  return (
+    <RotationFields
+      mode={mode}
+      custom={custom}
+      keepUpright={keepUpright}
+      error={error}
+      setRotationMode={setRotationMode}
+      toggleOrientation={toggleOrientation}
+      setKeepCartonsUpright={setKeepCartonsUpright}
+    />
   );
 }
