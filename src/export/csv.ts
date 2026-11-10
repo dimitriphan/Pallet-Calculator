@@ -76,6 +76,8 @@ export function buildCsv(p: ExportPayload): string {
     ['Remaining height (in)', n(a.pallet.remainingHeight)],
     ['Target status', TARGET[a.target.status]],
     ['Maximum quantity possible', a.target.maxPossible],
+    ['Cartons needed for target', a.target.cartonsNeeded ?? ''],
+    ['Layers needed for target', a.target.layersNeeded ?? ''],
     ['Overall score', n(sel.score.total)],
     ['Quantity contribution', n(sel.score.quantityContribution)],
     ['Utilization contribution', n(sel.score.utilizationContribution)],

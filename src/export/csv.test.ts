@@ -90,10 +90,17 @@ describe('buildCsv', () => {
     );
   });
 
+  it('leaves the target rows blank without a target', () => {
+    expect(lines).toContain('Cartons needed for target,');
+    expect(lines).toContain('Layers needed for target,');
+  });
+
   it('records the target when one is set', () => {
     const p = buildExportPayload({ ...CUBES, targetQuantity: 10 }, optimize(CUBES), 0, NOW);
     const out = buildCsv(p).split('\r\n');
     expect(out).toContain('Target quantity,10');
     expect(out).toContain('Target status,Target exceeded');
+    expect(out).toContain(`Cartons needed for target,${p.analytics.target.cartonsNeeded}`);
+    expect(out).toContain(`Layers needed for target,${p.analytics.target.layersNeeded}`);
   });
 });

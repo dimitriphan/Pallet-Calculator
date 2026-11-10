@@ -71,7 +71,9 @@ describe('ExportMenu', () => {
     await user.click(screen.getByRole('menuitem', { name: 'CSV' }));
     const [blob, name] = mocks.downloadBlob.mock.calls[0] as [Blob, string];
     expect(name).toMatch(/\.csv$/);
-    expect((await blob.text()).startsWith('Metric,Value\r\n')).toBe(true);
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]); // UTF-8 BOM for Excel
+    expect(new TextDecoder().decode(bytes.slice(3)).startsWith('Metric,Value\r\n')).toBe(true);
   });
 
   it('composes and downloads a PNG from the captured views', async () => {

@@ -3,6 +3,8 @@ import type { Inputs } from './types';
 export const PALLET_HEIGHT = 5;
 export const EPS = 1e-9;
 export const PRODUCT_RENDER_THRESHOLD = 5000;
+/** Above this many products, "Show anyway" is refused: drawing them could crash the tab. */
+export const PRODUCT_FORCE_LIMIT = 200000;
 export const SCORE_WEIGHTS = { quantity: 0.6, utilization: 0.25, space: 0.15 } as const;
 
 export const DEFAULT_INPUTS: Inputs = {

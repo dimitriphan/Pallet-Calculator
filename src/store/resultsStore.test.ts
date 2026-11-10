@@ -162,6 +162,16 @@ describe('resultsStore', () => {
     });
   });
 
+  it('restore clamps a saved selection to the layouts it has', () => {
+    const store = createResultsStore(vi.fn());
+    store.getState().restore(inputsA, result(1), 7);
+    expect(store.getState().selectedIndex).toBe(1);
+    store.getState().restore(inputsA, result(1), -3);
+    expect(store.getState().selectedIndex).toBe(0);
+    store.getState().restore(inputsA, { ...result(1), layouts: [] }, 4);
+    expect(store.getState().selectedIndex).toBe(0);
+  });
+
   it('restore supersedes a request still in flight', async () => {
     const d = deferred();
     const store = createResultsStore(() => d.promise);

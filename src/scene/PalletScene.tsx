@@ -1,7 +1,7 @@
 import { Grid } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
-import { PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
+import { PRODUCT_FORCE_LIMIT, PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
 import { useScene, useStores } from '../ui/StoreContext';
 import { CameraRig } from './CameraRig';
 import { CaptureBridge } from './CaptureBridge';
@@ -27,7 +27,8 @@ function SceneContents() {
   const productsShown =
     !!layout &&
     s.showProducts &&
-    (layout.totalProducts <= PRODUCT_RENDER_THRESHOLD || s.forceProducts);
+    (layout.totalProducts <= PRODUCT_RENDER_THRESHOLD ||
+      (s.forceProducts && layout.totalProducts <= PRODUCT_FORCE_LIMIT));
   // With measurements on, the camera frames the dimension lines too.
   const framed = useMemo(
     () => (s.showMeasurements ? withMeasurements(bounds) : bounds),

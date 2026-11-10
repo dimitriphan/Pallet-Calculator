@@ -1,4 +1,4 @@
-import { PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
+import { PRODUCT_FORCE_LIMIT, PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
 import type { ToggleKey } from '../store/sceneStore';
 import { useScene } from '../ui/StoreContext';
 
@@ -41,10 +41,20 @@ export function SceneToolbar({ totalProducts }: { totalProducts: number }) {
       </div>
       {productsHidden && (
         <p role="status" className="mt-1 flex items-center gap-2 text-amber-800">
-          Products hidden: this layout has {totalProducts.toLocaleString('en-US')} boxes.
-          <button type="button" className={BUTTON} onClick={() => scene.toggle('forceProducts')}>
-            Show anyway
-          </button>
+          {totalProducts > PRODUCT_FORCE_LIMIT ? (
+            `Too many boxes to draw individually (${totalProducts.toLocaleString('en-US')}).`
+          ) : (
+            <>
+              Products hidden: this layout has {totalProducts.toLocaleString('en-US')} boxes.
+              <button
+                type="button"
+                className={BUTTON}
+                onClick={() => scene.toggle('forceProducts')}
+              >
+                Show anyway
+              </button>
+            </>
+          )}
         </p>
       )}
     </div>

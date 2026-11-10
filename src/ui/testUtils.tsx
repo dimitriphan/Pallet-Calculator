@@ -29,7 +29,7 @@ export function makeStores(
   const scene = createSceneStore();
   const inputs = createInputsStore(new FakeStorage());
   const results = createResultsStore(run, {
-    onSelectionReset: () => scene.getState().setSelection(null),
+    onSelectionReset: () => scene.getState().resetForLayout(),
   });
   const presets = createPresetsStore(
     createLocalStorageRepository({

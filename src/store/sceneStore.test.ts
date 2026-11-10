@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_INPUTS } from '../domain/constants';
+import { optimize } from '../engine/optimize';
+import { useResultsStore } from './resultsStore';
 import { createSceneStore, useSceneStore } from './sceneStore';
 
 describe('sceneStore', () => {
@@ -48,6 +51,21 @@ describe('sceneStore', () => {
     expect(b!.nonce).toBeGreaterThan(a!.nonce);
     expect(c).toMatchObject({ type: 'focus' });
     expect(c!.nonce).toBeGreaterThan(b!.nonce);
+  });
+
+  it('resetForLayout clears the selection and "Show anyway"', () => {
+    const store = createSceneStore();
+    store.getState().toggle('forceProducts');
+    store.getState().setSelection({ kind: 'pallet' });
+    store.getState().resetForLayout();
+    expect(store.getState()).toMatchObject({ forceProducts: false, selection: null });
+  });
+
+  it('the app resets "Show anyway" whenever the results store resets the selection', () => {
+    useSceneStore.getState().toggle('forceProducts');
+    expect(useSceneStore.getState().forceProducts).toBe(true);
+    useResultsStore.getState().restore(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0);
+    expect(useSceneStore.getState().forceProducts).toBe(false);
   });
 
   it('exports a default hook', () => {

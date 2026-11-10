@@ -109,7 +109,11 @@ export function ExportMenu() {
         name,
       );
     } else if (format === 'csv') {
-      downloadBlob(new Blob([buildCsv(payload)], { type: 'text/csv;charset=utf-8' }), name);
+      // The byte-order mark makes Excel read the file as UTF-8 (×, ³, –).
+      downloadBlob(
+        new Blob(['\uFEFF', buildCsv(payload)], { type: 'text/csv;charset=utf-8' }),
+        name,
+      );
     } else {
       try {
         if (!captureViews) throw new Error('3D view is unavailable');

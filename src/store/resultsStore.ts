@@ -117,7 +117,10 @@ export function createResultsStore(
         inFlight = null;
         staleMark = false;
         lastRequested = inputs;
-        set({ status: 'ready', inputs, result, stale: false, selectedIndex, error: null });
+        // A saved index is not trusted: keep it within the layouts (0 when there are none).
+        const last = result.layouts.length - 1;
+        const index = Math.max(0, Math.min(Math.trunc(selectedIndex) || 0, last));
+        set({ status: 'ready', inputs, result, stale: false, selectedIndex: index, error: null });
         resetSelection();
       },
       retry() {
@@ -128,7 +131,7 @@ export function createResultsStore(
 }
 
 const resultsStore = createResultsStore(createWorkerRunner(), {
-  onSelectionReset: () => useSceneStore.getState().setSelection(null),
+  onSelectionReset: () => useSceneStore.getState().resetForLayout(),
 });
 
 export const useResultsStore = Object.assign(

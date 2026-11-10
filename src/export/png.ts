@@ -26,6 +26,13 @@ export function pngLayout(): {
   };
 }
 
+/** An ISO timestamp as the viewer's local time, YYYY-MM-DD HH:mm. */
+export function localMinute(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 /** The caption text, one string per line. */
 export function captionLines(p: ExportPayload): string[] {
   const { summary, carton, pallet } = p.analytics;
@@ -41,7 +48,7 @@ export function captionLines(p: ExportPayload): string[] {
     `Carton: ${formatDims(carton.outer)} in (outer)`,
     [
       `Layout ${p.selectedLayout.rank}`,
-      `Exported ${p.exportedAt}`,
+      `Exported ${localMinute(p.exportedAt)}`,
       ...(p.stale ? [p.status] : []),
     ].join('   |   '),
   ];

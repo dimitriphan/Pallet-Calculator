@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs, Layout } from '../domain/types';
 import {
+  boundsEdges,
   boxEdgePositions,
   instanceMatrices,
   loadBounds,
   toScenePosition,
+  toSceneBounds,
   toSceneScale,
 } from './transforms';
 
@@ -103,6 +105,13 @@ describe('loadBounds', () => {
 });
 
 describe('boxEdgePositions', () => {
+  it('matches boundsEdges for several boxes, written back to back', () => {
+    const other = { ...BOX, x: 10, y: 5, z: 2, dx: 3, dy: 4, dz: 5 };
+    const p = boxEdgePositions([BOX, other], I40);
+    const expected = [BOX, other].flatMap((b) => boundsEdges(toSceneBounds(b, I40)).flat());
+    expect(Array.from(p)).toEqual(expected);
+  });
+
   it('writes the 12 edges of each box as 24 scene-frame vertices', () => {
     const p = boxEdgePositions([BOX], I40);
     expect(p).toHaveLength(12 * 2 * 3);

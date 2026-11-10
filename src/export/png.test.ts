@@ -52,6 +52,15 @@ describe('captionLines', () => {
     expect(text).toContain('2026-11-10');
   });
 
+  it('shows the export time in local time as YYYY-MM-DD HH:mm', () => {
+    const now = new Date(2026, 10, 10, 9, 5, 3); // local time
+    const p = buildExportPayload(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0, now);
+    expect(p.exportedAt).toBe(now.toISOString());
+    const last = captionLines(p).at(-1)!;
+    expect(last).toContain('Exported 2026-11-10 09:05');
+    expect(last).not.toContain(now.toISOString());
+  });
+
   it('says when the result is out of date', () => {
     const r = optimize(DEFAULT_INPUTS);
     const now = new Date('2026-11-10T09:05:03Z');

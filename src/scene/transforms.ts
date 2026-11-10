@@ -127,11 +127,23 @@ export function boundsEdges({ min, max }: SceneBounds): Vec3[] {
 /** Line-segment vertices (x, y, z triples) for the 12 edges of every box, in the scene frame. */
 export function boxEdgePositions(boxes: PlacedBox[], i: Inputs): Float32Array {
   const out = new Float32Array(boxes.length * EDGES.length * 2 * 3);
+  const usable = usableFootprint(i);
+  // Corner c of a box: bit 0 picks max x, bit 1 max y, bit 2 max z (scene frame, as boundsEdges).
+  // Written straight into `out`, with no per-box arrays: there can be hundreds of thousands.
   let o = 0;
   for (const b of boxes) {
-    for (const p of boundsEdges(toSceneBounds(b, i))) {
-      out.set(p, o);
-      o += 3;
+    const x0 = b.x - usable.x / 2;
+    const y0 = b.z + PALLET_HEIGHT;
+    const z0 = b.y - usable.y / 2;
+    const x1 = b.x + b.dx - usable.x / 2;
+    const y1 = b.z + b.dz + PALLET_HEIGHT;
+    const z1 = b.y + b.dy - usable.y / 2;
+    for (const pair of EDGES) {
+      for (const c of pair) {
+        out[o++] = c & 1 ? x1 : x0;
+        out[o++] = c & 2 ? y1 : y0;
+        out[o++] = c & 4 ? z1 : z0;
+      }
     }
   }
   return out;

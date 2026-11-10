@@ -33,6 +33,8 @@ export interface SceneState {
   setCaptureViews(fn: SceneState['captureViews']): void;
   toggle(key: ToggleKey): void;
   setSelection(s: Selection): void;
+  /** For a new result or selected layout: clears the selection and "Show anyway". */
+  resetForLayout(): void;
   resetView(): void;
   focusSelection(): void;
 }
@@ -55,6 +57,7 @@ export function createSceneStore(): StoreApi<SceneState> {
       setCaptureViews: (fn) => set({ captureViews: fn }),
       toggle: (key) => set((s) => ({ [key]: !s[key] })),
       setSelection: (selection) => set({ selection }),
+      resetForLayout: () => set({ selection: null, forceProducts: false }),
       resetView: () => set({ cameraCommand: { type: 'reset', nonce: ++nonce } }),
       focusSelection: () => set({ cameraCommand: { type: 'focus', nonce: ++nonce } }),
     };
