@@ -4,8 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
+      var t = 'system';
       try {
-        var t = JSON.parse(localStorage.getItem('pc.prefs.v1')).theme;
+        var v = JSON.parse(localStorage.getItem('pc.prefs.v1')).theme;
+        if (v === 'light' || v === 'dark') t = v;
+      } catch (e) {}
+      try {
         if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches))
           document.documentElement.classList.add('dark');
       } catch (e) {}
