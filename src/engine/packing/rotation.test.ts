@@ -14,7 +14,11 @@ describe('allowedVerticalAxes', () => {
   });
   it('custom uses the distinct third letters in L, W, H order', () => {
     expect(
-      allowedVerticalAxes({ ...DEFAULT_INPUTS, rotationMode: 'custom', customOrientations: ['LWH', 'WLH', 'HWL'] }),
+      allowedVerticalAxes({
+        ...DEFAULT_INPUTS,
+        rotationMode: 'custom',
+        customOrientations: ['LWH', 'WLH', 'HWL'],
+      }),
     ).toEqual(['L', 'H']);
   });
 });
