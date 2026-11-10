@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs, Layout } from '../domain/types';
 import { cartonPlacements } from '../engine/packing/positions';
-import { dimensionLines, palletParts, selectionBounds } from './sceneGeometry';
+import { dimensionLines, palletParts, selectionBounds, withMeasurements } from './sceneGeometry';
 
 const I: Inputs = {
   ...DEFAULT_INPUTS,
@@ -63,6 +63,22 @@ describe('dimensionLines', () => {
     expect(d.labels.map((l) => l.text)).toEqual(['50.00 in', '42.00 in', '60.00 in']);
     // 3 lines, each with 2 end ticks: 9 segments of 2 points.
     expect(d.segments).toHaveLength(9 * 2);
+  });
+});
+
+describe('withMeasurements', () => {
+  it('grows the bounds to hold every dimension line, tick and label anchor', () => {
+    const b = { min: [-25, 0, -21], max: [25, 60, 21] } as const;
+    const grown = withMeasurements({ min: [...b.min], max: [...b.max] });
+    const d = dimensionLines({ min: [...b.min], max: [...b.max] });
+    for (const p of [...d.segments, ...d.labels.map((l) => l.position)]) {
+      for (let k = 0; k < 3; k++) {
+        expect(p[k]).toBeGreaterThanOrEqual(grown.min[k]!);
+        expect(p[k]).toBeLessThanOrEqual(grown.max[k]!);
+      }
+    }
+    expect(grown.min).toEqual([-25, 0, -21]);
+    expect(grown.max[1]).toBe(60);
   });
 });
 

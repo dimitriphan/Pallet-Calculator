@@ -20,10 +20,12 @@ interface Props {
   selected: SceneBounds | null;
   /** The camera re-fits the load whenever a new result (new inputs) arrives. */
   inputs: Inputs | null;
+  /** Turning measurements on or off re-frames the load so the dimension lines fit. */
+  measurements: boolean;
 }
 
 /** Orbit controls plus the initial fit, Reset view and Focus selection. */
-export function CameraRig({ load, selected, inputs }: Props) {
+export function CameraRig({ load, selected, inputs, measurements }: Props) {
   const get = useThree((s) => s.get);
   const controls = useThree((s) => s.controls);
   const invalidate = useThree((s) => s.invalidate);
@@ -53,10 +55,11 @@ export function CameraRig({ load, selected, inputs }: Props) {
     [get, invalidate],
   );
 
-  // Initial view, and a fresh view of the load whenever a new result arrives.
+  // Initial view, and a fresh view of the load whenever a new result arrives or
+  // measurements are switched (so the dimension lines are framed).
   useEffect(() => {
     fitTo(latest.current.load);
-  }, [inputs, controls, fitTo]);
+  }, [inputs, measurements, controls, fitTo]);
 
   useEffect(() => {
     if (!command) return;

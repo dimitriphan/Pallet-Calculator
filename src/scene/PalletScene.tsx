@@ -13,7 +13,7 @@ import { Pallet } from './Pallet';
 import { Products } from './Products';
 import { SceneErrorBoundary } from './SceneErrorBoundary';
 import { SceneToolbar } from './SceneToolbar';
-import { selectionBounds } from './sceneGeometry';
+import { selectionBounds, withMeasurements } from './sceneGeometry';
 import { SelectionOutline } from './SelectionOutline';
 import { useSceneData } from './useSceneData';
 import { WEBGL_UNAVAILABLE } from './webgl';
@@ -28,6 +28,11 @@ function SceneContents() {
     !!layout &&
     s.showProducts &&
     (layout.totalProducts <= PRODUCT_RENDER_THRESHOLD || s.forceProducts);
+  // With measurements on, the camera frames the dimension lines too.
+  const framed = useMemo(
+    () => (s.showMeasurements ? withMeasurements(bounds) : bounds),
+    [s.showMeasurements, bounds],
+  );
   const selected = useMemo(
     () => selectionBounds(s.selection, layout, inputs, cartons),
     [s.selection, layout, inputs, cartons],
@@ -90,7 +95,12 @@ function SceneContents() {
       )}
       {s.showMeasurements && inputs && <Measurements bounds={bounds} />}
       {selected && <SelectionOutline bounds={selected} />}
-      <CameraRig load={bounds} selected={selected} inputs={inputs} />
+      <CameraRig
+        load={framed}
+        selected={selected}
+        inputs={inputs}
+        measurements={s.showMeasurements}
+      />
       <CaptureBridge bounds={bounds} />
     </>
   );

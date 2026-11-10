@@ -35,6 +35,10 @@ export function palletParts(length: number, width: number): PalletPart[] {
   return parts;
 }
 
+/** How far the dimension lines stand off the load, and their tick half-length (inches). */
+const DIM_OFFSET = 6;
+const DIM_TICK = 2;
+
 export interface DimensionLines {
   /** Pairs of points, each pair one line segment. */
   segments: Vec3[];
@@ -45,7 +49,11 @@ export interface DimensionLines {
  * Dimension lines with end ticks for the overall length (along X, in front), width (along Z,
  * at the right) and height (up the front-right corner) of the bounds.
  */
-export function dimensionLines(b: SceneBounds, offset = 6, tick = 2): DimensionLines {
+export function dimensionLines(
+  b: SceneBounds,
+  offset = DIM_OFFSET,
+  tick = DIM_TICK,
+): DimensionLines {
   const [x0, y0, z0] = b.min;
   const [x1, y1, z1] = b.max;
   const front = z1 + offset;
@@ -74,6 +82,12 @@ export function dimensionLines(b: SceneBounds, offset = 6, tick = 2): DimensionL
       { text: label(y1 - y0), position: [right + tick * 2, (y0 + y1) / 2, front] },
     ],
   };
+}
+
+/** The bounds grown to hold the dimension lines, ticks and label anchors drawn for them. */
+export function withMeasurements(b: SceneBounds): SceneBounds {
+  const reach = DIM_OFFSET + DIM_TICK * 2;
+  return { min: [...b.min], max: [b.max[0] + reach, b.max[1], b.max[2] + reach] };
 }
 
 /** Scene bounds of the selected object, or null when nothing (or nothing that exists) is selected. */

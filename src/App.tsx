@@ -1,5 +1,4 @@
-import { lazy, Suspense } from 'react';
-import { WEBGL_UNAVAILABLE, webglAvailable } from './scene/webgl';
+import { SceneSlot } from './scene/SceneSlot';
 import { DetailsPanel } from './ui/DetailsPanel';
 import { Header } from './ui/Header';
 import { InputsPanel } from './ui/InputsPanel';
@@ -8,23 +7,6 @@ import { Notices } from './ui/Notices';
 import { ProductionSummary } from './ui/ProductionSummary';
 import { StoreProvider, type AppStores } from './ui/StoreContext';
 import { useAutoOptimize } from './ui/useAutoOptimize';
-
-// Code-split: three.js loads only when the browser can show the 3D view.
-const PalletScene = lazy(() => import('./scene/PalletScene'));
-
-function SceneSlot() {
-  const message = (text: string) => (
-    <div className="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500">
-      {text}
-    </div>
-  );
-  if (!webglAvailable()) return message(WEBGL_UNAVAILABLE);
-  return (
-    <Suspense fallback={message('Loading 3D view…')}>
-      <PalletScene />
-    </Suspense>
-  );
-}
 
 function Workspace() {
   useAutoOptimize();
