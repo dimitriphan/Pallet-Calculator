@@ -2,6 +2,7 @@ import {
   describeBoxCounts,
   describeLayerOrientations,
   type Analytics,
+  type LayerOrientation,
 } from '../engine/analytics/analytics';
 import { formatDims, formatNumber } from '../engine/units/units';
 import { DetailRows } from './DetailRows';
@@ -17,6 +18,16 @@ const dims = (d: Parameters<typeof formatDims>[0]) => `${formatDims(d)} in`;
 const area = (v: number) => `${formatNumber(v)} in²`;
 const volume = (v: number) => `${formatNumber(v)} in³`;
 const pct = (v: number) => `${formatNumber(v)}%`;
+
+/** One layer type per line; the text still reads "Length up: 1 layer; Width up: 6 layers". */
+function OrientationLines({ list }: { list: LayerOrientation[] }) {
+  return list.map((o, k) => (
+    <span key={`${o.vertical}-${o.cartonsPerLayer}`} className="block whitespace-nowrap">
+      {describeLayerOrientations([o])}
+      {k < list.length - 1 ? '; ' : ''}
+    </span>
+  ));
+}
 
 /** Every analytics figure of the selected layout. */
 export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
@@ -54,8 +65,11 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Carton utilization', pct(a.carton.utilizationPct)],
           ['Empty volume', volume(a.carton.emptyVolume)],
           ['Cartons per pallet', String(a.carton.perPallet)],
-          ['Boxes along product length × width × height', describeBoxCounts(a.carton.counts)],
-          ['Product side facing up', describeLayerOrientations(a.carton.layerOrientations)],
+          [
+            'Boxes along product length × width × height',
+            <span className="whitespace-nowrap">{describeBoxCounts(a.carton.counts)}</span>,
+          ],
+          ['Product side facing up', <OrientationLines list={a.carton.layerOrientations} />],
         ]}
       />
       <DetailRows
