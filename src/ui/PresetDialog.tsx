@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { downloadBlob } from '../export/download';
 import { formatDims, formatNumber } from '../engine/units/units';
 import type { Preset } from '../domain/types';
-import { useNoticesStore } from '../store/noticesStore';
 import { BUTTON, ModalDialog, PRIMARY_BUTTON } from './ModalDialog';
 import { PresetEditForm } from './PresetEditForm';
 import { usePresets, useStores } from './StoreContext';
@@ -14,6 +13,7 @@ export function PresetDialog({ onClose }: { onClose(): void }) {
   const { presets: store } = useStores();
   const presets = usePresets((s) => s.presets);
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
+  const [importMessage, setImportMessage] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
 
   const editing = mode.kind === 'edit' ? presets.find((p) => p.id === mode.id) : undefined;
@@ -24,12 +24,19 @@ export function PresetDialog({ onClose }: { onClose(): void }) {
       'pallet-presets.json',
     );
 
+  // The result is shown here, not as a global notice: notices sit outside the modal dialog.
   const importFile = async (file: File | undefined) => {
     if (!file) return;
-    const { imported, skipped } = store.getState().importJson(await file.text());
-    // A file that is not a preset export already raised its own notice.
-    if (imported + skipped > 0)
-      useNoticesStore.getState().push(`Imported ${imported} preset(s), skipped ${skipped}.`);
+    try {
+      const { imported, skipped } = store.getState().importJson(await file.text());
+      setImportMessage(
+        imported + skipped > 0
+          ? `Imported ${imported} preset(s), skipped ${skipped}.`
+          : 'That file is not a valid preset export.',
+      );
+    } catch {
+      setImportMessage('That file could not be read.');
+    }
   };
 
   const pending = (p: Preset) => mode.kind === 'delete' && mode.id === p.id;
@@ -67,6 +74,9 @@ export function PresetDialog({ onClose }: { onClose(): void }) {
               }}
             />
           </div>
+          <p role="status" className="text-sm text-gray-800 empty:hidden">
+            {importMessage}
+          </p>
           {presets.length === 0 ? (
             <p className="text-sm text-gray-600">No presets yet.</p>
           ) : (

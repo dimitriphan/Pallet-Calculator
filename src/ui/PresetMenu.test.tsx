@@ -226,11 +226,43 @@ describe('PresetDialog', () => {
     await user.upload(input, file);
 
     await waitFor(() =>
-      expect(screen.getByText('Imported 1 preset(s), skipped 1.')).toBeInTheDocument(),
+      expect(within(dialog).getByRole('status')).toHaveTextContent(
+        'Imported 1 preset(s), skipped 1.',
+      ),
     );
-    expect(
-      screen.getByText('Imported 1 preset(s), skipped 1.').closest('[role="status"]'),
-    ).not.toBeNull();
+    expect(useNoticesStore.getState().notices).toEqual([]);
     expect(within(dialog).getByText('Imported one')).toBeInTheDocument();
+  });
+
+  describe.each([
+    ['invalid JSON', '{not json'],
+    ['a JSON array', '[1, 2]'],
+    ['an object without presets', '{"version": 1}'],
+  ])('importing %s', (_label, text) => {
+    it('shows a message inside the dialog and adds nothing', async () => {
+      const { user, stores } = await renderApp();
+      const dialog = await openManage(user);
+      const input = within(dialog).getByLabelText('Import presets file') as HTMLInputElement;
+      await user.upload(input, new File([text], 'bad.json', { type: 'application/json' }));
+      await waitFor(() =>
+        expect(within(dialog).getByRole('status')).toHaveTextContent(
+          'That file is not a valid preset export.',
+        ),
+      );
+      expect(stores.presets.getState().presets).toHaveLength(2);
+    });
+  });
+
+  it('reports a file that cannot be read, without an unhandled rejection', async () => {
+    const { user, stores } = await renderApp();
+    const dialog = await openManage(user);
+    const input = within(dialog).getByLabelText('Import presets file') as HTMLInputElement;
+    const file = new File(['{}'], 'p.json', { type: 'application/json' });
+    file.text = () => Promise.reject(new Error('disk gone'));
+    await user.upload(input, file);
+    await waitFor(() =>
+      expect(within(dialog).getByRole('status')).toHaveTextContent('That file could not be read.'),
+    );
+    expect(stores.presets.getState().presets).toHaveLength(2);
   });
 });

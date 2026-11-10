@@ -31,8 +31,9 @@ export function ModalDialog({ title, onClose, placement = 'center', children }: 
     if (!dialog) return;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     // jsdom has no showModal(); the open attribute still makes the dialog visible there.
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else dialog.setAttribute('open', '');
+    if (typeof dialog.showModal === 'function') {
+      if (!dialog.open) dialog.showModal();
+    } else dialog.setAttribute('open', '');
     const onCancel = (e: Event) => {
       e.preventDefault(); // Escape: let React unmount the dialog instead
       onCloseRef.current();
