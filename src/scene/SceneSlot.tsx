@@ -12,7 +12,7 @@ const loadPalletScene = (): Promise<SceneModule> => import('./PalletScene');
 
 function Message({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm text-gray-500 dark:text-harbor-mist">
       {children}
     </div>
   );
@@ -35,7 +35,7 @@ export function SceneSlot({ load = loadPalletScene }: { load?: () => Promise<Sce
       <button
         type="button"
         onClick={retry}
-        className="rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus-visible:outline-blue-400"
+        className="focus-ticks border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline"
       >
         Retry
       </button>

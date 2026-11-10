@@ -1,3 +1,5 @@
+import { HARBOR } from '../theme/tokens';
+
 /** Colours of the 3D view that follow the theme. Loads, envelope and selection never change. */
 export interface SceneTheme {
   background: string;
@@ -25,16 +27,18 @@ const LIGHT: SceneTheme = {
   measureLine: LIGHT_MEASURE_LINE,
 };
 
-// The grid greys stay visible on the light background, which exports render with.
-const DARK: SceneTheme = {
-  background: '#111827',
-  gridCell: '#4b5563',
-  gridSection: '#9ca3af',
-  chipBg: 'rgba(31, 41, 55, 0.9)',
-  chipText: '#f3f4f6',
-  measureLine: '#d1d5db',
+// Harbor: the viewport colour with faint grid lines, foam on deep chips and foam lines. drei's
+// Grid has no opacity, so the lines are mist pre-blended over the viewport colour: 12% for the
+// cells (#395265) and 30% for the sections (#526A7A); full-strength mist would dominate the view.
+const HARBOR_SCENE: SceneTheme = {
+  background: HARBOR.viewport,
+  gridCell: '#395265',
+  gridSection: '#526A7A',
+  chipBg: HARBOR.deep,
+  chipText: HARBOR.foam,
+  measureLine: HARBOR.foam,
 };
 
-export function sceneTheme(theme: 'light' | 'dark'): SceneTheme {
-  return theme === 'dark' ? DARK : LIGHT;
+export function sceneTheme(theme: 'light' | 'harbor'): SceneTheme {
+  return theme === 'harbor' ? HARBOR_SCENE : LIGHT;
 }

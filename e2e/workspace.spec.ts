@@ -32,6 +32,17 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   const viewSwitch = page.getByRole('radiogroup', { name: 'View' });
   const html = page.locator('html');
 
+  // A fresh visit opens in Harbor, with one decorative (hidden) image in the header
+  // and a favicon the site really serves.
+  const theme = page.getByLabel('Theme', { exact: true });
+  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
+  await expect(theme).toHaveValue('harbor');
+  await expect(theme.locator('option:checked')).toHaveText('Harbor');
+  await expect(page.getByRole('banner').locator('img')).toHaveCount(1);
+  await expect(page.getByRole('banner').locator('img')).toHaveAttribute('aria-hidden', 'true');
+  const favicon = await page.request.get('/favicon.png');
+  expect(favicon.status()).toBe(200);
+
   const summary = page.getByRole('region', { name: 'Production summary' });
   const tile = (name: string) =>
     summary.locator('div', { has: page.getByText(name, { exact: true }) });
@@ -70,15 +81,13 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   // The total boxes tile is drawn as its own text string: jsPDF writes "(260) Tj".
   expect(pdfText).toContain('(260) Tj');
 
-  // Dark theme: applied now, and still applied (and still Basic) after a reload.
-  const theme = page.getByLabel('Theme', { exact: true });
-  await theme.selectOption('dark');
-  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/);
-  await page.reload();
-  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/);
-  await expect(viewSwitch.getByRole('radio', { name: 'Basic' })).toBeChecked();
+  // Light: applied now, and still applied (and still Basic) after a reload.
   await theme.selectOption('light');
-  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/);
+  await expect(html).not.toHaveClass(/(^|\s)harbor(\s|$)/);
+  await page.reload();
+  await expect(html).not.toHaveClass(/(^|\s)harbor(\s|$)/);
+  await expect(theme).toHaveValue('light');
+  await expect(viewSwitch.getByRole('radio', { name: 'Basic' })).toBeChecked();
 
   // Full view: the comparison table appears and the original steps follow.
   await viewSwitch.getByRole('radio', { name: 'Full' }).click();
@@ -144,4 +153,108 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   await expect(group(page, 'Pallet limitation').getByText('Enter a number')).toBeVisible();
 
   expect(problems).toEqual([]);
+});
+
+test('a saved Dark preference opens in Harbor', async ({ page }) => {
+  const problems: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') problems.push(`console: ${m.text()}`);
+  });
+  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+
+  // Written before the app loads, as an older version of the tool would have saved it.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('pc.prefs.v1')) {
+      localStorage.setItem('pc.prefs.v1', '{"viewMode":"basic","theme":"dark"}');
+    }
+  });
+  await page.goto('/');
+
+  const html = page.locator('html');
+  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
+  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/);
+  await expect(page.getByLabel('Theme', { exact: true })).toHaveValue('harbor');
+  await expect(page.getByLabel('Theme', { exact: true }).locator('option:checked')).toHaveText(
+    'Harbor',
+  );
+
+  expect(problems).toEqual([]);
+});
+
+test('the working mascot animates in the built app while a calculation is held', async ({
+  page,
+}) => {
+  // Hold the optimiser worker script so the first calculation stays "Calculating…".
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/optimizer.worker*.js', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto('/');
+  await expect(page.getByText('Calculating…').first()).toBeVisible();
+
+  const frames = page.locator('.mascot-frame:visible');
+  await expect(frames).toHaveCount(3);
+  // Exactly one of the three frames is on at any moment, and the built CSS really runs them.
+  const visibleNow = () =>
+    frames.evaluateAll((els) => els.filter((e) => getComputedStyle(e).opacity === '1').length);
+  for (let i = 0; i < 5; i++) {
+    await expect.poll(visibleNow).toBe(1);
+  }
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        document
+          .getAnimations()
+          .map((a) => (a as CSSAnimation).animationName)
+          .filter((n) => n.startsWith('mascot-frame-'))
+          .sort()
+          .join(),
+      ),
+    )
+    .toBe('mascot-frame-1,mascot-frame-2,mascot-frame-3');
+  // The frames take turns: more than one distinct frame is seen on within a few loops.
+  const seen = new Set<number>();
+  await expect
+    .poll(async () => {
+      seen.add(
+        await frames.evaluateAll((els) =>
+          els.findIndex((e) => getComputedStyle(e).opacity === '1'),
+        ),
+      );
+      return seen.size;
+    })
+    .toBeGreaterThanOrEqual(3);
+
+  release();
+  await expect(page.getByText('Calculating…')).toHaveCount(0);
+});
+
+test('the header fits one 48 px row in Full view at 1100 x 600', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 600 });
+  await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  const banner = page.getByRole('banner');
+  await expect(banner.getByRole('heading', { name: 'Pallet Calculator' })).toBeVisible();
+
+  for (const theme of ['harbor', 'light']) {
+    await page.getByLabel('Theme', { exact: true }).selectOption(theme);
+    const result = await banner.evaluate((header) => {
+      const box = header.getBoundingClientRect();
+      const h1 = header.querySelector('h1') as HTMLElement;
+      const lineHeight = parseFloat(getComputedStyle(h1).lineHeight);
+      const outside = [...header.querySelectorAll('button, select, label, h1, [data-mascot-box]')]
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5 || r.right > box.right + 0.5;
+        })
+        .map((el) => `${el.tagName} ${el.textContent ?? ''}`.trim());
+      return { outside, h1Height: h1.getBoundingClientRect().height, lineHeight };
+    });
+    expect(result.outside, theme).toEqual([]);
+    expect(result.h1Height, theme).toBeLessThan(result.lineHeight * 1.6);
+  }
 });

@@ -29,22 +29,21 @@ export function BuildSheetDialog({ onSave, onCancel }: BuildSheetDialogProps) {
         }}
       >
         <div className="min-w-0 flex-1">
-          <label
-            htmlFor={id}
-            className="mb-0.5 block text-xs font-medium text-gray-700 dark:text-gray-300"
-          >
+          <label htmlFor={id} className="mb-0.5 block text-xs text-gray-700 dark:text-harbor-mist">
             Job name (optional)
           </label>
-          <input
-            ref={field}
-            id={id}
-            type="text"
-            value={jobName}
-            maxLength={80}
-            autoComplete="off"
-            onChange={(e) => setJobName(e.target.value)}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-          />
+          <div className="focus-ticks-within flex">
+            <input
+              ref={field}
+              id={id}
+              type="text"
+              value={jobName}
+              maxLength={80}
+              autoComplete="off"
+              onChange={(e) => setJobName(e.target.value)}
+              className="w-full border border-gray-300 px-2 py-1 text-sm focus:outline-none dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+            />
+          </div>
         </div>
         <button type="submit" disabled={busy} className={PRIMARY_BUTTON}>
           {busy ? 'Creating…' : 'Save PDF'}

@@ -51,7 +51,15 @@ A strict product setting also limits how the carton may be turned on the pallet.
 - If nothing fits, or an error occurs, Basic shows the message and hides the "What to build" card.
 - **A failed calculation marks the previous result out of date.** The error is shown with Retry; the production figures and 3D view keep the last result, dimmed and badged "Out of date" (in both views), until a calculation succeeds.
 - Switching views never recalculates and never changes your inputs, selected layout, presets or scenarios.
-- The theme (System, Light, Dark) only changes colours on screen. It never affects a result.
+- The theme (Harbor or Light) only changes how the page looks on screen. It never affects a result.
+
+## Look and themes
+
+- There are two themes only: **Harbor** (the default) and **Light**. There is no System option. The tool no longer follows your computer's light or dark setting.
+- Browsers that had "Dark" or "System" saved now open in Harbor. A saved "Light" stays Light.
+- The fonts (Exo 2 for headings, Barlow for text and numbers) are bundled with the site. They add roughly 60 kB the first time the page loads, and the tool never asks another website for them. While they load, text shows in a standard system font.
+- Exports always stay light, whatever the theme. The PNG, PDF, CSV and JSON files look the same in both themes.
+- The mascot is decoration only. It is hidden from screen readers, has no name or caption, and never changes a result. It shows in the header, beside the "What to build" hint, beside "Calculating", beside an error or "nothing fits" message, in the browser tab, and once on page 1 of the build sheet. It never appears in the 3D view, the PNG, or any other page.
 
 ## Limitations
 
@@ -82,12 +90,12 @@ A strict product setting also limits how the carton may be turned on the pallet.
 - **Build sheet (PDF).** Available in both views. You may type a job name of up to 80 characters.
   - Page 1: title, job name and date, the five production figures, the carton (outer size, inner size, boxes per carton, how boxes sit inside), the pallet and finished load size, and two pictures (the 3D view and the side view). If the result is out of date, a boxed line says so. If a layout other than layout 1 was selected, a line under the date says "Layout N of M selected. Layout 1 fits X boxes."
   - Next pages: one block per distinct layer pattern with a top-down drawing to scale, and a stacking table from bottom to top. The drawing's edge dimensions are always the pallet's length and width, measured along the solid pallet outline. Each block of cartons is labelled "rows × columns" inside the drawing when it has room (the same values are listed as "Blocks (rows × columns)"). With overhang, a key under the drawing says which outline is which, for example "Solid line: pallet 48.00 × 40.00 in. Dashed line: limit with overhang 50.00 × 42.00 in." A long table continues on further pages. Pages 2 onward carry a running header. Every footer lists the settings used, including "Desired boxes per carton: best fit." when blank or "Desired boxes per carton: N." when set, "Layout N of M" and "Page X of Y".
-  - US Letter, portrait, inches only, English only, no company name or logo.
+  - US Letter, portrait, inches only, English only, no company name or logo. The only picture besides the drawings is the small mascot at the top right of page 1.
   - The pictures and text are always on a white background, whatever the theme.
   - The layer drawings show carton outlines, not individual product boxes.
   - Letters outside the basic Latin alphabet in a job name (for example Chinese or Cyrillic) print as "?".
   - If the 3D view is unavailable, the sheet is made without the two pictures and says "3D pictures unavailable".
-- PNG and PDF are always light, whatever the theme.
+- PNG and PDF are always light, whatever the theme. The PNG has no mascot.
 
 ## Planned for a later round (not built yet)
 

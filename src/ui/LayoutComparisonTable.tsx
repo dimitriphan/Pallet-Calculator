@@ -11,15 +11,16 @@ import { useResults } from './StoreContext';
 const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; className: string }> = {
   met: {
     label: 'Target met',
-    className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+    className: 'bg-green-100 text-green-800 dark:bg-harbor-green dark:text-harbor-deep',
   },
   exceeded: {
     label: 'Target exceeded',
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
+    className: 'bg-blue-100 text-blue-800 dark:bg-harbor-green dark:text-harbor-deep',
   },
   notAchievable: {
     label: 'Target not achievable',
-    className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
+    className:
+      'bg-red-100 text-red-800 dark:border dark:border-harbor-coral dark:bg-harbor-raised dark:text-harbor-foam',
   },
 };
 
@@ -50,18 +51,15 @@ export function LayoutComparisonTable() {
   return (
     <section aria-labelledby="comparison-heading" className="shrink-0 space-y-2">
       <div className="flex items-baseline justify-between">
-        <h2
-          id="comparison-heading"
-          className="text-sm font-semibold text-gray-900 dark:text-gray-100"
-        >
+        <h2 id="comparison-heading" className="heading text-sm text-gray-900 dark:text-harbor-foam">
           Layout comparison
         </h2>
       </div>
       <StatusMessages />
       {rows.length > 0 && (
-        <div className="overflow-x-auto rounded border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+        <div className="overflow-x-auto border border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-mist">
               <tr>
                 <th scope="col" className={`${th} w-8`}>
                   #
@@ -102,20 +100,20 @@ export function LayoutComparisonTable() {
                     aria-current={selected ? 'true' : undefined}
                     onClick={() => select(index)}
                     onKeyDown={(e) => onKeyDown(e, index)}
-                    className={`cursor-pointer border-b border-gray-100 last:border-b-0 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:border-gray-800 dark:focus-visible:outline-blue-400 ${
+                    className={`focus-ticks-row cursor-pointer border-b border-gray-100 last:border-b-0 dark:border-harbor-foam/40 dark:border-l-[3px] ${
                       selected
-                        ? 'bg-blue-50 text-blue-950 dark:bg-blue-950 dark:text-blue-100'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-blue-50 text-blue-950 dark:border-l-harbor-green dark:bg-harbor-raised dark:font-semibold dark:text-harbor-foam'
+                        : 'hover:bg-gray-50 dark:border-l-transparent dark:text-harbor-foam dark:hover:bg-harbor-raised'
                     }`}
                   >
-                    <td className={`${td} font-medium`}>{ranked.rank}</td>
+                    <td className={td}>{ranked.rank}</td>
                     <td className={td}>{formatDims(cartonDisplayDims(ranked.layout, 'outer'))}</td>
                     <td className={`${td} text-right`}>
                       <span className="flex flex-col items-end gap-0.5">
                         <span className="font-semibold">{ranked.layout.totalProducts}</span>
                         {badge && (
                           <span
-                            className={`whitespace-nowrap rounded px-1.5 text-[11px] font-medium leading-4 ${badge.className}`}
+                            className={`whitespace-nowrap px-1.5 text-[11px] leading-4 ${badge.className}`}
                           >
                             {badge.label}
                           </span>

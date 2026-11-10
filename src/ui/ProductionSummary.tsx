@@ -16,19 +16,20 @@ export function ProductionSummary() {
   return (
     <section
       aria-label="Production summary"
-      className="relative shrink-0 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+      className="relative shrink-0 border-b border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel"
     >
       <dl
-        className={`grid grid-cols-5 divide-x divide-gray-200 dark:divide-gray-700 ${stale ? 'opacity-50' : ''}`}
+        className={`grid grid-cols-5 divide-x divide-gray-200 dark:divide-harbor-foam/30 ${stale ? 'opacity-50 dark:opacity-100' : ''}`}
       >
         {tiles.map(([label, value], k) => (
           <div key={label} className="px-4 py-2">
-            <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</dt>
+            <dt className="text-xs text-gray-500 dark:text-harbor-mist">{label}</dt>
             <dd
               className={`text-xl font-semibold tabular-nums ${
-                k === tiles.length - 1
-                  ? 'text-blue-700 dark:text-blue-400'
-                  : 'text-gray-900 dark:text-gray-100'
+                k === tiles.length - 1 ? 'text-blue-700' : 'text-gray-900'
+              } ${
+                // Harbor marks an out-of-date result with mist values and the badge, never by fading.
+                stale ? 'dark:text-harbor-mist' : 'dark:text-harbor-foam'
               }`}
             >
               {value === undefined ? '—' : String(value)}

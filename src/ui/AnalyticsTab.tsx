@@ -57,6 +57,7 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Quantity per carton', String(a.product.perCarton)],
         ]}
       />
+      <div className="root-divider" aria-hidden="true" />
       <DetailRows
         title="Carton"
         rows={[
@@ -72,6 +73,7 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Product side facing up', <OrientationLines list={a.carton.layerOrientations} />],
         ]}
       />
+      <div className="root-divider" aria-hidden="true" />
       <DetailRows
         title="Pallet"
         rows={[
@@ -96,6 +98,7 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Remaining footprint (fullest layer)', area(p.remainingFootprintArea)],
         ]}
       />
+      <div className="root-divider" aria-hidden="true" />
       <DetailRows
         title="Final results"
         rows={[

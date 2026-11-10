@@ -73,20 +73,27 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
       <div>
         <label
           htmlFor={nameId}
-          className="mb-0.5 block text-xs font-medium text-gray-700 dark:text-gray-300"
+          className="mb-0.5 block text-xs text-gray-700 dark:text-harbor-mist"
         >
           Name
         </label>
-        <input
-          id={nameId}
-          type="text"
-          value={name}
-          autoComplete="off"
-          aria-invalid={nameError ? 'true' : 'false'}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-        />
-        {nameError && <p className="mt-0.5 text-xs text-red-700 dark:text-red-400">{nameError}</p>}
+        <div className="focus-ticks-within flex">
+          <input
+            id={nameId}
+            type="text"
+            value={name}
+            autoComplete="off"
+            aria-invalid={nameError ? 'true' : 'false'}
+            onChange={(e) => setName(e.target.value)}
+            className={`w-full border border-gray-300 px-2 py-1 text-sm focus:outline-none dark:bg-harbor-raised dark:text-harbor-foam ${
+              // Light shows the name error as text only; Harbor also gives the field its coral edge.
+              nameError ? 'dark:border-l-[3px] dark:border-harbor-coral' : 'dark:border-harbor-foam'
+            }`}
+          />
+        </div>
+        {nameError && (
+          <p className="mt-0.5 text-xs text-red-700 dark:text-harbor-coral-text">{nameError}</p>
+        )}
       </div>
       <DimsFieldset
         legend="Pallet limitation"
@@ -107,7 +114,7 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
         onChange={setField}
       />
       <fieldset className="grid grid-cols-2 gap-2">
-        <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <legend className="mb-1 text-xs heading text-gray-500 dark:text-harbor-mist">
           Packing
         </legend>
         <NumberField

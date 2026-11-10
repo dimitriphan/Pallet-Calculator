@@ -8,20 +8,24 @@ const mocks = vi.hoisted(() => ({
   composePng: vi.fn(),
   downloadBlob: vi.fn(),
   renderBuildSheetPdf: vi.fn(),
+  loadPrintMascot: vi.fn(),
 }));
 vi.mock('../export/png', async (orig) => ({
   ...(await orig<typeof import('../export/png')>()),
   composePng: mocks.composePng,
 }));
 vi.mock('../export/download', () => ({ downloadBlob: mocks.downloadBlob }));
+vi.mock('../export/mascotImage', () => ({ loadPrintMascot: mocks.loadPrintMascot }));
 vi.mock('../export/buildSheetPdf', () => ({ renderBuildSheetPdf: mocks.renderBuildSheetPdf }));
 
+const MASCOT = { dataUrl: 'data:image/png;base64,AAAA', aspect: 0.63 };
 const VIEWS = { current: 'c', top: 't', side: 's' };
 
 beforeEach(() => {
   useNoticesStore.setState({ notices: [] });
   mocks.composePng.mockReset().mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
   mocks.downloadBlob.mockReset();
+  mocks.loadPrintMascot.mockReset().mockResolvedValue(MASCOT);
   mocks.renderBuildSheetPdf
     .mockReset()
     .mockResolvedValue(new Blob(['%PDF'], { type: 'application/pdf' }));
@@ -215,10 +219,22 @@ describe('ExportMenu, build sheet', () => {
     expect(sheet.jobName).toBe('Dock 4');
     expect(sheet.summary.at(-1)?.value).toBe('260');
     expect(pictures).toEqual({ current: 'c', side: 's' });
+    expect(mocks.renderBuildSheetPdf.mock.calls[0]?.[2]).toEqual(MASCOT);
     expect(mocks.downloadBlob).toHaveBeenCalledTimes(1);
     expect(mocks.downloadBlob.mock.calls[0]?.[1]).toMatch(/^pallet-build-sheet-\d{8}-\d{6}\.pdf$/);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export' })).toHaveFocus();
+    expect(useNoticesStore.getState().notices).toEqual([]);
+  });
+
+  it('still downloads the sheet, without the mascot, when the mascot cannot be loaded', async () => {
+    mocks.loadPrintMascot.mockRejectedValue(new Error('offline'));
+    const { user } = await renderApp();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Save PDF' }));
+    expect(mocks.renderBuildSheetPdf).toHaveBeenCalledTimes(1);
+    expect(mocks.renderBuildSheetPdf.mock.calls[0]?.[2]).toBeUndefined();
+    expect(mocks.downloadBlob).toHaveBeenCalledTimes(1);
     expect(useNoticesStore.getState().notices).toEqual([]);
   });
 

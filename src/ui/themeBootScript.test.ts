@@ -2,18 +2,15 @@ import { describe, expect, it } from 'vitest';
 import html from '../../index.html?raw';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { FakeStorage } from '../persistence/testStorage';
-import { createPrefsStore, resolveTheme } from '../store/prefsStore';
+import { createPrefsStore } from '../store/prefsStore';
 
 const head = html.slice(0, html.indexOf('</head>'));
 const body = /<script>([\s\S]*?)<\/script>/.exec(head)?.[1] ?? '';
 
-interface Env {
-  stored: string | null | 'throw';
-  systemDark: boolean | 'missing' | 'throw';
-}
+type Stored = string | null | 'throw';
 
-/** Runs the real inline script against fakes and reports whether it added "dark". */
-function bootAddsDark({ stored, systemDark }: Env): boolean {
+/** Runs the real inline script against fakes and reports whether it added "harbor". */
+function bootAddsHarbor(stored: Stored): boolean {
   const added: string[] = [];
   const localStorage = {
     getItem: () => {
@@ -21,38 +18,31 @@ function bootAddsDark({ stored, systemDark }: Env): boolean {
       return stored;
     },
   };
-  const matchMedia =
-    systemDark === 'missing'
-      ? undefined
-      : () => {
-          if (systemDark === 'throw') throw new Error('no media');
-          return { matches: systemDark };
-        };
   const document = { documentElement: { classList: { add: (c: string) => added.push(c) } } };
-  new Function('localStorage', 'matchMedia', 'document', body)(localStorage, matchMedia, document);
-  return added.includes('dark');
+  new Function('localStorage', 'document', body)(localStorage, document);
+  expect(added.filter((c) => c !== 'harbor')).toEqual([]);
+  return added.includes('harbor');
 }
 
-/** What the app itself resolves for the same stored string and system setting. */
-function appResolvesDark({ stored, systemDark }: Env): boolean {
+/** What the app itself resolves for the same stored string. */
+function appResolvesHarbor(stored: Stored): boolean {
   const storage = new FakeStorage();
-  if (typeof stored === 'string' && stored !== 'throw') storage.setItem(STORAGE_KEYS.prefs, stored);
+  if (typeof stored === 'string') storage.setItem(STORAGE_KEYS.prefs, stored);
   if (stored === 'throw') storage.failReads = true;
-  const theme = createPrefsStore(storage).getState().theme;
-  return resolveTheme(theme, systemDark === true) === 'dark';
+  return createPrefsStore(storage).getState().theme === 'harbor';
 }
 
-const CASES: [string, Env, boolean][] = [
-  ['no stored value, system dark', { stored: null, systemDark: true }, true],
-  ['no stored value, system light', { stored: null, systemDark: false }, false],
-  ['dark stored, system light', { stored: '{"theme":"dark"}', systemDark: false }, true],
-  ['light stored, system dark', { stored: '{"theme":"light"}', systemDark: true }, false],
-  ['theme missing, system dark', { stored: '{"viewMode":"full"}', systemDark: true }, true],
-  ['theme invalid, system dark', { stored: '{"theme":"x"}', systemDark: true }, true],
-  ['unparseable JSON, system dark', { stored: '{bad', systemDark: true }, true],
-  ['getItem throws, system dark', { stored: 'throw', systemDark: true }, true],
-  ['no matchMedia, nothing stored', { stored: null, systemDark: 'missing' }, false],
-  ['matchMedia throws, nothing stored', { stored: null, systemDark: 'throw' }, false],
+const CASES: [string, Stored, boolean][] = [
+  ['no stored value', null, true],
+  ['light stored', '{"theme":"light"}', false],
+  ['harbor stored', '{"theme":"harbor"}', true],
+  ['dark stored', '{"theme":"dark"}', true],
+  ['system stored', '{"theme":"system"}', true],
+  ['theme missing', '{"viewMode":"full"}', true],
+  ['theme invalid', '{"theme":"x"}', true],
+  ['"Light" in another case', '{"theme":"Light"}', true],
+  ['unparseable JSON', '{bad', true],
+  ['getItem throws', 'throw', true],
 ];
 
 describe('theme boot script in index.html', () => {
@@ -60,8 +50,12 @@ describe('theme boot script in index.html', () => {
     expect(body).toContain('pc.prefs.v1');
   });
 
-  it.each(CASES)('%s', (_name, env, expected) => {
-    expect(bootAddsDark(env)).toBe(expected);
-    expect(bootAddsDark(env)).toBe(appResolvesDark(env));
+  it('does not consult the operating system', () => {
+    expect(body).not.toContain('matchMedia');
+  });
+
+  it.each(CASES)('%s', (_name, stored, expected) => {
+    expect(bootAddsHarbor(stored)).toBe(expected);
+    expect(bootAddsHarbor(stored)).toBe(appResolvesHarbor(stored));
   });
 });

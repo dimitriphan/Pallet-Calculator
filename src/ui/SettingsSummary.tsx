@@ -15,7 +15,7 @@ function visibleInBasic(errorKey: string): boolean {
 }
 
 const LINK_BUTTON =
-  'rounded font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400 dark:hover:text-blue-300 dark:focus-visible:outline-blue-400';
+  'focus-ticks text-blue-700 underline underline-offset-2 hover:text-blue-900 dark:text-harbor-teal-text dark:hover:text-harbor-teal-text';
 
 /**
  * Basic mode's one line about the settings it does not show: what will be used, or that a
@@ -33,8 +33,7 @@ export function SettingsSummary() {
 
   let text: string | null;
   let action: string;
-  let tone =
-    'border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300';
+  let tone = 'bracket bg-gray-50 text-gray-700 dark:bg-harbor-panel dark:text-harbor-foam';
   if (parsed.ok) {
     text = settingsSummary(parsed.inputs);
     action = 'Change in Full view';
@@ -42,7 +41,7 @@ export function SettingsSummary() {
     text = HIDDEN_INVALID;
     action = 'Open Full view';
     tone =
-      'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200';
+      'border border-red-200 bg-red-50 text-red-800 dark:border-0 dark:border-l-2 dark:border-harbor-coral dark:bg-harbor-panel dark:text-harbor-coral-text';
   } else {
     // A field on this screen is invalid; describe the settings behind the result still shown.
     text = lastInputs ? settingsSummary(lastInputs) : null;
@@ -51,7 +50,7 @@ export function SettingsSummary() {
   if (text === null) return null;
 
   return (
-    <p className={`rounded border px-3 py-2 text-sm ${tone}`}>
+    <p className={`px-3 py-2 text-sm ${tone}`}>
       {text}{' '}
       <button type="button" onClick={openFull} className={LINK_BUTTON}>
         {action}

@@ -6,7 +6,7 @@ import { formatDims } from '../engine/units/units';
 import type { SceneTheme } from './sceneTheme';
 import { toSceneBounds } from './transforms';
 
-const CHIP = 'whitespace-nowrap rounded px-1.5 py-0.5 text-xs shadow';
+const CHIP = 'whitespace-nowrap px-1.5 py-0.5 text-xs';
 
 interface Props {
   layout: Layout;

@@ -26,8 +26,8 @@ function SceneContents() {
   const { layout, inputs, cartons, bounds, measured } = useSceneData();
   const s = useScene((st) => st);
   const invalidate = useThree((st) => st.invalidate);
-  const dark = useResolvedTheme() === 'dark';
-  const theme = sceneTheme(dark ? 'dark' : 'light');
+  const themeName = useResolvedTheme();
+  const theme = sceneTheme(themeName);
 
   const productsShown =
     !!layout &&
@@ -105,7 +105,11 @@ function SceneContents() {
           bounds={measured}
           clear={bounds}
           line={theme.measureLine}
-          chip={dark ? { backgroundColor: theme.chipBg, color: theme.chipText } : undefined}
+          chip={
+            themeName === 'harbor'
+              ? { backgroundColor: theme.chipBg, color: theme.chipText }
+              : undefined
+          }
         />
       )}
       {selected && <SelectionOutline bounds={selected} />}
@@ -121,7 +125,7 @@ function SceneContents() {
 }
 
 const Unavailable = () => (
-  <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-600 dark:text-gray-300">
+  <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-600 dark:text-harbor-mist">
     {WEBGL_UNAVAILABLE}
   </div>
 );

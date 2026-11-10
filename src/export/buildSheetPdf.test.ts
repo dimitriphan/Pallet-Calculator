@@ -86,6 +86,39 @@ describe('planPages', () => {
   });
 });
 
+// A 1 x 1 brown PNG, different from the pictures' PNG (jsPDF stores identical images once).
+const MASCOT_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGOYEu78HwAE3wIucvoh+gAAAABJRU5ErkJggg==';
+const MASCOT = { dataUrl: MASCOT_PNG, aspect: 17 / 27 };
+const imageCount = (text: string) => (text.match(/\/Subtype \/Image/g) ?? []).length;
+
+describe('renderBuildSheetPdf mascot', () => {
+  it('adds one image to page 1 and keeps the page count', async () => {
+    const sheet = defaultSheet({ jobName: 'Dock 4' });
+    const without = await pdfText(await renderBuildSheetPdf(sheet, null));
+    const withMascot = await pdfText(await renderBuildSheetPdf(sheet, null, MASCOT));
+    expect(imageCount(withMascot)).toBe(imageCount(without) + 1);
+    expect(pageObjects(withMascot)).toBe(planPages(sheet).totalPages);
+    expect(pageObjects(withMascot)).toBe(pageObjects(without));
+  });
+
+  it('draws the mascot once even with pictures and a long job name', async () => {
+    const sheet = defaultSheet({ jobName: 'x'.repeat(80) });
+    const pics = { current: PNG, side: PNG };
+    const without = await pdfText(await renderBuildSheetPdf(sheet, pics));
+    const withMascot = await pdfText(await renderBuildSheetPdf(sheet, pics, MASCOT));
+    expect(imageCount(withMascot)).toBe(imageCount(without) + 1);
+  });
+
+  it('is unchanged when the mascot is undefined', async () => {
+    const sheet = defaultSheet();
+    const a = await pdfText(await renderBuildSheetPdf(sheet, null));
+    const b = await pdfText(await renderBuildSheetPdf(sheet, null, undefined));
+    expect(imageCount(b)).toBe(imageCount(a));
+    expect(b.length).toBe(a.length);
+  });
+});
+
 describe('renderBuildSheetPdf', () => {
   it('renders the default winner as text, without pictures', async () => {
     const text = await pdfText(

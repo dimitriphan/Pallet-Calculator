@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { optimize } from '../engine/optimize';
 import { renderApp } from './testUtils';
 
-afterEach(() => document.documentElement.classList.remove('dark'));
+afterEach(() => document.documentElement.classList.remove('harbor'));
 
 describe('header preference controls', () => {
   it('shows the view switch and theme select after the existing controls', async () => {
@@ -16,9 +16,8 @@ describe('header preference controls', () => {
     expect(screen.getByRole('radio', { name: 'Full' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: 'Basic' })).toHaveAttribute('aria-checked', 'false');
     expect(Array.from(select.querySelectorAll('option')).map((o) => o.textContent)).toEqual([
-      'System',
+      'Harbor',
       'Light',
-      'Dark',
     ]);
     const exportBtn = screen.getByRole('button', { name: /export/i });
     expect(
@@ -27,11 +26,15 @@ describe('header preference controls', () => {
     expect(group.compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('choosing Dark sets the dark class on the document', async () => {
+  it('choosing Harbor sets the harbor class on the document, and Light removes it', async () => {
     const { user, stores } = await renderApp();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Theme' }), 'Dark');
-    expect(document.documentElement).toHaveClass('dark');
-    expect(stores.prefs.getState().theme).toBe('dark');
+    const select = screen.getByRole('combobox', { name: 'Theme' });
+    await user.selectOptions(select, 'Harbor');
+    expect(document.documentElement).toHaveClass('harbor');
+    expect(stores.prefs.getState().theme).toBe('harbor');
+    await user.selectOptions(select, 'Light');
+    expect(document.documentElement).not.toHaveClass('harbor');
+    expect(stores.prefs.getState().theme).toBe('light');
   });
 
   it('choosing Basic stores the preference without running the optimizer again', async () => {

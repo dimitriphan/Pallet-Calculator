@@ -16,7 +16,7 @@ const TOGGLES: [ToggleKey, string][] = [
 const BASIC_TOGGLES = new Set<ToggleKey>(['showProducts', 'showMeasurements']);
 
 const BUTTON =
-  'rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus-visible:outline-blue-400';
+  'focus-ticks border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline';
 
 /** View toggles and camera buttons for the 3D workspace; a reduced set in Basic mode. */
 export function SceneToolbar({ totalProducts }: { totalProducts: number }) {
@@ -27,10 +27,10 @@ export function SceneToolbar({ totalProducts }: { totalProducts: number }) {
     scene.showProducts && totalProducts > PRODUCT_RENDER_THRESHOLD && !scene.forceProducts;
 
   return (
-    <div className="border-b border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+    <div className="border-b border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 dark:border-harbor-foam/40 dark:bg-harbor-panel dark:text-harbor-foam">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {toggles.map(([key, label]) => (
-          <label key={key} className="flex items-center gap-1">
+          <label key={key} className="focus-ticks-within flex items-center gap-1">
             <input type="checkbox" checked={scene[key]} onChange={() => scene.toggle(key)} />
             {label}
           </label>
@@ -49,7 +49,7 @@ export function SceneToolbar({ totalProducts }: { totalProducts: number }) {
       {productsHidden && (
         <p
           role="status"
-          className="mt-1 flex items-center gap-2 text-amber-800 dark:text-amber-300"
+          className="mt-1 flex items-center gap-2 text-amber-800 dark:text-harbor-sand"
         >
           {totalProducts > PRODUCT_FORCE_LIMIT ? (
             `Too many boxes to draw individually (${totalProducts.toLocaleString('en-US')}).`

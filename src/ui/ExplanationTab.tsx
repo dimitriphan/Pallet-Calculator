@@ -13,11 +13,11 @@ export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
   const cell = 'px-2 py-1 text-right tabular-nums';
   return (
     <div className="space-y-4">
-      <table className="w-full rounded border border-gray-200 bg-white text-sm dark:border-gray-700 dark:bg-gray-900">
-        <caption className="mb-1 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <table className="w-full border border-gray-200 bg-white text-sm dark:border-harbor-foam/40 dark:bg-harbor-panel dark:text-harbor-foam">
+        <caption className="mb-1 text-left text-xs heading text-gray-500 dark:text-harbor-mist">
           Score of layout {ranked.rank}
         </caption>
-        <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+        <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-mist">
           <tr>
             <th scope="col" className="px-2 py-1 text-left font-medium">
               Component
@@ -33,12 +33,12 @@ export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+        <tbody className="divide-y divide-gray-100 dark:divide-harbor-foam/40">
           {rows.map(([name, value, weight, contribution]) => (
             <tr key={name}>
               <th
                 scope="row"
-                className="px-2 py-1 text-left font-normal text-gray-700 dark:text-gray-300"
+                className="px-2 py-1 text-left font-medium text-gray-700 dark:text-harbor-mist"
               >
                 {name}
               </th>
@@ -48,22 +48,22 @@ export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
             </tr>
           ))}
         </tbody>
-        <tfoot className="border-t border-gray-200 dark:border-gray-700">
+        <tfoot className="border-t border-gray-200 dark:border-harbor-foam/40">
           <tr>
             <th
               scope="row"
               colSpan={3}
-              className="px-2 py-1 text-left font-semibold text-gray-900 dark:text-gray-100"
+              className="px-2 py-1 text-left font-semibold text-gray-900 dark:text-harbor-foam"
             >
               Final score
             </th>
-            <td className={`${cell} font-semibold text-blue-700 dark:text-blue-400`}>
+            <td className={`${cell} font-semibold text-blue-700 dark:text-harbor-foam`}>
               {formatNumber(s.total)}
             </td>
           </tr>
         </tfoot>
       </table>
-      <p className="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+      <p className="text-sm leading-relaxed text-gray-800 dark:text-harbor-foam">
         {ranked.explanation}
       </p>
     </div>

@@ -26,7 +26,11 @@ In Full view, click a row in the **layout comparison** table to see that layout 
 
 ### Theme
 
-The **Theme** control in the header offers System, Light and Dark. System follows your computer's setting. Exports (the PNG picture and the PDF) are always on a light background, so they print well.
+The look of the tool is called **Harbor**: deep blues, teal, square corners, and a small pixel-art mascot. The **Theme** control in the header offers two choices: **Harbor** (the default) and **Light**. Pick one and the tool remembers it in this browser. The tool does not follow your computer's light or dark setting. If you saved "Dark" or "System" in an older version, the tool now opens in Harbor.
+
+The typefaces come with the site. Nothing is fetched from another website. The mascot is only decoration. It says nothing and shows no numbers. Exports (the PNG picture and the PDF) are always on a light background, so they print well. The mascot appears in exports only once: on page 1 of the build sheet.
+
+To change a pixel of the mascot, edit `tools/mascot/poses.mjs`, then run `npm run mascot`. This rebuilds the pictures in `src/assets/mascot/`.
 
 ### Boxes per carton
 

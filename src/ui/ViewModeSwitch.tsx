@@ -44,7 +44,7 @@ export function ViewModeSwitch() {
     <div
       role="radiogroup"
       aria-label="View"
-      className="inline-flex rounded border border-gray-300 dark:border-gray-600"
+      className="inline-flex border border-gray-300 dark:border-harbor-foam"
     >
       {MODES.map((m, i) => {
         const selected = m.value === viewMode;
@@ -61,10 +61,10 @@ export function ViewModeSwitch() {
             tabIndex={selected ? 0 : -1}
             onClick={() => choose(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`px-3 py-1 text-sm first:rounded-l last:rounded-r focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 ${
+            className={`focus-ticks px-3 py-1 text-sm ${
               selected
-                ? 'bg-blue-600 font-medium text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
+                ? 'bg-blue-600 text-white dark:bg-harbor-teal-fill dark:text-harbor-foam'
+                : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline'
             }`}
           >
             {m.label}
