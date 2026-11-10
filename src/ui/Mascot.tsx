@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import concernedUrl from '../assets/mascot/concerned.png';
 import headerUrl from '../assets/mascot/header-mark.png';
 import idleUrl from '../assets/mascot/idle.png';
@@ -10,19 +11,27 @@ export type MascotPose = 'header' | 'idle' | 'working' | 'concerned';
 const STILL = { header: headerUrl, idle: idleUrl, concerned: concernedUrl } as const;
 const WORKING = [working1Url, working2Url, working3Url] as const;
 
-interface Props {
-  pose: MascotPose;
-  /** Rendered height in px: a multiple of 32, except 'header' which is 24 or 32. */
-  size: number;
-}
+/**
+ * The header mark is the 32 x 32 art shown at exactly 2x, cropped to the head ring, stem and
+ * leaves. These are that drawing's bounding box in the 32 x 32 sprite (x, y, width, height),
+ * taken from `POSES.headerMark` in tools/mascot/poses.mjs; Mascot.test.tsx checks they still match.
+ */
+export const HEADER_MARK_BOX = { x: 11, y: 9, width: 10, height: 13 } as const;
+const HEADER_SCALE = 2;
+const CELL = 32;
+
+type Props = { pose: 'header' } | { pose: Exclude<MascotPose, 'header'>; size: number };
 
 /**
  * The small, silent pixel-art mascot. Purely decorative: no name, hidden from assistive tech,
- * with fixed dimensions so it never shifts the layout. The working pose stacks its three frames
- * and cycles them by CSS (see `.mascot-frame` in index.css); with reduced motion only frame 2 shows.
+ * with fixed dimensions so it never shifts the layout. The sized poses take a height that is a
+ * multiple of 32 (whole-number pixel scale). The working pose stacks its three frames and cycles
+ * them by CSS (see `.mascot-frame` in index.css); with reduced motion only frame 2 shows.
  */
-export function Mascot({ pose, size }: Props) {
-  const img = (src: string, className: string, key?: number) => (
+export function Mascot(props: Props) {
+  const { pose } = props;
+  const size = props.pose === 'header' ? CELL * HEADER_SCALE : props.size;
+  const img = (src: string, className: string, key?: number, style?: CSSProperties) => (
     <img
       key={key}
       src={src}
@@ -32,10 +41,27 @@ export function Mascot({ pose, size }: Props) {
       width={size}
       height={size}
       data-mascot={pose}
-      style={{ imageRendering: 'pixelated' }}
+      style={{ imageRendering: 'pixelated', ...style }}
       className={className}
     />
   );
+
+  if (pose === 'header') {
+    const { x, y, width, height } = HEADER_MARK_BOX;
+    return (
+      <span
+        aria-hidden="true"
+        data-mascot-box="header"
+        className="relative inline-block shrink-0 select-none overflow-hidden"
+        style={{ width: width * HEADER_SCALE, height: height * HEADER_SCALE }}
+      >
+        {img(STILL.header, 'absolute max-w-none', undefined, {
+          left: -x * HEADER_SCALE,
+          top: -y * HEADER_SCALE,
+        })}
+      </span>
+    );
+  }
 
   if (pose !== 'working') return img(STILL[pose], 'shrink-0 select-none');
 

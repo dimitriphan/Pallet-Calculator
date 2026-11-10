@@ -8,7 +8,8 @@ import idleUrl from '../assets/mascot/idle.png';
 import working1Url from '../assets/mascot/working-1.png';
 import working2Url from '../assets/mascot/working-2.png';
 import working3Url from '../assets/mascot/working-3.png';
-import { Mascot } from './Mascot';
+import { HEADER_MARK_BOX, Mascot } from './Mascot';
+import { POSES } from '../../tools/mascot/poses.mjs';
 import { flush, makeStores, renderApp } from './testUtils';
 import App from '../App';
 import { vi } from 'vitest';
@@ -27,10 +28,9 @@ function field(group: string, label: string) {
 
 describe('Mascot', () => {
   it.each([
-    ['header', 24, headerUrl],
-    ['header', 32, headerUrl],
+    ['idle', 96, idleUrl],
     ['idle', 64, idleUrl],
-    ['concerned', 32, concernedUrl],
+    ['concerned', 64, concernedUrl],
   ] as const)('draws the %s pose at %i px as one decorative pixelated image', (pose, size, url) => {
     const { container } = render(<Mascot pose={pose} size={size} />);
     const imgs = container.querySelectorAll('img');
@@ -46,17 +46,54 @@ describe('Mascot', () => {
     expect(screen.queryAllByRole('img')).toHaveLength(0);
   });
 
+  it('draws the header mark at exactly 2x, cropped to the head, in a fixed-size box', () => {
+    const { container } = render(<Mascot pose="header" />);
+    const img = container.querySelector('img')!;
+    expect(img).toHaveAttribute('src', headerUrl);
+    expect(img).toHaveAttribute('alt', '');
+    expect(img).toHaveAttribute('aria-hidden', 'true');
+    expect(img).toHaveAttribute('width', '64');
+    expect(img).toHaveAttribute('height', '64');
+    expect(img).toHaveStyle({ imageRendering: 'pixelated', left: '-22px', top: '-18px' });
+    const box = container.firstElementChild!;
+    expect(box).toHaveStyle({ width: '20px', height: '26px' });
+    expect(box).toHaveClass('overflow-hidden');
+  });
+
+  it('crops to the bounding box of the header mark in the pose map', () => {
+    const rows = POSES.headerMark!;
+    let left = Infinity;
+    let top = Infinity;
+    let right = -Infinity;
+    let bottom = -Infinity;
+    rows.forEach((row, y) =>
+      [...row].forEach((ch, x) => {
+        if (ch === '.') return;
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }),
+    );
+    expect(HEADER_MARK_BOX).toEqual({
+      x: left,
+      y: top,
+      width: right - left + 1,
+      height: bottom - top + 1,
+    });
+  });
+
   it('stacks the three working frames in one fixed-size box', () => {
-    const { container } = render(<Mascot pose="working" size={32} />);
+    const { container } = render(<Mascot pose="working" size={64} />);
     const imgs = Array.from(container.querySelectorAll('img'));
     expect(imgs.map((i) => i.getAttribute('src'))).toEqual([working1Url, working2Url, working3Url]);
     for (const img of imgs) {
       expect(img).toHaveAttribute('aria-hidden', 'true');
       expect(img).toHaveAttribute('alt', '');
-      expect(img).toHaveAttribute('width', '32');
-      expect(img).toHaveAttribute('height', '32');
+      expect(img).toHaveAttribute('width', '64');
+      expect(img).toHaveAttribute('height', '64');
     }
-    expect(container.firstElementChild).toHaveStyle({ width: '32px', height: '32px' });
+    expect(container.firstElementChild).toHaveStyle({ width: '64px', height: '64px' });
     expect(screen.queryAllByRole('img')).toHaveLength(0);
   });
 
@@ -75,13 +112,13 @@ describe('where the mascot appears', () => {
   const renderBasic = (run?: Parameters<typeof renderApp>[0]) =>
     renderApp(run, { viewMode: 'basic' });
 
-  it('puts exactly one mark, 32 px tall, before the product name', async () => {
+  it('puts exactly one mark, a 2x crop, before the product name', async () => {
     await renderApp();
     const header = screen.getByRole('banner');
     const marks = header.querySelectorAll('img');
     expect(marks).toHaveLength(1);
     expect(marks[0]).toHaveAttribute('src', headerUrl);
-    expect(marks[0]).toHaveAttribute('height', '32');
+    expect(marks[0]).toHaveAttribute('height', '64');
     const title = screen.getByRole('heading', { level: 1, name: 'Pallet Calculator' });
     expect(title.contains(marks[0]!)).toBe(false);
     expect(
@@ -121,7 +158,7 @@ describe('where the mascot appears', () => {
     const card = screen.getByRole('region', { name: 'What to build' });
     expect(within(card).getByText('Enter the three sizes to see what to build.')).toBeVisible();
     expect(kinds()).toEqual(['header', 'idle']);
-    expect(card.querySelector('img[data-mascot="idle"]')).toHaveAttribute('height', '64');
+    expect(card.querySelector('img[data-mascot="idle"]')).toHaveAttribute('height', '96');
     unmount();
     await renderBasic();
     expect(kinds()).toEqual(['header']);
@@ -131,9 +168,9 @@ describe('where the mascot appears', () => {
     await renderBasic(() => new Promise(() => {}));
     expect(kinds()).toEqual(['header', 'working', 'working', 'working']);
     const line = screen.getByText('Calculating…');
-    const box = line.querySelector('[data-mascot-box="working"]');
+    const box = line.parentElement?.querySelector('[data-mascot-box="working"]');
     expect(box).not.toBeNull();
-    expect(line.firstElementChild).toBe(box);
+    expect(line.parentElement?.firstElementChild).toBe(box);
     expect(box!.querySelectorAll('img')).toHaveLength(3);
     expect(liveRegion()).toHaveTextContent('Calculating…');
     expect(screen.queryAllByRole('img')).toHaveLength(0);
@@ -143,7 +180,7 @@ describe('where the mascot appears', () => {
     await renderBasic(() => Promise.reject(new Error('Calculation failed.')));
     expect(kinds()).toEqual(['header', 'concerned']);
     const status = liveRegion();
-    expect(status.querySelector('img[data-mascot="concerned"]')).toHaveAttribute('height', '32');
+    expect(status.querySelector('img[data-mascot="concerned"]')).toHaveAttribute('height', '64');
     expect(status).toHaveTextContent('Calculation failed.Retry');
   });
 

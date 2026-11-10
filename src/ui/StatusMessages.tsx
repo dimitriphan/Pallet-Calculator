@@ -68,8 +68,8 @@ export function StatusMessages() {
     <>
       <div role="status" className="space-y-1 text-sm empty:!mt-0">
         {error && (
-          <div className="flex items-center gap-3 border border-red-200 bg-red-50 px-2 py-1 text-red-800 dark:border-0 dark:border-l-2 dark:border-harbor-coral dark:bg-harbor-panel dark:text-harbor-coral-text">
-            <Mascot pose="concerned" size={32} />
+          <div className="flex items-start gap-3 border border-red-200 bg-red-50 px-2 py-1 text-red-800 dark:border-0 dark:border-l-2 dark:border-harbor-coral dark:bg-harbor-panel dark:text-harbor-coral-text">
+            <Mascot pose="concerned" size={64} />
             <span className="flex-1">{error}</span>
             <button
               type="button"
@@ -81,16 +81,22 @@ export function StatusMessages() {
           </div>
         )}
         {lines.map((l) => (
-          <p key={l.key} className={l.progress ? `flex items-center gap-2 ${l.tone}` : l.tone}>
-            {l.progress && <Mascot pose="working" size={32} />}
-            {l.text}
-            {l.progress && <SproutProgress />}
+          <p key={l.key} className={l.progress ? `flex items-start gap-2 ${l.tone}` : l.tone}>
+            {l.progress && <Mascot pose="working" size={64} />}
+            {l.progress ? (
+              <span className="flex h-5 items-center gap-2">
+                {l.text}
+                <SproutProgress />
+              </span>
+            ) : (
+              l.text
+            )}
           </p>
         ))}
       </div>
       {empty && (
-        <p className="bracket flex items-center gap-3 bg-white px-3 py-4 text-sm text-gray-700 dark:bg-harbor-panel dark:text-harbor-foam">
-          <Mascot pose="concerned" size={32} />
+        <p className="bracket flex items-start gap-3 bg-white px-3 py-4 text-sm text-gray-700 dark:bg-harbor-panel dark:text-harbor-foam">
+          <Mascot pose="concerned" size={64} />
           <span>{empty}</span>
         </p>
       )}

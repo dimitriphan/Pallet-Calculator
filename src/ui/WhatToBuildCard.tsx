@@ -111,8 +111,8 @@ export function WhatToBuildCard() {
     );
   } else if (!running) {
     body = (
-      <div className="flex items-center gap-3">
-        <Mascot pose="idle" size={64} />
+      <div className="flex items-start gap-3">
+        <Mascot pose="idle" size={96} />
         <p className="text-sm text-gray-600 dark:text-harbor-mist">{NO_LAYOUT}</p>
       </div>
     );
