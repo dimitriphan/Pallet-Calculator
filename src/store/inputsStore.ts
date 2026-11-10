@@ -14,6 +14,8 @@ export interface InputsState {
   toggleOrientation(c: OrientationCode): void;
   setKeepCartonsUpright(v: boolean): void;
   replaceInputs(i: Inputs): void;
+  /** Writes the fields a preset covers (everything but the product) and leaves the product text as typed. */
+  applyPreset(fields: Omit<Inputs, 'product'>): void;
   reset(): void;
 }
 
@@ -108,6 +110,10 @@ export function createInputsStore(
       },
       setKeepCartonsUpright: (keepCartonsUpright) => apply({ ...get().draft, keepCartonsUpright }),
       replaceInputs: (i) => apply(draftFromInputs(i)),
+      applyPreset(fields) {
+        const covered = draftFromInputs({ ...fields, product: DEFAULT_INPUTS.product });
+        apply({ ...covered, product: get().draft.product });
+      },
       reset: () => apply(draftFromInputs(DEFAULT_INPUTS)),
     };
   });

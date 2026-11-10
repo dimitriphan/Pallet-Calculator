@@ -44,6 +44,26 @@ describe('PresetMenu', () => {
     expect(screen.queryByText('Modified')).not.toBeInTheDocument();
   });
 
+  it('keeps a product that is mid-edit or invalid when a preset is chosen', async () => {
+    const { user, stores } = await renderApp();
+    const before = structuredClone(stores.presets.getState().presets);
+    await user.clear(inputField('Product box', 'Length'));
+    await user.type(inputField('Product box', 'Length'), 'abc');
+    await choosePreset(user, GMA);
+
+    expect(inputField('Product box', 'Length')).toHaveValue('abc');
+    expect(inputField('Product box', 'Width')).toHaveValue('8');
+    expect(inputField('Pallet limitation', 'Length')).toHaveValue('48');
+    expect(inputField('Pallet limitation', 'Width')).toHaveValue('40');
+    expect(stores.presets.getState().presets).toEqual(before);
+    // The preset-covered fields still match, so it is not "Modified".
+    expect(screen.queryByText('Modified')).not.toBeInTheDocument();
+    await setLeeway(user, '0.75');
+    expect(screen.getByText('Modified')).toBeInTheDocument();
+    await setLeeway(user, 'x');
+    expect(screen.getByText('Modified')).toBeInTheDocument();
+  });
+
   it('lists "No preset" and clearing it leaves the inputs unchanged', async () => {
     const { user, stores } = await renderApp();
     await choosePreset(user, GMA);

@@ -90,4 +90,32 @@ describe('inputsStore', () => {
   it('exports a default hook that exists', () => {
     expect(useInputsStore.getState().draft).toBeDefined();
   });
+
+  it('applyPreset writes only the preset-covered fields and keeps the product text', () => {
+    const store = createInputsStore(new FakeStorage());
+    store.getState().setField('product.length', 'abc');
+    const fields: Omit<Inputs, 'product'> = {
+      pallet: { length: 48, width: 40, height: 60 },
+      maxCarton: DEFAULT_INPUTS.maxCarton,
+      targetQuantity: 100,
+      leeway: 1,
+      wallThickness: DEFAULT_INPUTS.wallThickness,
+      overhang: DEFAULT_INPUTS.overhang,
+      rotationMode: DEFAULT_INPUTS.rotationMode,
+      customOrientations: DEFAULT_INPUTS.customOrientations,
+      keepCartonsUpright: DEFAULT_INPUTS.keepCartonsUpright,
+    };
+    store.getState().applyPreset(fields);
+    const s = store.getState();
+    expect(s.draft.product).toEqual({ length: 'abc', width: '8', height: '4' });
+    expect(s.draft.pallet).toEqual({ length: '48', width: '40', height: '60' });
+    expect(s.draft.leeway).toBe('1');
+    expect(s.draft.targetQuantity).toBe('100');
+    expect(s.parsed.ok).toBe(false);
+    store.getState().setField('product.length', '12');
+    expect(store.getState().parsed).toEqual({
+      ok: true,
+      inputs: { ...DEFAULT_INPUTS, ...fields },
+    });
+  });
 });

@@ -1,8 +1,8 @@
 import { useId, useState } from 'react';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import { draftFromInputs, parseDraft } from '../domain/schemas';
-import type { Inputs } from '../domain/types';
-import { inputsMatchPreset, presetToInputs } from '../store/presetsStore';
+import type { InputsDraft, Preset } from '../domain/types';
+import { inputsMatchPreset } from '../store/presetsStore';
 import { BUTTON, ModalDialog } from './ModalDialog';
 import { NamePrompt } from './NamePrompt';
 import { PresetDialog } from './PresetDialog';
@@ -10,6 +10,15 @@ import { presetFieldsOf } from './presetFields';
 import { useInputs, usePresets, useStores } from './StoreContext';
 
 const NO_PRESET = '';
+
+/**
+ * Whether the draft's preset-covered fields (everything but the product) parse and equal the
+ * preset's. The product is swapped for the default so a product being edited does not matter.
+ */
+function coveredFieldsMatch(draft: InputsDraft, preset: Preset): boolean {
+  const parsed = parseDraft({ ...draft, product: draftFromInputs(DEFAULT_INPUTS).product });
+  return parsed.ok && inputsMatchPreset(parsed.inputs, preset);
+}
 
 /** Preset picker with "Modified" tracking, save actions, and a Manage dialog. */
 export function PresetMenu() {
@@ -23,7 +32,7 @@ export function PresetMenu() {
   const selectId = useId();
 
   const active = presets.find((p) => p.id === activeId);
-  const modified = !!active && (!parsed.ok || !inputsMatchPreset(parsed.inputs, active));
+  const modified = !!active && !coveredFieldsMatch(draft, active);
 
   const choose = (id: string) => {
     const preset = presets.find((p) => p.id === id);
@@ -31,18 +40,8 @@ export function PresetMenu() {
       presetsStore.getState().setActive(null);
       return;
     }
-    // Only the product survives from the current inputs. When other fields are invalid, check
-    // the product alone by parsing it beside valid defaults; a bad product falls back to the default.
-    let current: Inputs;
-    if (parsed.ok) current = parsed.inputs;
-    else {
-      const product = parseDraft({ ...draftFromInputs(DEFAULT_INPUTS), product: draft.product });
-      current = {
-        ...DEFAULT_INPUTS,
-        product: product.ok ? product.inputs.product : DEFAULT_INPUTS.product,
-      };
-    }
-    inputs.getState().replaceInputs(presetToInputs(preset, current));
+    // A preset never covers the product: it stays exactly as typed, even mid-edit or invalid.
+    inputs.getState().applyPreset(preset);
     presetsStore.getState().setActive(preset.id);
   };
 
