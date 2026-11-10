@@ -67,8 +67,8 @@ export function SelectionTab({ selection, layout, inputs, analytics }: Selection
             title={`Product ${selection.productIndex + 1} in carton ${selection.cartonIndex + 1}`}
             rows={[
               ['Dimensions (L × W × H)', `${formatDims(inputs.product)} in`],
-              ['X (along pallet length)', inches(product.x)],
-              ['Y (along pallet width)', inches(product.y)],
+              ['X (from load corner)', inches(product.x)],
+              ['Y (from load corner)', inches(product.y)],
               ['Z (above pallet top)', inches(product.z)],
             ]}
           />

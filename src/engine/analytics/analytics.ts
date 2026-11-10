@@ -6,6 +6,39 @@ import { footprintAxes } from '../packing/stacking';
 
 export type TargetStatus = 'none' | 'met' | 'exceeded' | 'notAchievable';
 
+export interface LayerOrientation {
+  vertical: ProductAxis;
+  layers: number;
+  cartonsPerLayer: number;
+}
+
+const AXIS_NAME: Record<ProductAxis, string> = { L: 'Length', W: 'Width', H: 'Height' };
+
+/** Layers grouped by vertical axis and carton count, in the order they are first stacked. */
+export function layerOrientations(l: Layout): LayerOrientation[] {
+  const out: LayerOrientation[] = [];
+  for (const layer of l.layers) {
+    const same = out.find(
+      (o) => o.vertical === layer.vertical && o.cartonsPerLayer === layer.cartonCount,
+    );
+    if (same) same.layers += 1;
+    else out.push({ vertical: layer.vertical, layers: 1, cartonsPerLayer: layer.cartonCount });
+  }
+  return out;
+}
+
+/** "1 × 1 × 5": boxes along product length, width and height. */
+export function describeBoxCounts(counts: Record<ProductAxis, number>): string {
+  return `${counts.L} × ${counts.W} × ${counts.H}`;
+}
+
+/** "Length up: 1 layer; Width up: 6 layers". */
+export function describeLayerOrientations(list: LayerOrientation[]): string {
+  return list
+    .map((o) => `${AXIS_NAME[o.vertical]} up: ${o.layers} ${o.layers === 1 ? 'layer' : 'layers'}`)
+    .join('; ');
+}
+
 export interface Analytics {
   product: { dims: Dims; volume: number; perCarton: number };
   carton: {
@@ -14,6 +47,10 @@ export interface Analytics {
     utilizationPct: number;
     emptyVolume: number;
     perPallet: number;
+    /** Boxes along each product dimension inside the carton. */
+    counts: Record<ProductAxis, number>;
+    /** Per distinct layer type, bottom first: which product dimension points up. */
+    layerOrientations: LayerOrientation[];
   };
   pallet: {
     dims: Dims;
@@ -119,6 +156,8 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       utilizationPct: l.carton.utilization * 100,
       emptyVolume: l.carton.emptyVolume,
       perPallet: l.totalCartons,
+      counts: { ...l.carton.counts },
+      layerOrientations: layerOrientations(l),
     },
     pallet: {
       dims: i.pallet,

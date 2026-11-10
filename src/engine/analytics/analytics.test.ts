@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../../domain/constants';
 import type { Inputs, Layout } from '../../domain/types';
 import { optimize } from '../optimize';
-import { computeAnalytics, cartonDisplayDims } from './analytics';
+import { computeAnalytics, cartonDisplayDims, layerOrientations } from './analytics';
 
 const CASE_I: Inputs = {
   ...DEFAULT_INPUTS,
@@ -66,10 +66,16 @@ describe('computeAnalytics, case I', () => {
 
 describe('computeAnalytics, target', () => {
   const layout = winner(CASE_I);
-  const run = (t: number | null) => computeAnalytics(layout, { ...CASE_I, targetQuantity: t }).target;
+  const run = (t: number | null) =>
+    computeAnalytics(layout, { ...CASE_I, targetQuantity: t }).target;
 
   it('met', () => {
-    expect(run(32)).toMatchObject({ status: 'met', requested: 32, maxPossible: 32, cartonsNeeded: 8 });
+    expect(run(32)).toMatchObject({
+      status: 'met',
+      requested: 32,
+      maxPossible: 32,
+      cartonsNeeded: 8,
+    });
   });
   it('exceeded', () => {
     const t = run(20);
@@ -128,7 +134,10 @@ describe('cartonDisplayDims', () => {
     const mixed: Layout = {
       ...base,
       carton: { ...base.carton, outer: { L: 7, W: 6, H: 10 }, inner: { L: 5, W: 4, H: 9 } },
-      layers: [{ ...layer, vertical: 'L' }, { ...layer, vertical: 'W' }],
+      layers: [
+        { ...layer, vertical: 'L' },
+        { ...layer, vertical: 'W' },
+      ],
     };
     expect(cartonDisplayDims(mixed, 'outer')).toEqual({ length: 10, width: 7, height: 6 });
     expect(cartonDisplayDims(mixed, 'inner')).toEqual({ length: 9, width: 5, height: 4 });
@@ -153,5 +162,36 @@ describe('computeAnalytics, default inputs', () => {
     expect(a.carton.outer).toEqual(cartonDisplayDims(l, 'outer'));
     expect(a.carton.inner).toEqual(cartonDisplayDims(l, 'inner'));
     expect(a.totals.remainingVolume).toBeCloseTo(a.totals.volumeAvailable - a.totals.volumeUsed, 6);
+  });
+});
+
+describe('computeAnalytics, boxes inside the carton', () => {
+  it('reports boxes per product axis and which side faces up in each layer type', () => {
+    const l = winner(DEFAULT_INPUTS);
+    const a = computeAnalytics(l, DEFAULT_INPUTS);
+    expect(a.carton.counts).toEqual({ L: 1, W: 1, H: 5 });
+    expect(a.carton.layerOrientations).toEqual([
+      { vertical: 'L', layers: 1, cartonsPerLayer: 10 },
+      { vertical: 'W', layers: 6, cartonsPerLayer: 7 },
+    ]);
+  });
+
+  it('groups layers by vertical axis and carton count, in stacking order', () => {
+    const base = winner(CASE_I);
+    const layer = base.layers[0]!;
+    const mixed: Layout = {
+      ...base,
+      layers: [
+        { ...layer, vertical: 'H', cartonCount: 4 },
+        { ...layer, vertical: 'L', cartonCount: 3 },
+        { ...layer, vertical: 'H', cartonCount: 4 },
+        { ...layer, vertical: 'H', cartonCount: 2 },
+      ],
+    };
+    expect(layerOrientations(mixed)).toEqual([
+      { vertical: 'H', layers: 2, cartonsPerLayer: 4 },
+      { vertical: 'L', layers: 1, cartonsPerLayer: 3 },
+      { vertical: 'H', layers: 1, cartonsPerLayer: 2 },
+    ]);
   });
 });

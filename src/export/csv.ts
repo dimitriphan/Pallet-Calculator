@@ -1,4 +1,8 @@
-import type { TargetStatus } from '../engine/analytics/analytics';
+import {
+  describeBoxCounts,
+  describeLayerOrientations,
+  type TargetStatus,
+} from '../engine/analytics/analytics';
 import { formatNumber } from '../engine/units/units';
 import type { RotationMode } from '../domain/types';
 import type { ExportPayload } from './exportData';
@@ -61,6 +65,8 @@ export function buildCsv(p: ExportPayload): string {
     ['Carton outer length (in)', n(a.carton.outer.length)],
     ['Carton outer width (in)', n(a.carton.outer.width)],
     ['Carton outer height (in)', n(a.carton.outer.height)],
+    ['Boxes along product length × width × height', describeBoxCounts(a.carton.counts)],
+    ['Product side facing up', describeLayerOrientations(a.carton.layerOrientations)],
     ['Boxes per carton', a.summary.boxesPerCarton],
     ['Cartons per layer', a.summary.cartonsPerLayer],
     ['Layers', a.summary.layers],

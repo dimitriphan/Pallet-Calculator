@@ -49,6 +49,13 @@ describe('InputsPanel', () => {
     expect(boxes).toHaveLength(6);
     for (const box of boxes) if ((box as HTMLInputElement).checked) await user.click(box);
     expect(screen.getByText('Select at least one orientation')).toBeInTheDocument();
+    const custom = screen.getByRole('group', { name: 'Custom orientations' });
+    expect(custom).toHaveAttribute('aria-invalid', 'true');
+    expect(custom).toHaveAccessibleDescription(
+      expect.stringContaining('Select at least one orientation'),
+    );
+    await user.click(boxes[0]!);
+    expect(custom).toHaveAttribute('aria-invalid', 'false');
   });
 
   it('keeps Advanced optimization closed and disabled', async () => {

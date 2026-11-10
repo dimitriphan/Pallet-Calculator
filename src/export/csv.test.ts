@@ -90,6 +90,13 @@ describe('buildCsv', () => {
     );
   });
 
+  it('describes how the boxes sit inside the carton', () => {
+    const d = buildCsv(buildExportPayload(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0, NOW));
+    const out = d.split('\r\n');
+    expect(out).toContain('Boxes along product length × width × height,1 × 1 × 5');
+    expect(out).toContain('Product side facing up,Length up: 1 layer; Width up: 6 layers');
+  });
+
   it('leaves the target rows blank without a target', () => {
     expect(lines).toContain('Cartons needed for target,');
     expect(lines).toContain('Layers needed for target,');

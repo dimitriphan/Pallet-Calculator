@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PALLET_HEIGHT } from './constants';
+import { computeAnalytics, type Analytics } from '../engine/analytics/analytics';
 import { analyticsSchema, optimizeResultSchema } from './resultSchemas';
 import type { Inputs, InputsDraft, OrientationCode, Preset, Scenario } from './types';
 
@@ -61,15 +62,26 @@ export const presetSchema: z.ZodType<Preset> = z
     error: CUSTOM_MSG,
   });
 
-export const scenarioSchema: z.ZodType<Scenario> = z.object({
-  id: z.string().min(1),
-  name: z.string(),
-  savedAt: z.string(),
-  inputs: inputsSchema,
-  result: optimizeResultSchema,
-  selectedIndex: z.number().int().min(0),
-  analytics: analyticsSchema.nullable(),
-});
+export const scenarioSchema: z.ZodType<Scenario> = z
+  .object({
+    id: z.string().min(1),
+    name: z.string(),
+    savedAt: z.string(),
+    inputs: inputsSchema,
+    result: optimizeResultSchema,
+    selectedIndex: z.number().int().min(0),
+    analytics: analyticsSchema.nullable(),
+  })
+  .transform((s): Scenario => {
+    const a = s.analytics;
+    if (a === null || (a.carton.counts && a.carton.layerOrientations)) {
+      return { ...s, analytics: a as Analytics | null };
+    }
+    // Saved before the carton arrangement was part of the analytics: recompute from the
+    // saved layout, which is the same pure calculation that produced the rest.
+    const layout = s.result.layouts[s.selectedIndex]?.layout;
+    return { ...s, analytics: layout ? computeAnalytics(layout, s.inputs) : null };
+  });
 
 export function draftFromInputs(inputs: Inputs): InputsDraft {
   const dimsDraft = (d: Inputs['pallet']) => ({

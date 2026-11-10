@@ -1,4 +1,8 @@
-import type { Analytics } from '../engine/analytics/analytics';
+import {
+  describeBoxCounts,
+  describeLayerOrientations,
+  type Analytics,
+} from '../engine/analytics/analytics';
 import { formatDims, formatNumber } from '../engine/units/units';
 import { DetailRows } from './DetailRows';
 
@@ -50,6 +54,8 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Carton utilization', pct(a.carton.utilizationPct)],
           ['Empty volume', volume(a.carton.emptyVolume)],
           ['Cartons per pallet', String(a.carton.perPallet)],
+          ['Boxes along product length × width × height', describeBoxCounts(a.carton.counts)],
+          ['Product side facing up', describeLayerOrientations(a.carton.layerOrientations)],
         ]}
       />
       <DetailRows

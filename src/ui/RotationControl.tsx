@@ -69,8 +69,11 @@ export function RotationFields({
               Product length, width and height along the carton's length, width and height.
             </p>
             <div
-              className="grid grid-cols-3 gap-1"
+              role="group"
+              aria-label="Custom orientations"
               aria-describedby={error ? `${helpId} ${errorId}` : helpId}
+              aria-invalid={error ? 'true' : 'false'}
+              className="grid grid-cols-3 gap-1"
             >
               {CODES.map((code) => (
                 <label

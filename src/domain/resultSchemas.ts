@@ -65,7 +65,13 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   truncated: z.boolean(),
 });
 
-export const analyticsSchema: z.ZodType<Analytics> = z.object({
+/** Analytics as stored, where fields added after the first release may be missing. */
+export type StoredAnalytics = Omit<Analytics, 'carton'> & {
+  carton: Omit<Analytics['carton'], 'counts' | 'layerOrientations'> &
+    Partial<Pick<Analytics['carton'], 'counts' | 'layerOrientations'>>;
+};
+
+export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
   product: z.object({ dims, volume: num, perCarton: num }),
   carton: z.object({
     inner: dims,
@@ -73,6 +79,12 @@ export const analyticsSchema: z.ZodType<Analytics> = z.object({
     utilizationPct: num,
     emptyVolume: num,
     perPallet: num,
+    // Added after the first release: optional so older saved scenarios still load (the
+    // scenario schema recomputes analytics when they are missing).
+    counts: perAxis.optional(),
+    layerOrientations: z
+      .array(z.object({ vertical: axis, layers: num, cartonsPerLayer: num }))
+      .optional(),
   }),
   pallet: z.object({
     dims,

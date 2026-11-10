@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from './constants';
-import { draftFromInputs, inputsSchema, parseDraft } from './schemas';
+import { computeAnalytics } from '../engine/analytics/analytics';
+import { optimize } from '../engine/optimize';
+import { draftFromInputs, inputsSchema, parseDraft, scenarioSchema } from './schemas';
 import type { InputsDraft } from './types';
 
 function err(draft: InputsDraft): Record<string, string> {
@@ -75,5 +77,34 @@ describe('inputsSchema', () => {
     const r = inputsSchema.safeParse({ ...DEFAULT_INPUTS, leeway: -1 });
     expect(r.success).toBe(false);
     expect(r.error?.issues[0]?.message).toBe('Cannot be negative');
+  });
+});
+
+describe('scenarioSchema', () => {
+  const result = optimize(DEFAULT_INPUTS);
+  const analytics = computeAnalytics(result.layouts[1]!.layout, DEFAULT_INPUTS);
+  const scenario = {
+    id: 's1',
+    name: 'Saved',
+    savedAt: '2026-11-10T12:00:00.000Z',
+    inputs: DEFAULT_INPUTS,
+    result,
+    selectedIndex: 1,
+    analytics,
+  };
+
+  it('keeps current analytics as saved', () => {
+    expect(scenarioSchema.parse(structuredClone(scenario)).analytics).toEqual(analytics);
+  });
+
+  it('loads an older scenario without the carton arrangement and recomputes it', () => {
+    const old = structuredClone(scenario) as unknown as {
+      analytics: { carton: Record<string, unknown> };
+    };
+    delete old.analytics.carton.counts;
+    delete old.analytics.carton.layerOrientations;
+    const parsed = scenarioSchema.safeParse(old);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.analytics).toEqual(analytics);
   });
 });

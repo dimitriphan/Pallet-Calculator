@@ -31,6 +31,15 @@ describe('DetailsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows how the boxes sit inside the carton', async () => {
+    await renderApp();
+    const carton = screen.getByRole('heading', { name: 'Carton' }).closest('section')!;
+    const value = (label: string) =>
+      within(carton).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+    expect(value('Boxes along product length × width × height')).toBe('1 × 1 × 5');
+    expect(value('Product side facing up')).toBe('Length up: 1 layer; Width up: 6 layers');
+  });
+
   it('shows score contributions of the selected layout to two decimals', async () => {
     const { user, stores } = await renderApp();
     await user.click(screen.getByRole('tab', { name: 'Explanation' }));
@@ -62,5 +71,16 @@ describe('DetailsPanel', () => {
       `${formatNumber(carton.dx)} × ${formatNumber(carton.dy)} × ${formatNumber(carton.dz)}`,
     );
     expect(panel).toHaveTextContent(`${formatNumber(layout.carton.utilization * 100)}%`);
+  });
+
+  it('labels product coordinates from the load corner and the pallet top', async () => {
+    const { user, stores } = await renderApp();
+    await user.click(screen.getByRole('tab', { name: 'Selection' }));
+    act(() =>
+      stores.scene.getState().setSelection({ kind: 'product', cartonIndex: 0, productIndex: 0 }),
+    );
+    const panel = screen.getByRole('tabpanel');
+    for (const label of ['X (from load corner)', 'Y (from load corner)', 'Z (above pallet top)'])
+      expect(within(panel).getByText(label)).toBeInTheDocument();
   });
 });
