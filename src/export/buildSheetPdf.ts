@@ -182,6 +182,11 @@ function drawHeader(doc: jsPDF, sheet: BuildSheet): number {
   font(doc, 10, 'normal', GREY_TEXT);
   base += 0.22;
   doc.text(sheet.dateText, LEFT, base);
+  if (sheet.layoutNote) {
+    font(doc, 10, 'bold');
+    base += lineH(10) + 0.04;
+    doc.text(sheet.layoutNote, LEFT, base);
+  }
   const ruleY = base + 0.14;
   rule(doc, LEFT, ruleY, RIGHT, 0.015, BLACK);
   return ruleY + 0.22;
@@ -312,6 +317,32 @@ function drawRunningHeader(doc: jsPDF, sheet: BuildSheet) {
   rule(doc, LEFT, base + 0.1, RIGHT, 0.008);
 }
 
+/**
+ * Each block's "rows × columns" centred in its region, on a white patch so carton lines do
+ * not run through the text. A block too small for its label gets none.
+ */
+function drawBlockLabels(
+  doc: jsPDF,
+  blocks: SheetPattern['drawing']['blocks'],
+  ox: number,
+  oy: number,
+  s: number,
+) {
+  font(doc, 7, 'normal', GREY_TEXT);
+  const textH = 0.075;
+  const pad = 0.025;
+  for (const b of blocks) {
+    const w = doc.getTextWidth(b.label);
+    if (w + 2 * pad > b.dx * s || textH + 2 * pad > b.dy * s) continue;
+    const cx = ox + (b.x + b.dx / 2) * s;
+    const cy = oy + (b.y + b.dy / 2) * s;
+    // Set every time: jsPDF draws text colour with the fill operator.
+    doc.setFillColor(255, 255, 255);
+    doc.rect(cx - w / 2 - pad, cy - textH / 2 - pad, w + 2 * pad, textH + 2 * pad, 'F');
+    doc.text(b.label, cx, cy + textH / 2, { align: 'center' });
+  }
+}
+
 /** Height kept under a layer drawing for the outline key, when there is one. */
 const KEY_H = 0.2;
 
@@ -350,6 +381,8 @@ function drawLayerDrawing(
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.008);
   for (const c of cartons) doc.rect(ox + c.x * s, oy + c.y * s, c.dx * s, c.dy * s, 'FD');
+
+  drawBlockLabels(doc, drawing.blocks, ox, oy, s);
 
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.02);

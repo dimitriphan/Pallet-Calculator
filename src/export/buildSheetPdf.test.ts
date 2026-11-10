@@ -131,6 +131,24 @@ describe('renderBuildSheetPdf', () => {
     expect(without).not.toContain('Dashed line');
   });
 
+  it('labels blocks inside the drawing and notes a non-default layout', async () => {
+    const text = await pdfText(await renderBuildSheetPdf(defaultSheet(), null));
+    // "2 × 5" appears twice: in the Blocks fact and inside the drawing.
+    expect(text.split('(2 \xd7 5) Tj').length - 1).toBe(2);
+    expect(text).toContain('(Blocks \\(rows \xd7 columns\\)) Tj');
+    expect(text).not.toContain('selected. Layout 1 fits');
+    const second = buildSheetContent({
+      inputs: DEFAULT_INPUTS,
+      result: optimize(DEFAULT_INPUTS),
+      selectedIndex: 1,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    const text2 = await pdfText(await renderBuildSheetPdf(second, null));
+    expect(text2).toContain('Layout 2 of 5 selected. Layout 1 fits 260 boxes.');
+  });
+
   it('boxes the out-of-date line when stale', async () => {
     const text = await pdfText(await renderBuildSheetPdf(defaultSheet({ stale: true }), null));
     expect(text).toContain('Out of date: inputs changed after this calculation.');

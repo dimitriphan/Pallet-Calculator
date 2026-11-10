@@ -95,7 +95,7 @@ describe('buildSheetContent, default winner', () => {
       'Carton footprint as placed',
       'Layer height',
       'Side facing up',
-      'Blocks',
+      'Blocks (rows × columns)',
     ]);
     expect(s.patterns[0]?.facts[0]?.value).toBe('10');
     expect(s.patterns[0]?.facts[3]?.value).toBe('Product length');
@@ -120,6 +120,30 @@ describe('buildSheetContent, default winner', () => {
         for (let k = i + 1; k < cartons.length; k++)
           expect(overlaps(cartons[i] as SheetRect, cartons[k] as SheetRect)).toBe(false);
     }
+  });
+
+  it('block rectangles cover exactly the cartons of their layer', () => {
+    for (const p of s.patterns) {
+      const { blocks, cartons } = p.drawing;
+      expect(blocks.map((b) => b.label).join(', ')).toBe(p.facts[4]?.value);
+      const area = (r: SheetRect) => r.dx * r.dy;
+      const sum = (rs: SheetRect[]) => rs.reduce((n, r) => n + area(r), 0);
+      expect(sum(blocks)).toBeCloseTo(sum(cartons), 9);
+      for (let i = 0; i < blocks.length; i++)
+        for (let k = i + 1; k < blocks.length; k++)
+          expect(overlaps(blocks[i] as SheetRect, blocks[k] as SheetRect)).toBe(false);
+      const inside = (c: SheetRect, b: SheetRect) =>
+        c.x >= b.x - 1e-9 &&
+        c.y >= b.y - 1e-9 &&
+        c.x + c.dx <= b.x + b.dx + 1e-9 &&
+        c.y + c.dy <= b.y + b.dy + 1e-9;
+      for (const c of cartons) expect(blocks.filter((b) => inside(c, b)).length).toBe(1);
+    }
+    expect(s.patterns[0]?.drawing.blocks).toEqual([expect.objectContaining({ label: '2 × 5' })]);
+  });
+
+  it('has no layout note for layout 1', () => {
+    expect(s.layoutNote).toBeNull();
   });
 
   it('stacking rows', () => {
@@ -179,5 +203,24 @@ describe('buildSheetContent, variations', () => {
   it('footer mentions a desired boxes per carton', () => {
     const s = build({ boxesPerCarton: 5 });
     expect(s.footer.endsWith(' Desired boxes per carton: 5.')).toBe(true);
+  });
+
+  it('footer says best fit when boxes per carton is blank', () => {
+    expect(build().footer).toBe(
+      'Using 0.50 in leeway, 0.25 in carton walls, no overhang, fully rotatable. Desired boxes per carton: best fit.',
+    );
+  });
+
+  it('notes a layout other than layout 1 on page 1', () => {
+    const s = buildSheetContent({
+      inputs: DEFAULT_INPUTS,
+      result: RESULT,
+      selectedIndex: 1,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    expect(s.layoutNote).toBe('Layout 2 of 5 selected. Layout 1 fits 260 boxes.');
+    expect(s.layoutLabel).toBe('Layout 2 of 5');
   });
 });

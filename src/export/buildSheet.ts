@@ -25,11 +25,20 @@ export interface SheetRect {
   dx: number;
   dy: number;
 }
+/** One block of a layer drawing: the region its cartons cover and its "rows × columns". */
+export interface SheetBlock extends SheetRect {
+  label: string;
+}
 export interface SheetPattern {
   letter: string;
   heading: string;
   facts: SheetRow[];
-  drawing: { footprint: { x: number; y: number }; pallet: SheetRect; cartons: SheetRect[] };
+  drawing: {
+    footprint: { x: number; y: number };
+    pallet: SheetRect;
+    cartons: SheetRect[];
+    blocks: SheetBlock[];
+  };
 }
 /** Says which outline in the layer drawings is the pallet and which the overhang limit. */
 export interface DrawingKey {
@@ -41,6 +50,8 @@ export interface BuildSheet {
   title: 'Pallet build sheet';
   jobName: string | null;
   dateText: string;
+  /** Page 1 note when the selected layout is not layout 1, else null. */
+  layoutNote: string | null;
   stale: boolean;
   summary: SheetRow[];
   carton: SheetRow[];
@@ -117,6 +128,7 @@ export function buildSheetContent(a: {
   const ranked = result.layouts[selectedIndex];
   if (!ranked) throw new Error(`No layout at index ${selectedIndex}`);
   const layout = ranked.layout;
+  const best = result.layouts[0];
   const analytics = computeAnalytics(layout, inputs);
   const { summary, pallet } = analytics;
 
@@ -136,6 +148,28 @@ export function buildSheetContent(a: {
     const cartons = placements
       .filter((c) => c.layerIndex === p.layerIndex)
       .map((c) => ({ x: c.x, y: c.y, dx: c.dx, dy: c.dy }));
+    // Placements come block by block, rows × cols each: each block's region bounds its run.
+    const blocks: SheetBlock[] = [];
+    let next = 0;
+    for (const b of layer.blocks) {
+      const run = cartons.slice(next, next + b.rows * b.cols);
+      next += run.length;
+      if (run.length === 0) continue;
+      let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
+      for (const c of run) {
+        x0 = Math.min(x0, c.x);
+        y0 = Math.min(y0, c.y);
+        x1 = Math.max(x1, c.x + c.dx);
+        y1 = Math.max(y1, c.y + c.dy);
+      }
+      blocks.push({
+        x: x0,
+        y: y0,
+        dx: x1 - x0,
+        dy: y1 - y0,
+        label: `${b.rows} × ${b.cols}`,
+      });
+    }
     const first = cartons[0];
     const mixed = layer.blocks.some((b) => b.rotated) && layer.blocks.some((b) => !b.rotated);
     const footprintText = first
@@ -149,9 +183,12 @@ export function buildSheetContent(a: {
         { label: 'Carton footprint as placed', value: footprintText },
         { label: 'Layer height', value: inches(p.height) },
         { label: 'Side facing up', value: SIDE_UP[p.vertical] },
-        { label: 'Blocks', value: layer.blocks.map((b) => `${b.rows} × ${b.cols}`).join(', ') },
+        {
+          label: 'Blocks (rows × columns)',
+          value: layer.blocks.map((b) => `${b.rows} × ${b.cols}`).join(', '),
+        },
       ],
-      drawing: { footprint: { ...footprint }, pallet: { ...palletRect }, cartons },
+      drawing: { footprint: { ...footprint }, pallet: { ...palletRect }, cartons, blocks },
     };
   });
 
@@ -206,6 +243,10 @@ export function buildSheetContent(a: {
     title: 'Pallet build sheet',
     jobName: trimmed === '' ? null : trimmed,
     dateText: localMinute(a.now),
+    layoutNote:
+      selectedIndex > 0 && best
+        ? `Layout ${selectedIndex + 1} of ${result.layouts.length} selected. Layout 1 fits ${best.layout.totalProducts} boxes.`
+        : null,
     stale: a.stale,
     summary: [
       { label: 'Boxes per carton', value: String(summary.boxesPerCarton) },
@@ -229,9 +270,9 @@ export function buildSheetContent(a: {
     stacking,
     footer:
       settingsSummary(inputs) +
-      (inputs.boxesPerCarton !== null
-        ? ` Desired boxes per carton: ${formatNumber(inputs.boxesPerCarton, 0)}.`
-        : ''),
+      ` Desired boxes per carton: ${
+        inputs.boxesPerCarton !== null ? formatNumber(inputs.boxesPerCarton, 0) : 'best fit'
+      }.`,
     layoutLabel: `Layout ${selectedIndex + 1} of ${result.layouts.length}`,
   };
   return safeDeep(sheet);
