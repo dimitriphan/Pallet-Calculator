@@ -1,3 +1,5 @@
+import type { Analytics } from '../engine/analytics/analytics';
+
 export interface Dims {
   length: number;
   width: number;
@@ -95,4 +97,29 @@ export interface OptimizeResult {
   candidatesEvaluated: number;
   emptyReason: EmptyReason | null;
   truncated: boolean;
+}
+
+export interface Preset {
+  id: string;
+  name: string;
+  pallet: Dims;
+  maxCarton: Dims;
+  leeway: number;
+  wallThickness: number;
+  overhang: number;
+  targetQuantity: number | null;
+  rotationMode: RotationMode;
+  customOrientations: OrientationCode[];
+  keepCartonsUpright: boolean;
+  advanced: Record<string, unknown>; // reserved for the later Advanced Optimization release
+}
+
+export interface Scenario {
+  id: string;
+  name: string;
+  savedAt: string; // ISO timestamp
+  inputs: Inputs;
+  result: OptimizeResult;
+  selectedIndex: number;
+  analytics: Analytics | null;
 }

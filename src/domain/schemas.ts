@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PALLET_HEIGHT } from './constants';
-import type { Inputs, InputsDraft, OrientationCode } from './types';
+import { analyticsSchema, optimizeResultSchema } from './resultSchemas';
+import type { Inputs, InputsDraft, OrientationCode, Preset, Scenario } from './types';
 
 const POSITIVE = 'Must be greater than 0';
 const NEGATIVE = 'Cannot be negative';
@@ -20,23 +21,50 @@ const palletDims = z.object({
 
 const orientation = z.enum(['LWH', 'LHW', 'WLH', 'WHL', 'HLW', 'HWL']);
 
+const inputsShape = {
+  pallet: palletDims,
+  product: dims,
+  maxCarton: dims,
+  targetQuantity: z.number().int({ error: TARGET_MSG }).min(1, { error: TARGET_MSG }).nullable(),
+  leeway: nonNegative,
+  wallThickness: nonNegative,
+  overhang: nonNegative,
+  rotationMode: z.enum(['full', 'upright', 'noSide', 'custom']),
+  customOrientations: z.array(orientation),
+  keepCartonsUpright: z.boolean(),
+};
+
 export const inputsSchema: z.ZodType<Inputs> = z
-  .object({
-    pallet: palletDims,
-    product: dims,
-    maxCarton: dims,
-    targetQuantity: z.number().int({ error: TARGET_MSG }).min(1, { error: TARGET_MSG }).nullable(),
-    leeway: nonNegative,
-    wallThickness: nonNegative,
-    overhang: nonNegative,
-    rotationMode: z.enum(['full', 'upright', 'noSide', 'custom']),
-    customOrientations: z.array(orientation),
-    keepCartonsUpright: z.boolean(),
-  })
+  .object(inputsShape)
   .refine((v) => v.rotationMode !== 'custom' || v.customOrientations.length > 0, {
     path: ['customOrientations'],
     error: CUSTOM_MSG,
   });
+
+export const presetSchema: z.ZodType<Preset> = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  pallet: inputsShape.pallet,
+  maxCarton: inputsShape.maxCarton,
+  leeway: inputsShape.leeway,
+  wallThickness: inputsShape.wallThickness,
+  overhang: inputsShape.overhang,
+  targetQuantity: inputsShape.targetQuantity,
+  rotationMode: inputsShape.rotationMode,
+  customOrientations: inputsShape.customOrientations,
+  keepCartonsUpright: inputsShape.keepCartonsUpright,
+  advanced: z.record(z.string(), z.unknown()),
+});
+
+export const scenarioSchema: z.ZodType<Scenario> = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  savedAt: z.string(),
+  inputs: inputsSchema,
+  result: optimizeResultSchema,
+  selectedIndex: z.number().int().min(0),
+  analytics: analyticsSchema.nullable(),
+});
 
 export function draftFromInputs(inputs: Inputs): InputsDraft {
   const dimsDraft = (d: Inputs['pallet']) => ({
