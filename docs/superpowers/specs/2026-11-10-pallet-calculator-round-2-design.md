@@ -101,6 +101,8 @@ export.
 - Not shown: the layout comparison table, scores and contributions,
   utilization and volume figures, the Explanation and Selection tabs.
   Clicking objects in the 3D view still highlights them but opens no panel.
+  When a "nothing fits" or error message is showing, the "What to build" card
+  is hidden.
 - Status messages stay: "Calculating…", the out-of-date notice and badges,
   the two "nothing fits" messages, the limited-search note, and the error
   with Retry. In Basic they appear above the "What to build" card.
@@ -127,8 +129,9 @@ presets, or scenarios. It changes only what is displayed.
 - Every surface is themed: header, summary bar, inputs, notices, tables,
   tabs, badges, menus, dialogs, drawer, focus rings, and the scene toolbar.
   Text contrast meets WCAG AA in both themes.
-- 3D view: background, floor grid, label and measurement chips follow the
-  theme. Pallet, carton, product, envelope, and selection colours do not
+- 3D view: background, label and measurement chips follow the theme, and so
+  does the measurement line colour. The floor grid section colour is the same
+  in both themes. Pallet, carton, product, envelope, and selection colours do not
   change, so a load looks the same in either theme.
 - Exports ignore the theme: the PNG panels and the PDF are always rendered
   with the light scene background and dark text on white.
@@ -189,7 +192,9 @@ US Letter, portrait, 0.5 in margins, inches throughout, black text on white.
    cartons, layer height, height to the top of that layer including the
    pallet.
 3. Patterns flow onto further pages as needed; a pattern block is never
-   split across pages.
+   split across pages. A long stacking table continues on further pages, and
+   pages 2 onward carry a running header. The overhang row reads "2.00 in
+   total, 1.00 in each side".
 
 **Every page footer:** the settings used (leeway, wall thickness, overhang,
 rotation, keep-upright), "Layout N of M" and "Page X of Y".
@@ -240,7 +245,8 @@ layout among the cartons considered.
   "Counts that do fit: A and B." naming the nearest achievable count below N
   and the nearest above N (only one is named if only one exists; the
   sentence is omitted if no carton fits at all, in which case the existing
-  "No carton fits" message is shown instead).
+  "No carton fits" message is shown instead). The nearest counts are computed
+  exactly and are not limited by the 8000-candidate cap.
 - If a carton of N fits the maximum but cannot be placed on the pallet, the
   existing "No layout fits" message is shown.
 
@@ -265,21 +271,21 @@ src/
     BasicInputs.tsx     SettingsSummary.tsx  WhatToBuildCard.tsx
     BuildSheetDialog.tsx
     settingsSummary.ts         pure: inputs -> sentence
-    stackDescription.ts        pure: layout -> layer-run lines
   export/
     buildSheet.ts              pure: content model
     buildSheetPdf.ts           jsPDF rendering (lazy-loaded)
+  engine/analytics/stack.ts    pattern grouping and layer runs
   scene/sceneTheme.ts          theme -> scene colours
 ```
 
 The boxes-per-carton rule lives in `src/engine/packing/cartons.ts` (candidate
-generation) and `src/engine/optimize.ts` (the new empty reason and the
-nearest achievable counts); `Inputs`, the schemas, presets, and the export
+generation and `nearestAchievableCounts`) and `src/engine/optimize.ts` (the
+new empty reason); `Inputs`, the schemas, presets, and the export
 builders gain the field.
 
 `App.tsx` chooses between the Full and Basic arrangements from the view
 mode. Existing Full-view components are reused unchanged apart from dark
-variants and the centre-column sizing. `stackDescription.ts` is shared by
+variants and the centre-column sizing. `stack.ts` (in `src/engine/analytics/`) is shared by
 the "What to build" card and the build sheet.
 
 ## 10. Error handling

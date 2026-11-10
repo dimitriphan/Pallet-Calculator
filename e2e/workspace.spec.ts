@@ -14,7 +14,7 @@ async function fillDims(page: Page, legend: string, labels: string[], values: st
   }
 }
 
-async function chooseExport(page: Page, item: 'JSON' | 'CSV' | 'PNG') {
+async function chooseExport(page: Page, item: 'Build sheet (PDF)' | 'JSON' | 'CSV' | 'PNG') {
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await page.getByRole('menuitem', { name: item, exact: true }).click();
@@ -29,12 +29,58 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
 
   await page.goto('/');
-  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  const viewSwitch = page.getByRole('radiogroup', { name: 'View' });
+  const html = page.locator('html');
 
   const summary = page.getByRole('region', { name: 'Production summary' });
   const tile = (name: string) =>
     summary.locator('div', { has: page.getByText(name, { exact: true }) });
   const rows = page.getByRole('table', { name: 'Layout comparison' }).locator('tbody tr');
+
+  // A fresh visit opens in Basic: the answer card, no comparison table.
+  await expect(viewSwitch.getByRole('radio', { name: 'Basic' })).toBeChecked();
+  await expect(page.getByRole('heading', { name: 'What to build' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Layout comparison' })).toHaveCount(0);
+  await expect(tile('Total boxes per pallet').locator('dd')).toHaveText('260');
+
+  // Desired boxes per carton: 6 is honoured, 7 cannot be built, blank restores the best fit.
+  const perCarton = page.getByLabel('Desired boxes per carton', { exact: true });
+  await perCarton.fill('6');
+  await expect(tile('Boxes per carton').locator('dd')).toHaveText('6');
+  await perCarton.fill('7');
+  await expect(page.getByText(/No carton holding exactly 7 boxes/)).toBeVisible();
+  await expect(page.getByText('Counts that do fit: 6 and 8.')).toBeVisible();
+  await perCarton.fill('');
+  await expect(tile('Total boxes per pallet').locator('dd')).toHaveText('260');
+  await expect(page.getByText(/No carton holding exactly/)).toHaveCount(0);
+
+  // Build sheet (PDF): job name, save, then check the downloaded file.
+  const pdfDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Build sheet (PDF)', exact: true }).click();
+  await page.getByLabel('Job name (optional)').fill('E2E run');
+  await page.getByRole('button', { name: 'Save PDF', exact: true }).click();
+  const pdfBytes = await readFile(await (await pdfDownload).path());
+  expect(pdfBytes.subarray(0, 4).toString('latin1')).toBe('%PDF');
+  const pdfText = pdfBytes.toString('latin1');
+  expect((pdfText.match(/\/Type\s*\/Page(?![s])/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  expect(pdfText).toContain('Pallet build sheet');
+  expect(pdfText).toContain('E2E run');
+  expect(pdfText).toContain('260');
+
+  // Dark theme: applied now, and still applied (and still Basic) after a reload.
+  const theme = page.getByLabel('Theme', { exact: true });
+  await theme.selectOption('dark');
+  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/);
+  await page.reload();
+  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/);
+  await expect(viewSwitch.getByRole('radio', { name: 'Basic' })).toBeChecked();
+  await theme.selectOption('light');
+  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/);
+
+  // Full view: the comparison table appears and the original steps follow.
+  await viewSwitch.getByRole('radio', { name: 'Full' }).click();
+  await expect(page.getByRole('table', { name: 'Layout comparison' })).toBeVisible();
 
   // Default inputs: the summary follows the selected row.
   await expect(tile('Total boxes per pallet').locator('dd')).toHaveText('260');

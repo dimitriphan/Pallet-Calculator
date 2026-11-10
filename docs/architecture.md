@@ -8,9 +8,9 @@ A static React 18 + TypeScript (strict) site built with Vite. There is no backen
 | --- | --- |
 | `src/domain/` | Types (`types.ts`), constants such as the 5 inch pallet and tolerance (`constants.ts`), and Zod schemas that validate inputs and stored data (`schemas.ts`, `resultSchemas.ts`). |
 | `src/engine/units/` | Number formatting and unit conversion (`units.ts`). Rounding happens only here, for display. |
-| `src/engine/packing/` | `cartons.ts` finds valid carton candidates (and the 8000 cap). `rotation.ts` applies the rotation rules. `layerSearch.ts` finds the best guillotine layer on a rectangle. `stacking.ts` picks how many layers of each type fit the height and builds layouts. `positions.ts` turns a layout into carton and product positions. `metrics.ts`, `geometry.ts` and `tolerance.ts` hold shared maths. |
+| `src/engine/packing/` | `cartons.ts` finds valid carton candidates (and the 8000 cap). When "Desired boxes per carton" is set, it builds candidates straight from the factorizations of that number, so the cap cannot hide a valid carton. If none fits, `nearestAchievableCounts` works out, exactly and without the cap, the nearest counts below and above that do fit; `optimize.ts` returns them with the empty reason `NO_CARTON_WITH_COUNT`. `rotation.ts` applies the rotation rules. `layerSearch.ts` finds the best guillotine layer on a rectangle. `stacking.ts` picks how many layers of each type fit the height and builds layouts. `positions.ts` turns a layout into carton and product positions. `metrics.ts`, `geometry.ts` and `tolerance.ts` hold shared maths. |
 | `src/engine/ranking/` | `score.ts` (the 60/25/15 score), `rank.ts` (ordering, top 5, removal of look-alikes), `explain.ts` (the sentence comparing neighbours). |
-| `src/engine/analytics/` | `analytics.ts`: all the numbers shown in the details panel, the summary bar and exports. |
+| `src/engine/analytics/` | `analytics.ts`: all the numbers shown in the details panel, the summary bar and exports. `stack.ts`: groups a layout's layers into patterns and runs of identical layers ("Layers 2-7"). The "What to build" card and the build sheet both use it, so they always agree. |
 | `src/engine/optimize.ts` | Ties the above together and applies the 4 second limit. |
 
 Every product belongs to a carton, and every carton belongs to a layout. Positions are worked out on demand from the layout, never stored separately.
@@ -48,6 +48,19 @@ Keep all conversion in that one file.
 
 Write an object that implements `Repository<T>` (for example one that calls a REST API), validate what it returns with the same Zod schemas, and pass it where the stores are created instead of the Local Storage one. The stores do not know which backend they use.
 
+## Preferences, theme and views
+
+- `src/store/prefsStore.ts` holds the view mode (`basic` or `full`, default `basic`) and the theme (`system`, `light` or `dark`, default `system`). It saves to Local Storage under `pc.prefs.v1`, checks what it reads with Zod, and quietly falls back to the defaults if the value is unreadable or storage fails.
+- Theme boot script: a small inline script in `index.html` reads `pc.prefs.v1` and sets the `dark` class on `<html>` before the first paint, so a dark page never flashes light. `src/ui/useTheme.ts` keeps the class in step afterwards, and follows the system setting live when the theme is `system`.
+- Where theme colours live: the page uses Tailwind `dark:` variants, with the `dark` class strategy. The 3D scene colours are in `src/scene/sceneTheme.ts`. Exports ignore the theme and ask for the light scene colours.
+- `App.tsx` picks the Basic or Full arrangement from the view mode. Switching only changes what is drawn. It never calls the optimizer.
+
+## Build sheet (PDF)
+
+- `src/export/buildSheet.ts` is a pure function that turns the selected layout, the inputs it came from, its analytics, the job name, the out-of-date flag and a date into a content model (pages, tables, drawings as plain data). No drawing happens there, and every number comes from the existing analytics and position functions.
+- `src/export/buildSheetPdf.ts` draws that model with jsPDF (US Letter, vector drawings, real text). It is loaded on demand, so jsPDF lives in its own lazy chunk, as three.js does in the scene chunk. Neither is in the initial page load. The dependency `jspdf` needs no change to how the site is built or deployed.
+- `src/ui/BuildSheetDialog.tsx` asks for the job name, and `ExportMenu.tsx` starts the export.
+
 ## Adding a layer pattern generator (Round 2)
 
 Layers are built in `src/engine/packing/stacking.ts` (`bestLayer`, `plainLayers`, `buildLayouts`). A layer is a list of blocks (origin, rows, columns, flat rotation). To add a pattern such as pinwheel:
@@ -62,4 +75,4 @@ Layers are built in `src/engine/packing/stacking.ts` (`bestLayer`, `plainLayers`
 
 - Unit tests sit next to the code as `*.test.ts` / `*.test.tsx` and run with `npm test` (Vitest). They cover engines, stores, persistence, export and UI components.
 - `src/engine/packing/testSupport.ts` holds shared helpers such as brute-force checks.
-- The end-to-end test is `e2e/workspace.spec.ts` (Playwright, `npm run e2e`). It enters a worked example, checks the numbers, selects a row, exports PNG, JSON and CSV, reloads, checks a validation message, and fails on any console error.
+- The end-to-end test is `e2e/workspace.spec.ts` (Playwright, `npm run e2e`). It starts in Basic view (the "What to build" card, the boxes-per-carton field with 6, 7 and blank), saves a build sheet and checks the PDF, switches to dark and checks it survives a reload, then switches to Full view, enters a worked example, checks the numbers, selects a row, exports PNG, JSON and CSV, reloads, checks a validation message, and fails on any console error.
