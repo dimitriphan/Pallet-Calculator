@@ -13,10 +13,12 @@ Round 2 makes the result easy to hand to other people:
 - a **Basic mode** that shows staff only the answer and what they need to
   build it,
 - a **PDF build sheet** for the team stacking the pallet,
-- a **dark mode**, and
-- a **larger 3D view** that fills the space the screen currently wastes.
+- a **dark mode**,
+- a **larger 3D view** that fills the space the screen currently wastes, and
+- a **desired boxes per carton** input for products with a fixed case pack.
 
-No optimizer, ranking, or analytics behaviour changes in this round.
+The only optimizer change in this round is the boxes-per-carton filter in
+section 8. Ranking and analytics formulas are unchanged.
 
 Success means:
 
@@ -27,13 +29,16 @@ Success means:
 - Every screen and dialog is legible in both themes; exports always print on
   white.
 - The 3D view uses all the height the centre column has.
+- Entering a boxes-per-carton number yields only cartons holding exactly that
+  many, or a clear statement that none fits and which counts do.
 
 ## 2. Scope
 
 ### In scope
 
 Basic mode, view-mode and theme preferences, dark theme, 3D view sizing,
-PDF build sheet, and the tests and documentation for them.
+PDF build sheet, the desired boxes-per-carton input, and the tests and
+documentation for them.
 
 ### Not in scope (still deferred)
 
@@ -68,13 +73,14 @@ export.
 
 - Pallet limitation, product box, and maximum carton, each with length,
   width, and height, with the same validation and messages as Full view.
+- Desired boxes per carton (section 8), below the three sizes.
 - The 5-inch pallet notice and the usable stacking height line.
 - A read-only line stating the other settings in effect, built from the
   current valid inputs, for example: "Using 0.50 in leeway, 0.25 in carton
   walls, no overhang, fully rotatable. Change in Full view." It also states a
   target quantity when one is set and "cartons kept upright" when that is on.
-- Desired quantity, leeway, wall thickness, overhang, rotation, keep-upright,
-  and the Advanced section are not shown. Their values are unchanged and
+- Desired box quantity, leeway, wall thickness, overhang, rotation,
+  keep-upright, and the Advanced section are not shown. Their values are unchanged and
   still used.
 - If one of those hidden fields is invalid (possible only if it was left
   invalid in Full view), the line reads "A setting in Full view needs fixing
@@ -199,7 +205,57 @@ with the screen.
 Two layers share a pattern when they have the same vertical axis and the
 same blocks.
 
-## 8. Architecture
+## 8. Desired boxes per carton
+
+### 8.1 Input
+
+- A new optional input "Desired boxes per carton", placeholder "Blank = best
+  fit", suffix "boxes". Shown in both modes: in Full view in the Packing
+  group above "Desired box quantity"; in Basic mode below the three sizes.
+- Blank (the default) means the optimizer chooses, exactly as in Round 1.
+- Otherwise it must be a whole number of 1 or more; the message for anything
+  else is "Enter a whole number of 1 or more".
+- It is independent of "Desired box quantity" (the per-pallet target); both
+  may be set.
+
+### 8.2 Optimizer rule
+
+When a number N is set, only cartons holding exactly N boxes are candidates.
+Every arrangement of N is considered (for N = 6: 1 × 1 × 6, 1 × 2 × 3, and
+their turns), subject to the maximum carton dimensions, leeway, walls, and
+rotation rules as before. Among those, the optimizer still maximizes boxes
+per pallet and returns up to five layouts.
+
+Candidates are produced from the factorizations of N directly, so the
+8000-candidate cap in the Round 1 spec cannot hide a valid carton of N.
+
+Scores are computed as before; quantity efficiency is relative to the best
+layout among the cartons considered.
+
+### 8.3 When no carton of N fits
+
+- If no arrangement of N boxes fits within the maximum carton dimensions,
+  the result is empty with a new reason and the message: "No carton holding
+  exactly N boxes fits within the maximum carton dimensions." followed by
+  "Counts that do fit: A and B." naming the nearest achievable count below N
+  and the nearest above N (only one is named if only one exists; the
+  sentence is omitted if no carton fits at all, in which case the existing
+  "No carton fits" message is shown instead).
+- If a carton of N fits the maximum but cannot be placed on the pallet, the
+  existing "No layout fits" message is shown.
+
+### 8.4 Where it appears
+
+- The production summary's "Boxes per carton" equals N whenever a result
+  exists.
+- The Basic-mode settings line does not repeat it (the field is visible).
+- Presets store it; presets saved before this change load with it blank.
+- Scenarios, the inputs remembered between visits, and imported preset files
+  saved before this change load with it blank.
+- JSON, CSV, and the PDF footer include it ("Desired boxes per carton",
+  blank or N).
+
+## 9. Architecture
 
 ```
 src/
@@ -216,12 +272,17 @@ src/
   scene/sceneTheme.ts          theme -> scene colours
 ```
 
+The boxes-per-carton rule lives in `src/engine/packing/cartons.ts` (candidate
+generation) and `src/engine/optimize.ts` (the new empty reason and the
+nearest achievable counts); `Inputs`, the schemas, presets, and the export
+builders gain the field.
+
 `App.tsx` chooses between the Full and Basic arrangements from the view
 mode. Existing Full-view components are reused unchanged apart from dark
 variants and the centre-column sizing. `stackDescription.ts` is shared by
 the "What to build" card and the build sheet.
 
-## 9. Error handling
+## 10. Error handling
 
 - Corrupt preferences: defaults.
 - jsPDF chunk fails to load, or rendering throws: the notice in 7.1; the
@@ -229,7 +290,7 @@ the "What to build" card and the build sheet.
 - No layout: PDF and PNG items disabled.
 - Hidden invalid setting in Basic mode: the message in 4.2.
 
-## 10. Testing
+## 11. Testing
 
 - **Preferences:** defaults, persistence, corrupt value, storage failure.
 - **Pure helpers:** settings sentence for each rotation mode and for target,
@@ -238,6 +299,14 @@ the "What to build" card and the build sheet.
   "Layers 2–7: 7 cartons each…"); build-sheet content for the default winner
   and for a layout with overhang, with every number checked against
   analytics; pattern grouping.
+- **Boxes per carton:** validation; with the default example, N = 10 gives
+  only 10-box cartons, N = 6 gives only 6-box cartons, N = 7 gives the
+  "no carton holding exactly 7" message naming 6 and 8; every factorization
+  of N is tried (checked against a brute-force filter of the unrestricted
+  candidates on small cases); a product so small that the unrestricted
+  candidate cap would apply still finds a carton of N; blank reproduces the
+  Round 1 result exactly (260 boxes for the default example); old presets,
+  scenarios, and remembered inputs load with the field blank.
 - **Basic mode UI:** first render is Basic; hidden things are absent and
   kept things present; the settings line; the non-default-layout note and
   "Use layout 1"; status messages; switching modes does not call the
@@ -254,16 +323,18 @@ the "What to build" card and the build sheet.
 - **By eye:** screenshots of Basic and Full in both themes at 1440 × 900 and
   1280 × 720; the PDF rendered to images and read page by page.
 
-## 11. Documentation
+## 12. Documentation
 
-README and `docs/` are updated for Basic mode, themes, and the build sheet;
+README and `docs/` are updated for Basic mode, themes, the build sheet, and
+boxes per carton;
 `docs/assumptions-and-limitations.md` lists what Basic mode hides and that
 hidden settings still apply.
 
-## 12. Known limitations (Round 2)
+## 13. Known limitations (Round 2)
 
 - The build sheet is US Letter, inches, English only, with no company name
   or logo.
 - Basic mode cannot edit leeway, walls, overhang, rotation, or target
   quantity.
+- Boxes per carton is exact only; "at least" and "at most" are not offered.
 - The layer drawings show carton outlines, not individual product boxes.
