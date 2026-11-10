@@ -61,12 +61,14 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   await page.getByLabel('Job name (optional)').fill('E2E run');
   await page.getByRole('button', { name: 'Save PDF', exact: true }).click();
   const pdfBytes = await readFile(await (await pdfDownload).path());
+  await expect(page.getByRole('dialog', { name: 'Build sheet (PDF)' })).toHaveCount(0);
   expect(pdfBytes.subarray(0, 4).toString('latin1')).toBe('%PDF');
   const pdfText = pdfBytes.toString('latin1');
   expect((pdfText.match(/\/Type\s*\/Page(?![s])/g) ?? []).length).toBeGreaterThanOrEqual(2);
   expect(pdfText).toContain('Pallet build sheet');
   expect(pdfText).toContain('E2E run');
-  expect(pdfText).toContain('260');
+  // The total boxes tile is drawn as its own text string: jsPDF writes "(260) Tj".
+  expect(pdfText).toContain('(260) Tj');
 
   // Dark theme: applied now, and still applied (and still Basic) after a reload.
   const theme = page.getByLabel('Theme', { exact: true });
