@@ -102,7 +102,8 @@ export.
   utilization and volume figures, the Explanation and Selection tabs.
   Clicking objects in the 3D view still highlights them but opens no panel.
   When a "nothing fits" or error message is showing, the "What to build" card
-  is hidden.
+  is hidden. A failed calculation that keeps a previous result marks it out of
+  date (summary dimmed, "Out of date" badges) until a calculation succeeds.
 - Status messages stay: "Calculating…", the out-of-date notice and badges,
   the two "nothing fits" messages, the limited-search note, and the error
   with Retry. In Basic they appear above the "What to build" card.
@@ -169,7 +170,8 @@ US Letter, portrait, 0.5 in margins, inches throughout, black text on white.
 **Page 1, overview**
 
 1. Title "Pallet build sheet", the job name if given, and the local date and
-   time.
+   time. When the selected layout is not layout 1, a line under the date:
+   "Layout N of M selected. Layout 1 fits X boxes."
 2. If the result is out of date: a boxed line "Out of date: inputs changed
    after this calculation."
 3. The five production-summary figures.
@@ -187,7 +189,11 @@ US Letter, portrait, 0.5 in margins, inches throughout, black text on white.
    and every carton as an outlined rectangle; beside it, cartons in the
    layer, carton footprint as placed, layer height, and which product side
    faces up. Rotated blocks are visibly distinguishable by their proportions
-   and each block is labelled "rows × columns".
+   and each block is labelled "rows × columns" inside the drawing when it has
+   room (the fact reads "Blocks (rows × columns)"). The edge dimensions are the
+   pallet's length and width, along the solid pallet outline. With overhang, a
+   key under the drawing reads "Solid line: pallet L × W in. Dashed line: limit
+   with overhang L' × W' in."
 2. A "Stacking order" table, bottom to top: layer number, pattern letter,
    cartons, layer height, height to the top of that layer including the
    pallet.
@@ -259,7 +265,11 @@ layout among the cartons considered.
 - Scenarios, the inputs remembered between visits, and imported preset files
   saved before this change load with it blank.
 - JSON, CSV, and the PDF footer include it ("Desired boxes per carton",
-  blank or N).
+  blank or N; the PDF footer always states it: "Desired boxes per carton: best
+  fit." when blank, "Desired boxes per carton: N." when set).
+- When only one achievable count exists on either side of N, the "nothing
+  fits" message reads "The closest count that fits is X." instead of naming
+  two counts.
 
 ## 9. Architecture
 
