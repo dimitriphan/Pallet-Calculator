@@ -2,6 +2,7 @@ import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
 import { describeRun, stackRuns } from '../engine/analytics/stack';
 import { formatDims, formatNumber } from '../engine/units/units';
+import { Mascot } from './Mascot';
 import { StaleBadge } from './StaleBadge';
 import { useStatusContent } from './StatusMessages';
 import { useResults } from './StoreContext';
@@ -109,7 +110,12 @@ export function WhatToBuildCard() {
       </>
     );
   } else if (!running) {
-    body = <p className="text-sm text-gray-600 dark:text-harbor-mist">{NO_LAYOUT}</p>;
+    body = (
+      <div className="flex items-center gap-3">
+        <Mascot pose="idle" size={64} />
+        <p className="text-sm text-gray-600 dark:text-harbor-mist">{NO_LAYOUT}</p>
+      </div>
+    );
   } else {
     // "Calculating…" above says a first calculation is under way.
     return null;
