@@ -1,17 +1,20 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BuildSheet } from '../export/buildSheet';
 import { useNoticesStore } from '../store/noticesStore';
 import { flush, renderApp } from './testUtils';
 
 const mocks = vi.hoisted(() => ({
   composePng: vi.fn(),
   downloadBlob: vi.fn(),
+  renderBuildSheetPdf: vi.fn(),
 }));
 vi.mock('../export/png', async (orig) => ({
   ...(await orig<typeof import('../export/png')>()),
   composePng: mocks.composePng,
 }));
 vi.mock('../export/download', () => ({ downloadBlob: mocks.downloadBlob }));
+vi.mock('../export/buildSheetPdf', () => ({ renderBuildSheetPdf: mocks.renderBuildSheetPdf }));
 
 const VIEWS = { current: 'c', top: 't', side: 's' };
 
@@ -19,6 +22,9 @@ beforeEach(() => {
   useNoticesStore.setState({ notices: [] });
   mocks.composePng.mockReset().mockResolvedValue(new Blob(['png'], { type: 'image/png' }));
   mocks.downloadBlob.mockReset();
+  mocks.renderBuildSheetPdf
+    .mockReset()
+    .mockResolvedValue(new Blob(['%PDF'], { type: 'application/pdf' }));
 });
 afterEach(() => vi.useRealTimers());
 
@@ -27,11 +33,12 @@ async function openMenu(user: Awaited<ReturnType<typeof renderApp>>['user']) {
 }
 
 describe('ExportMenu', () => {
-  it('lists JSON, CSV and PNG as menu items', async () => {
+  it('lists the build sheet, JSON, CSV and PNG as menu items', async () => {
     const { user } = await renderApp();
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     await openMenu(user);
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
+      'Build sheet (PDF)',
       'JSON',
       'CSV',
       'PNG',
@@ -126,7 +133,7 @@ describe('ExportMenu', () => {
     const { user, stores } = await renderApp();
     act(() => stores.results.setState({ result: null, inputs: null }));
     await openMenu(user);
-    for (const name of ['JSON', 'CSV', 'PNG']) {
+    for (const name of ['Build sheet (PDF)', 'JSON', 'CSV', 'PNG']) {
       const item = screen.getByRole('menuitem', { name });
       expect(item).toBeDisabled();
       expect(item).toHaveAttribute('title', 'Run a calculation first');
@@ -149,8 +156,8 @@ describe('ExportMenu', () => {
     screen.getByRole('button', { name: 'Export' }).focus();
     await user.keyboard('{Enter}');
     expect(screen.getByRole('menu')).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'JSON' })).toHaveFocus();
-    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Build sheet (PDF)' })).toHaveFocus();
+    await user.keyboard('{ArrowDown}{ArrowDown}');
     expect(screen.getByRole('menuitem', { name: 'CSV' })).toHaveFocus();
     await user.keyboard('{ArrowUp}{ArrowUp}');
     expect(screen.getByRole('menuitem', { name: 'JSON' })).toBeEnabled();
@@ -163,6 +170,7 @@ describe('ExportMenu', () => {
     const { user } = await renderApp();
     screen.getByRole('button', { name: 'Export' }).focus();
     await user.keyboard(' ');
+    await user.keyboard('{ArrowDown}');
     await user.keyboard('{Enter}');
     expect(mocks.downloadBlob.mock.calls[0]?.[1]).toMatch(/\.json$/);
   });
@@ -172,5 +180,135 @@ describe('ExportMenu', () => {
     await openMenu(user);
     await user.click(document.body);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});
+
+describe('ExportMenu, build sheet', () => {
+  const FAILED = 'Build sheet could not be created. Try again.';
+
+  async function openDialog(user: Awaited<ReturnType<typeof renderApp>>['user']) {
+    await openMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Build sheet (PDF)' }));
+    return screen.getByRole('dialog', { name: 'Build sheet (PDF)' });
+  }
+
+  it('opens a dialog with a job name field', async () => {
+    const { user } = await renderApp();
+    const dialog = await openDialog(user);
+    const field = within(dialog).getByRole('textbox', { name: 'Job name (optional)' });
+    expect(field).toHaveAttribute('maxLength', '80');
+    expect(field).toHaveFocus();
+    expect(within(dialog).getByRole('button', { name: 'Save PDF' })).toBeEnabled();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('renders the sheet with the job name and downloads it', async () => {
+    const { user, stores } = await renderApp();
+    const capture = vi.fn(() => VIEWS);
+    act(() => stores.scene.getState().setCaptureViews(capture));
+    const dialog = await openDialog(user);
+    await user.type(within(dialog).getByRole('textbox', { name: 'Job name (optional)' }), 'Dock 4');
+    await user.click(within(dialog).getByRole('button', { name: 'Save PDF' }));
+    expect(mocks.renderBuildSheetPdf).toHaveBeenCalledTimes(1);
+    const [sheet, pictures] = mocks.renderBuildSheetPdf.mock.calls[0] as [BuildSheet, unknown];
+    expect(sheet.jobName).toBe('Dock 4');
+    expect(sheet.summary.at(-1)?.value).toBe('260');
+    expect(pictures).toEqual({ current: 'c', side: 's' });
+    expect(mocks.downloadBlob).toHaveBeenCalledTimes(1);
+    expect(mocks.downloadBlob.mock.calls[0]?.[1]).toMatch(/^pallet-build-sheet-\d{8}-\d{6}\.pdf$/);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export' })).toHaveFocus();
+    expect(useNoticesStore.getState().notices).toEqual([]);
+  });
+
+  it('submits with Enter', async () => {
+    const { user } = await renderApp();
+    const dialog = await openDialog(user);
+    await user.type(
+      within(dialog).getByRole('textbox', { name: 'Job name (optional)' }),
+      'Run{Enter}',
+    );
+    expect(mocks.renderBuildSheetPdf).toHaveBeenCalledTimes(1);
+    expect(mocks.downloadBlob).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows "Creating…" while the PDF is generated', async () => {
+    const { user } = await renderApp();
+    let finish: (b: Blob) => void = () => {};
+    mocks.renderBuildSheetPdf.mockReturnValue(new Promise<Blob>((r) => (finish = r)));
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Save PDF' }));
+    expect(within(dialog).getByRole('button', { name: 'Creating…' })).toBeDisabled();
+    await act(async () => finish(new Blob(['%PDF'])));
+    expect(mocks.downloadBlob).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('downloads nothing on Cancel', async () => {
+    const { user } = await renderApp();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.renderBuildSheetPdf).not.toHaveBeenCalled();
+    expect(mocks.downloadBlob).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Export' })).toHaveFocus();
+  });
+
+  it('pushes a notice and closes when the renderer fails', async () => {
+    const { user } = await renderApp();
+    mocks.renderBuildSheetPdf.mockRejectedValue(new Error('jsPDF failed'));
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Save PDF' }));
+    expect(useNoticesStore.getState().notices.map((n) => n.message)).toEqual([FAILED]);
+    expect(mocks.downloadBlob).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('passes no pictures when the 3D view is unavailable or capture throws', async () => {
+    const { user, stores } = await renderApp();
+    let dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Save PDF' }));
+    expect(mocks.renderBuildSheetPdf.mock.calls[0]?.[1]).toBeNull();
+
+    act(() =>
+      stores.scene.getState().setCaptureViews(() => {
+        throw new Error('context lost');
+      }),
+    );
+    dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Save PDF' }));
+    expect(mocks.renderBuildSheetPdf.mock.calls[1]?.[1]).toBeNull();
+    expect(mocks.downloadBlob).toHaveBeenCalledTimes(2);
+  });
+
+  it('exports the out-of-date flag from the results', async () => {
+    const { user } = await renderApp();
+    const length = screen.getAllByRole('textbox', { name: 'Length' })[0]!;
+    await user.clear(length);
+    await user.type(length, 'abc');
+    await flush();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Save PDF' }));
+    const [sheet] = mocks.renderBuildSheetPdf.mock.calls[0] as [BuildSheet];
+    expect(sheet.stale).toBe(true);
+  });
+
+  it('lists only the build sheet and PNG in Basic mode', async () => {
+    const { user } = await renderApp(undefined, { viewMode: 'basic' });
+    await openMenu(user);
+    expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
+      'Build sheet (PDF)',
+      'PNG',
+    ]);
+  });
+
+  it('disables the build sheet until a layout is selected', async () => {
+    const { user, stores } = await renderApp();
+    act(() => stores.results.setState({ result: null, inputs: null }));
+    await openMenu(user);
+    const item = screen.getByRole('menuitem', { name: 'Build sheet (PDF)' });
+    expect(item).toBeDisabled();
+    expect(item).toHaveAttribute('title', 'Run a calculation first');
   });
 });

@@ -102,7 +102,7 @@ describe('Basic mode', () => {
 
     await user.click(screen.getByRole('button', { name: 'Export' }));
     const items = within(screen.getByRole('menu', { name: 'Export' })).getAllByRole('menuitem');
-    expect(items.map((i) => i.textContent)).toEqual(['PNG']);
+    expect(items.map((i) => i.textContent)).toEqual(['Build sheet (PDF)', 'PNG']);
     expect(screen.queryByText('JSON')).not.toBeInTheDocument();
     expect(screen.queryByText('CSV')).not.toBeInTheDocument();
   });

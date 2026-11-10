@@ -150,7 +150,7 @@ describe('buildSheetContent, variations', () => {
       'Usable stacking height',
       'Finished load',
     ]);
-    expect(s.palletAndLoad[1]?.value).toBe('2.00 in in total, 1.00 in each side');
+    expect(s.palletAndLoad[1]?.value).toBe('2.00 in total, 1.00 in each side');
   });
 
   it('stale flag', () => {

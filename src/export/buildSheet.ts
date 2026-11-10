@@ -171,7 +171,7 @@ export function buildSheetContent(a: {
       ? [
           {
             label: 'Overhang',
-            value: `${inches(inputs.overhang)} in total, ${formatNumber(inputs.overhang / 2)} in each side`,
+            value: `${inches(inputs.overhang)} total, ${inches(inputs.overhang / 2)} each side`,
           },
         ]
       : []),

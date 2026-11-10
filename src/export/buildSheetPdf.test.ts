@@ -1,0 +1,137 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_INPUTS } from '../domain/constants';
+import { optimize } from '../engine/optimize';
+import { buildSheetContent, type BuildSheet } from './buildSheet';
+import { PAGE, planPages, renderBuildSheetPdf, stackingHeight } from './buildSheetPdf';
+
+const NOW = new Date(2026, 10, 10, 9, 5);
+
+function defaultSheet(over: { jobName?: string; stale?: boolean } = {}): BuildSheet {
+  return buildSheetContent({
+    inputs: DEFAULT_INPUTS,
+    result: optimize(DEFAULT_INPUTS),
+    selectedIndex: 0,
+    jobName: over.jobName ?? '',
+    stale: over.stale ?? false,
+    now: NOW,
+  });
+}
+
+/** The default sheet with `patterns` copies of its first pattern and `rows` stacking rows. */
+function syntheticSheet(patterns: number, rows: number): BuildSheet {
+  const base = defaultSheet({ jobName: 'Synthetic' });
+  const first = base.patterns[0]!;
+  const row = base.stacking[0]!;
+  return {
+    ...base,
+    patterns: Array.from({ length: patterns }, (_, i) => {
+      const letter = String.fromCharCode(65 + i);
+      return { ...first, letter, heading: `Pattern ${letter}: layer ${i + 1}` };
+    }),
+    stacking: Array.from({ length: rows }, (_, i) => ({ ...row, layer: i + 1 })),
+  };
+}
+
+/** The PDF's bytes as Latin-1 text. */
+async function pdfText(blob: Blob): Promise<string> {
+  return new TextDecoder('latin1').decode(await blob.arrayBuffer());
+}
+
+const pageObjects = (text: string) => (text.match(/\/Type \/Page(?!s)/g) ?? []).length;
+
+// A 2 x 1 white PNG.
+const PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAC0lEQVR4nGP4DwYAFPIF+6QNfF4AAAAASUVORK5CYII=';
+
+describe('planPages', () => {
+  it('puts both default patterns and the stacking table on page 2', () => {
+    const plan = planPages(defaultSheet());
+    expect(plan.patternsPerPage).toEqual([['A', 'B']]);
+    expect(plan.stackingOnPage).toBe(2);
+    expect(plan.totalPages).toBe(2);
+  });
+
+  it('flows five patterns two per page and keeps the stacking table on the page', () => {
+    const plan = planPages(syntheticSheet(5, 40));
+    expect(plan.patternsPerPage).toEqual([['A', 'B'], ['C', 'D'], ['E']]);
+    expect(plan.stackingOnPage).toBeGreaterThanOrEqual(4);
+    expect(plan.stackingParts.reduce((n, p) => n + p.count, 0)).toBe(40);
+    expect(plan.stackingParts[0]?.page).toBe(plan.stackingOnPage);
+    for (const part of plan.stackingParts) {
+      expect(part.top + stackingHeight(part.count)).toBeLessThanOrEqual(PAGE.bodyBottom + 1e-9);
+      expect(part.page).toBeLessThanOrEqual(plan.totalPages);
+    }
+    expect(plan.totalPages).toBe(plan.stackingParts.at(-1)?.page);
+  });
+
+  it('continues a table longer than a page on the next pages', () => {
+    const plan = planPages(syntheticSheet(3, 60));
+    expect(plan.patternsPerPage).toEqual([['A', 'B'], ['C']]);
+    expect(plan.stackingOnPage).toBe(3);
+    let next = 0;
+    plan.stackingParts.forEach((part, k) => {
+      expect(part.first).toBe(next);
+      expect(part.page).toBe(plan.stackingOnPage + k);
+      expect(part.top + stackingHeight(part.count)).toBeLessThanOrEqual(PAGE.bodyBottom + 1e-9);
+      expect(part.count).toBeGreaterThanOrEqual(5);
+      next += part.count;
+    });
+    expect(next).toBe(60);
+    expect(plan.totalPages).toBe(plan.stackingParts.at(-1)?.page);
+  });
+
+  it('places a short table below the last pattern on the same page', () => {
+    const plan = planPages(syntheticSheet(1, 1));
+    expect(plan).toMatchObject({ patternsPerPage: [['A']], stackingOnPage: 2, totalPages: 2 });
+  });
+});
+
+describe('renderBuildSheetPdf', () => {
+  it('renders the default winner as text, without pictures', async () => {
+    const text = await pdfText(
+      await renderBuildSheetPdf(defaultSheet({ jobName: 'Dock 4' }), null),
+    );
+    expect(text.startsWith('%PDF')).toBe(true);
+    for (const s of [
+      'Pallet build sheet',
+      'Dock 4',
+      '260',
+      'Pattern B: layers 2-7',
+      '3D pictures unavailable',
+      'Page 2 of 2',
+      '72.00 in',
+    ])
+      expect(text).toContain(s);
+    expect(text).not.toContain('Out of date');
+    expect(pageObjects(text)).toBe(2);
+  });
+
+  it('boxes the out-of-date line when stale', async () => {
+    const text = await pdfText(await renderBuildSheetPdf(defaultSheet({ stale: true }), null));
+    expect(text).toContain('Out of date: inputs changed after this calculation.');
+  });
+
+  it('embeds the two pictures', async () => {
+    const text = await pdfText(
+      await renderBuildSheetPdf(defaultSheet(), { current: PNG, side: PNG }),
+    );
+    expect((text.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(1);
+    expect(text).toContain('3D view');
+    expect(text).toContain('Side view');
+    expect(text).not.toContain('3D pictures unavailable');
+  });
+
+  it.each([
+    [2, 7],
+    [5, 40],
+    [1, 1],
+    [3, 60],
+  ])('prints as many pages as planned (%i patterns, %i rows)', async (patterns, rows) => {
+    const sheet = syntheticSheet(patterns, rows);
+    const { totalPages } = planPages(sheet);
+    const text = await pdfText(await renderBuildSheetPdf(sheet, null));
+    expect(pageObjects(text)).toBe(totalPages);
+    for (let p = 1; p <= totalPages; p++) expect(text).toContain(`Page ${p} of ${totalPages}`);
+    expect(text).not.toContain(`Page ${totalPages + 1} of`);
+  });
+});

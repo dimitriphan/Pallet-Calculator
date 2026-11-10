@@ -1,20 +1,24 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { buildSheetContent, buildSheetFilename } from '../export/buildSheet';
+import type { SheetPictures } from '../export/buildSheetPdf';
 import { buildCsv } from '../export/csv';
 import { downloadBlob } from '../export/download';
 import { buildExportPayload, exportFilename } from '../export/exportData';
 import { composePng } from '../export/png';
 import { useNoticesStore } from '../store/noticesStore';
+import { BuildSheetDialog } from './BuildSheetDialog';
 import { BUTTON } from './ModalDialog';
 import type { ViewMode } from '../store/prefsStore';
 import { usePrefs, useResults, useScene } from './StoreContext';
 
-type Format = 'json' | 'csv' | 'png';
+type Format = 'pdf' | 'json' | 'csv' | 'png';
 
 const BOTH: ViewMode[] = ['basic', 'full'];
 const FULL_ONLY: ViewMode[] = ['full'];
 
 /** The menu, in order; each item lists the view modes that offer it. */
 const ITEMS: { format: Format; label: string; modes: ViewMode[] }[] = [
+  { format: 'pdf', label: 'Build sheet (PDF)', modes: BOTH },
   { format: 'json', label: 'JSON', modes: FULL_ONLY },
   { format: 'csv', label: 'CSV', modes: FULL_ONLY },
   { format: 'png', label: 'PNG', modes: BOTH },
@@ -23,11 +27,15 @@ const ITEMS: { format: Format; label: string; modes: ViewMode[] }[] = [
 const NO_LAYOUT = 'Run a calculation first';
 const NO_3D = '3D view is unavailable, so PNG export is disabled.';
 const PNG_FAILED = 'PNG export failed. Try again after the 3D view has loaded.';
+const PDF_FAILED = 'Build sheet could not be created. Try again.';
 
 const ITEM =
   'block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:text-gray-100 dark:hover:bg-gray-700 dark:focus:bg-gray-700 dark:disabled:text-gray-500 dark:disabled:hover:bg-gray-800';
 
-/** Export of the selected layout as JSON, CSV, or a three-view PNG (PNG only in Basic mode). */
+/**
+ * Export of the selected layout as a PDF build sheet, JSON, CSV, or a three-view PNG
+ * (Basic mode offers the build sheet and PNG).
+ */
 export function ExportMenu() {
   const inputs = useResults((s) => s.inputs);
   const result = useResults((s) => s.result);
@@ -37,6 +45,7 @@ export function ExportMenu() {
   const viewMode = usePrefs((s) => s.viewMode);
   const items = ITEMS.filter((item) => item.modes.includes(viewMode));
   const [open, setOpen] = useState(false);
+  const [sheetDialog, setSheetDialog] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
@@ -104,9 +113,37 @@ export function ExportMenu() {
     else if (e.key === 'Tab') setOpen(false);
   };
 
+  /** Light-rendered pictures for the build sheet, or null when the 3D view cannot give them. */
+  const sheetPictures = (): SheetPictures | null => {
+    try {
+      if (!captureViews) return null;
+      const { current, side } = captureViews();
+      return { current, side };
+    } catch {
+      return null;
+    }
+  };
+
+  const saveBuildSheet = async (jobName: string) => {
+    try {
+      if (!inputs || !result) throw new Error('No layout');
+      const now = new Date();
+      const sheet = buildSheetContent({ inputs, result, selectedIndex, jobName, stale, now });
+      const { renderBuildSheetPdf } = await import('../export/buildSheetPdf');
+      downloadBlob(await renderBuildSheetPdf(sheet, sheetPictures()), buildSheetFilename(now));
+    } catch {
+      useNoticesStore.getState().push(PDF_FAILED);
+    }
+    setSheetDialog(false);
+  };
+
   const choose = async (format: Format) => {
     close(true);
     if (!inputs || !result) return;
+    if (format === 'pdf') {
+      setSheetDialog(true);
+      return;
+    }
     const now = new Date();
     const payload = buildExportPayload(inputs, result, selectedIndex, now, stale);
     const name = exportFilename(format, now);
@@ -173,6 +210,9 @@ export function ExportMenu() {
             </div>
           ))}
         </div>
+      )}
+      {sheetDialog && (
+        <BuildSheetDialog onSave={saveBuildSheet} onCancel={() => setSheetDialog(false)} />
       )}
     </div>
   );
