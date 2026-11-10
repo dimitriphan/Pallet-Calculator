@@ -350,7 +350,13 @@ implementation can replace it later. Stored data carries a schema version.
 Everything read from storage or from an imported file is validated with Zod; an
 invalid entry is skipped with a notice. Before unreadable or partly readable
 saved data is overwritten, the raw text is copied to a `<key>.backup` key, and
-the notice ends with "A backup copy was kept." Current inputs are remembered between
+the notice ends with "It will be backed up before anything is overwritten."
+("They will be backed up before anything is overwritten." when only some items
+were skipped). If the backup cannot be written, the key is not overwritten and
+the notice says "Could not keep a backup, so your change was not saved. Free up
+browser storage and try again." Each save or delete is merged into what is
+stored at that moment, so two open tabs keep each other's items; lists refresh
+when another tab changes storage. Current inputs are remembered between
 visits. A storage-full error is reported to the user without losing the
 on-screen result.
 

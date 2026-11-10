@@ -4,7 +4,7 @@ import { scenarioSchema } from '../domain/schemas';
 import type { Inputs, OptimizeResult, Scenario } from '../domain/types';
 import { computeAnalytics } from '../engine/analytics/analytics';
 import { STORAGE_KEYS } from '../persistence/keys';
-import { createDefaultRepository } from '../persistence/localStorageRepository';
+import { createDefaultRepository, onStorageChange } from '../persistence/localStorageRepository';
 import type { Repository } from '../persistence/repository';
 import { useNoticesStore } from './noticesStore';
 
@@ -14,6 +14,8 @@ export interface ScenariosState {
   rename(id: string, name: string): void;
   duplicate(id: string): Scenario;
   remove(id: string): void;
+  /** Re-reads the stored scenarios, e.g. after another tab changed them. */
+  refresh(): void;
 }
 
 export function createScenariosStore(
@@ -22,9 +24,11 @@ export function createScenariosStore(
   now: () => Date = () => new Date(),
 ): StoreApi<ScenariosState> {
   return createStore<ScenariosState>()((set, get) => {
+    // The repository merges each change with what other tabs stored, so read the list back.
+    const sync = () => set({ scenarios: repo.list() });
     const add = (scenario: Scenario) => {
       repo.save(scenario);
-      set((s) => ({ scenarios: [...s.scenarios, scenario] }));
+      sync();
     };
     return {
       scenarios: repo.list(),
@@ -47,7 +51,7 @@ export function createScenariosStore(
         if (!existing) return;
         const next = { ...existing, name };
         repo.save(next);
-        set((s) => ({ scenarios: s.scenarios.map((x) => (x.id === id ? next : x)) }));
+        sync();
       },
       duplicate(id) {
         const source = get().scenarios.find((s) => s.id === id);
@@ -63,7 +67,11 @@ export function createScenariosStore(
       },
       remove(id) {
         repo.remove(id);
-        set((s) => ({ scenarios: s.scenarios.filter((x) => x.id !== id) }));
+        sync();
+      },
+      refresh() {
+        repo.refresh?.();
+        sync();
       },
     };
   });
@@ -78,6 +86,8 @@ const scenariosStore = createScenariosStore(
   }),
   notify,
 );
+
+onStorageChange(STORAGE_KEYS.scenarios, () => scenariosStore.getState().refresh());
 
 export const useScenariosStore = Object.assign(
   <T>(selector: (s: ScenariosState) => T): T => useStore(scenariosStore, selector),

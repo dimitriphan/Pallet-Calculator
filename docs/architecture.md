@@ -40,7 +40,8 @@ Keep all conversion in that one file.
 
 - `src/persistence/repository.ts` defines a small `Repository` interface (`list`, `save`, `remove`) and a memory version used when browser storage is unavailable.
 - `src/persistence/localStorageRepository.ts` is the Local Storage version. Each key holds `{ version: 1, items }`. Keys are in `keys.ts`: `pc.presets.v1`, `pc.scenarios.v1`, `pc.inputs.v1`.
-- Everything read back is checked with Zod. Bad entries are skipped and a notice is shown. Before overwriting unreadable data, the raw text is copied to `<key>.backup`.
+- Everything read back is checked with Zod. Bad entries are skipped and a notice is shown ("... It will be backed up before anything is overwritten."). Before overwriting unreadable data, the raw text is copied to `<key>.backup`; if that copy cannot be written, the key is not overwritten and the change stays in memory.
+- Every save or delete re-reads the key and applies the change to what is stored, so two tabs keep each other's items. The presets and scenarios stores also refresh on the window `storage` event.
 - `src/store/presetsStore.ts` and `scenariosStore.ts` use a repository; sample presets come from `src/data/samplePresets.ts`.
 
 ### Adding a storage backend

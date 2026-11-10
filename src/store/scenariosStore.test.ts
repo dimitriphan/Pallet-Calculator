@@ -73,4 +73,15 @@ describe('scenarios store', () => {
     expect(store.getState().scenarios).toHaveLength(1);
     expect(notices).toEqual(['Could not save: browser storage is full or unavailable.']);
   });
+
+  it('keeps scenarios saved in two tabs and refreshes from storage', () => {
+    const storage = new FakeStorage();
+    const tabA = setup(storage).store;
+    const tabB = setup(storage).store;
+    tabA.getState().save('A', DEFAULT_INPUTS, result, 0);
+    tabB.getState().save('B', DEFAULT_INPUTS, result, 0);
+    expect(tabB.getState().scenarios.map((x) => x.name)).toEqual(['A', 'B']);
+    tabA.getState().refresh();
+    expect(tabA.getState().scenarios.map((x) => x.name)).toEqual(['A', 'B']);
+  });
 });

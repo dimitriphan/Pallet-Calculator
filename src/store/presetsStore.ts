@@ -4,7 +4,7 @@ import { samplePresets } from '../data/samplePresets';
 import { presetSchema } from '../domain/schemas';
 import type { Inputs, Preset } from '../domain/types';
 import { STORAGE_KEYS } from '../persistence/keys';
-import { createDefaultRepository } from '../persistence/localStorageRepository';
+import { createDefaultRepository, onStorageChange } from '../persistence/localStorageRepository';
 import type { Repository } from '../persistence/repository';
 import { useNoticesStore } from './noticesStore';
 
@@ -18,6 +18,8 @@ export interface PresetsState {
   setActive(id: string | null): void;
   exportJson(ids?: string[]): string;
   importJson(text: string): { imported: number; skipped: number };
+  /** Re-reads the stored presets, e.g. after another tab changed them. */
+  refresh(): void;
 }
 
 const INVALID_FILE = 'That file is not a valid preset export.';
@@ -63,9 +65,17 @@ export function createPresetsStore(
 ): StoreApi<PresetsState> {
   return createStore<PresetsState>()((set, get) => {
     const find = (id: string) => get().presets.find((p) => p.id === id);
+    // The repository merges each change with what other tabs stored, so read the list back.
+    const sync = () => {
+      const presets = repo.list();
+      set((s) => ({
+        presets,
+        activePresetId: presets.some((p) => p.id === s.activePresetId) ? s.activePresetId : null,
+      }));
+    };
     const add = (preset: Preset) => {
       repo.save(preset);
-      set((s) => ({ presets: [...s.presets, preset] }));
+      sync();
     };
     return {
       presets: repo.list(),
@@ -80,7 +90,7 @@ export function createPresetsStore(
         if (!existing) return;
         const next = { ...existing, ...patch, id };
         repo.save(next);
-        set((s) => ({ presets: s.presets.map((p) => (p.id === id ? next : p)) }));
+        sync();
       },
       clone(id) {
         const source = find(id);
@@ -92,10 +102,11 @@ export function createPresetsStore(
       },
       remove(id) {
         repo.remove(id);
-        set((s) => ({
-          presets: s.presets.filter((p) => p.id !== id),
-          activePresetId: s.activePresetId === id ? null : s.activePresetId,
-        }));
+        sync();
+      },
+      refresh() {
+        repo.refresh?.();
+        sync();
       },
       setActive: (id) => set({ activePresetId: id }),
       exportJson(ids) {
@@ -153,6 +164,8 @@ const presetsStore = createPresetsStore(
   }),
   notify,
 );
+
+onStorageChange(STORAGE_KEYS.presets, () => presetsStore.getState().refresh());
 
 export const usePresetsStore = Object.assign(
   <T>(selector: (s: PresetsState) => T): T => useStore(presetsStore, selector),

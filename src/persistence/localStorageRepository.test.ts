@@ -4,6 +4,7 @@ import {
   createDefaultRepository,
   createLocalStorageRepository,
   getBrowserStorage,
+  onStorageChange,
 } from './localStorageRepository';
 import { FakeStorage } from './testStorage';
 
@@ -48,7 +49,7 @@ describe('createLocalStorageRepository', () => {
     expect(repo.list().map((i) => i.id)).toEqual(['a', 'c']);
     repo.list();
     expect(notices).toEqual([
-      '1 saved item(s) could not be read and were skipped. A backup copy was kept.',
+      '1 saved item(s) could not be read and were skipped. They will be backed up before anything is overwritten.',
     ]);
   });
 
@@ -57,7 +58,9 @@ describe('createLocalStorageRepository', () => {
     storage.setItem(KEY, '{not json');
     const { repo, notices } = setup(storage);
     expect(repo.list()).toEqual([]);
-    expect(notices).toEqual(['Saved data could not be read. A backup copy was kept.']);
+    expect(notices).toEqual([
+      'Saved data could not be read. It will be backed up before anything is overwritten.',
+    ]);
   });
 
   it('returns [] with a notice for a wrong version or shape', () => {
@@ -65,7 +68,9 @@ describe('createLocalStorageRepository', () => {
     storage.setItem(KEY, JSON.stringify({ version: 2, items: [] }));
     const { repo, notices } = setup(storage);
     expect(repo.list()).toEqual([]);
-    expect(notices).toEqual(['Saved data could not be read. A backup copy was kept.']);
+    expect(notices).toEqual([
+      'Saved data could not be read. It will be backed up before anything is overwritten.',
+    ]);
   });
 
   it('returns [] with a notice when getItem throws', () => {
@@ -140,17 +145,68 @@ describe('createLocalStorageRepository', () => {
       expect(storage.getItem(`${KEY}.backup`)).toBe('{not json');
     });
 
-    it('still writes the main key when the backup write fails', () => {
+    it('leaves the main key unchanged and keeps the change when the backup write fails', () => {
       const storage = new FakeStorage();
       storage.setItem(KEY, '{not json');
       const realSet = storage.setItem.bind(storage);
+      let backupFails = true;
       storage.setItem = (k, v) => {
-        if (k.endsWith('.backup')) throw new Error('quota');
+        if (k.endsWith('.backup') && backupFails) throw new Error('quota');
         realSet(k, v);
       };
-      const { repo } = setup(storage);
+      const { repo, notices } = setup(storage);
       repo.save({ id: 'a', n: 1 });
-      expect(JSON.parse(storage.getItem(KEY)!).items).toHaveLength(1);
+      expect(storage.getItem(KEY)).toBe('{not json');
+      expect(repo.list()).toEqual([{ id: 'a', n: 1 }]);
+      expect(notices).toContain(
+        'Could not keep a backup, so your change was not saved. Free up browser storage and try again.',
+      );
+      // Once the backup can be written, the kept change is saved with the next one.
+      backupFails = false;
+      repo.save({ id: 'b', n: 2 });
+      expect(storage.getItem(`${KEY}.backup`)).toBe('{not json');
+      expect(JSON.parse(storage.getItem(KEY)!).items.map((i: Item) => i.id)).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('two tabs sharing one key', () => {
+    it('keeps the items both tabs saved', () => {
+      const storage = new FakeStorage();
+      const a = setup(storage).repo;
+      const b = setup(storage).repo;
+      expect(a.list()).toEqual([]);
+      expect(b.list()).toEqual([]);
+      a.save({ id: 'a', n: 1 });
+      b.save({ id: 'b', n: 2 });
+      expect(JSON.parse(storage.getItem(KEY)!).items).toEqual([
+        { id: 'a', n: 1 },
+        { id: 'b', n: 2 },
+      ]);
+      expect(b.list().map((i) => i.id)).toEqual(['a', 'b']);
+    });
+
+    it('does not bring back an item the other tab removed', () => {
+      const storage = new FakeStorage();
+      storage.setItem(KEY, JSON.stringify({ version: 1, items: [{ id: 'x', n: 0 }] }));
+      const a = setup(storage).repo;
+      const b = setup(storage).repo;
+      expect(a.list().map((i) => i.id)).toEqual(['x']);
+      expect(b.list().map((i) => i.id)).toEqual(['x']);
+      b.remove('x');
+      a.save({ id: 'y', n: 1 });
+      expect(JSON.parse(storage.getItem(KEY)!).items).toEqual([{ id: 'y', n: 1 }]);
+      expect(a.list()).toEqual([{ id: 'y', n: 1 }]);
+    });
+
+    it("refresh picks up the other tab's changes", () => {
+      const storage = new FakeStorage();
+      const a = setup(storage).repo;
+      const b = setup(storage).repo;
+      a.list();
+      b.save({ id: 'b', n: 2 });
+      expect(a.list()).toEqual([]);
+      a.refresh?.();
+      expect(a.list()).toEqual([{ id: 'b', n: 2 }]);
     });
   });
 
@@ -195,5 +251,18 @@ describe('createLocalStorageRepository', () => {
       repo.save({ id: 'a', n: 1 });
       expect(notices).toEqual([NOT_SAVED]);
     });
+  });
+});
+
+describe('onStorageChange', () => {
+  it('calls back for its key or a cleared storage, and stops after unsubscribing', () => {
+    const calls: string[] = [];
+    const stop = onStorageChange(KEY, () => calls.push('changed'));
+    window.dispatchEvent(new StorageEvent('storage', { key: KEY }));
+    window.dispatchEvent(new StorageEvent('storage', { key: 'other' }));
+    window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    stop();
+    window.dispatchEvent(new StorageEvent('storage', { key: KEY }));
+    expect(calls).toEqual(['changed', 'changed']);
   });
 });

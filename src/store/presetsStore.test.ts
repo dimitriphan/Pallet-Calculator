@@ -138,4 +138,24 @@ describe('presets store', () => {
     const text = JSON.stringify({ version: 1, presets: [bad] });
     expect(store.getState().importJson(text)).toEqual({ imported: 0, skipped: 1 });
   });
+
+  it('shows presets saved in another tab after its own save and on refresh', () => {
+    const storage = new FakeStorage();
+    const tabA = setup(storage).store;
+    const tabB = setup(storage).store;
+    tabA.getState().create('From A', DEFAULT_INPUTS);
+    const b = tabB.getState().create('From B', other);
+    expect(tabB.getState().presets.map((p) => p.name)).toEqual([
+      ...samplePresets.map((p) => p.name),
+      'From A',
+      'From B',
+    ]);
+    tabA.getState().setActive(b.id);
+    tabA.getState().refresh();
+    expect(tabA.getState().presets.map((p) => p.name)).toContain('From B');
+    tabB.getState().remove(b.id);
+    tabA.getState().refresh();
+    expect(tabA.getState().presets.map((p) => p.name)).not.toContain('From B');
+    expect(tabA.getState().activePresetId).toBeNull();
+  });
 });

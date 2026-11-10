@@ -56,7 +56,8 @@ A strict product setting also limits how the carton may be turned on the pallet.
 ## Saved data
 
 - Presets, scenarios and your last inputs are saved **in this browser only**. They are not shared between computers or browsers, and clearing the browser's site data removes them. Use the preset export to keep a copy.
-- If saved data cannot be read (for example it was damaged), the tool skips it and shows a notice. Before it ever overwrites such data, it keeps the original text under the same storage name with `.backup` added, for example `pc.presets.v1.backup`. The notice says "A backup copy was kept."
+- If saved data cannot be read (for example it was damaged), the tool skips it and shows a notice. Before it ever overwrites such data, it keeps the original text under the same storage name with `.backup` added, for example `pc.presets.v1.backup`. The notice says "It will be backed up before anything is overwritten." (or "They will be backed up before anything is overwritten." when only some saved items were skipped). If that backup copy cannot be written, nothing is overwritten: the change stays on screen only, and the notice says "Could not keep a backup, so your change was not saved. Free up browser storage and try again."
+- Presets and scenarios saved in two open tabs are merged: each save or delete is applied to what is stored at that moment, so one tab never wipes out another tab's items, and a deleted item is not brought back by the other tab. Lists in other open tabs update when storage changes.
 - If the browser cannot store data, the tool still works but tells you nothing will be saved.
 
 ## Exports

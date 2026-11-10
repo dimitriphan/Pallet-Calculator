@@ -2,6 +2,8 @@ export interface Repository<T extends { id: string }> {
   list(): T[];
   save(item: T): void;
   remove(id: string): void;
+  /** Re-reads the stored items (e.g. after another tab changed them); list() then returns them. */
+  refresh?(): void;
 }
 
 /** Non-persistent repository, used when browser storage is unavailable. `onFirstWrite` fires once. */
