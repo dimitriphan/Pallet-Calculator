@@ -96,7 +96,7 @@ export function LayoutComparisonTable() {
   const th = 'whitespace-nowrap px-2 py-1.5 font-medium';
   const td = 'whitespace-nowrap px-2 py-1.5 tabular-nums';
   return (
-    <section aria-labelledby="comparison-heading" className="space-y-2">
+    <section aria-labelledby="comparison-heading" className="shrink-0 space-y-2">
       <div className="flex items-baseline justify-between">
         <h2
           id="comparison-heading"

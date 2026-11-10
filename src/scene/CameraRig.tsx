@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { PerspectiveCamera, Vector3 } from 'three';
 import type { Inputs } from '../domain/types';
 import { useScene } from '../ui/StoreContext';
+import { aspectChanged } from './aspect';
 import { perspectiveFit } from './cameraFit';
 import type { SceneBounds } from './transforms';
 
@@ -29,17 +30,23 @@ export function CameraRig({ load, selected, inputs, measurements }: Props) {
   const get = useThree((s) => s.get);
   const controls = useThree((s) => s.controls);
   const invalidate = useThree((s) => s.invalidate);
+  const size = useThree((s) => s.size);
   const command = useScene((s) => s.cameraCommand);
   const latest = useRef({ load, selected });
   useEffect(() => {
     latest.current = { load, selected };
   });
 
+  // Aspect ratio at the last fit; a big change re-fits, a small one leaves the user's orbit alone.
+  const lastFitAspect = useRef(0);
+
   const fitTo = useCallback(
     (bounds: SceneBounds) => {
       const { camera, size, controls: c } = get();
       const cam = camera as PerspectiveCamera;
-      const fit = perspectiveFit(bounds, cam.fov, size.width / Math.max(size.height, 1));
+      const aspect = size.width / Math.max(size.height, 1);
+      lastFitAspect.current = aspect;
+      const fit = perspectiveFit(bounds, cam.fov, aspect);
       cam.position.set(...fit.position);
       cam.lookAt(...fit.target);
       cam.updateProjectionMatrix();
@@ -66,6 +73,11 @@ export function CameraRig({ load, selected, inputs, measurements }: Props) {
     const { load: l, selected: s } = latest.current;
     fitTo(command.type === 'focus' ? (s ?? l) : l);
   }, [command, fitTo]);
+
+  useEffect(() => {
+    const aspect = size.width / Math.max(size.height, 1);
+    if (aspectChanged(lastFitAspect.current, aspect)) fitTo(latest.current.load);
+  }, [size, fitTo]);
 
   return <OrbitControls makeDefault onChange={() => invalidate()} />;
 }
