@@ -195,3 +195,21 @@ describe('computeAnalytics, boxes inside the carton', () => {
     ]);
   });
 });
+
+describe('computeAnalytics, the default inputs winner (literal values)', () => {
+  it('matches the hand-checked figures', () => {
+    const a = computeAnalytics(winner(DEFAULT_INPUTS), DEFAULT_INPUTS);
+    expect(a.totals.cartons).toBe(52);
+    expect(a.totals.products).toBe(260);
+    expect(a.summary.boxesPerCarton).toBe(5);
+    expect(a.summary.cartonsPerLayer).toBe('7–10');
+    expect(a.summary.layers).toBe(7);
+    expect(a.pallet.loadLength).toBe(47);
+    expect(a.pallet.loadWidth).toBe(42);
+    expect(a.pallet.totalLoadHeight).toBe(72);
+    expect(a.totals.volumeUsed).toBe(127764);
+    expect(a.totals.volumeAvailable).toBe(140700);
+    expect(a.totals.utilizationPct).toBeCloseTo(90.806, 3);
+    expect(a.pallet.remainingHeight).toBe(0);
+  });
+});

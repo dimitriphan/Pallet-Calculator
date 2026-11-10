@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_INPUTS } from '../../domain/constants';
+import { DEFAULT_INPUTS, EPS } from '../../domain/constants';
+import { optimize } from '../optimize';
 import type { Inputs, Layout } from '../../domain/types';
 import { cartonKey, generateCartonCandidates } from './cartons';
 import { productSize, usableFootprint, usableHeight } from './geometry';
@@ -277,5 +278,22 @@ describe('testSupport helpers', () => {
     );
     expect(isInside(box(1, 1, 1), box(0, 0, 0, 3), 1)).toBe(true);
     expect(isInside(box(0.5, 1, 1), box(0, 0, 0, 3), 1)).toBe(false);
+  });
+});
+
+describe('cartonPlacements with overhang', () => {
+  it('keeps every carton inside the 52 x 44 usable footprint and centres the load', () => {
+    const inputs = { ...DEFAULT_INPUTS, overhang: 2 };
+    expect(usableFootprint(inputs)).toEqual({ x: 52, y: 44 });
+    const layout = optimize(inputs).layouts[0]!.layout;
+    const cartons = cartonPlacements(layout, inputs);
+    expect(cartons).toHaveLength(layout.totalCartons);
+    expect(boxesOutside(cartons, { x: 52, y: 44, z: usableHeight(inputs) })).toBe(0);
+    const minX = Math.min(...cartons.map((c) => c.x));
+    const maxX = Math.max(...cartons.map((c) => c.x + c.dx));
+    const minY = Math.min(...cartons.map((c) => c.y));
+    const maxY = Math.max(...cartons.map((c) => c.y + c.dy));
+    expect(Math.abs(minX - (52 - maxX))).toBeLessThan(EPS);
+    expect(Math.abs(minY - (44 - maxY))).toBeLessThan(EPS);
   });
 });
