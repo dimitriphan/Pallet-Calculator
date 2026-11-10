@@ -180,3 +180,81 @@ test('a saved Dark preference opens in Harbor', async ({ page }) => {
 
   expect(problems).toEqual([]);
 });
+
+test('the working mascot animates in the built app while a calculation is held', async ({
+  page,
+}) => {
+  // Hold the optimiser worker script so the first calculation stays "Calculating…".
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/optimizer.worker*.js', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto('/');
+  await expect(page.getByText('Calculating…').first()).toBeVisible();
+
+  const frames = page.locator('.mascot-frame:visible');
+  await expect(frames).toHaveCount(3);
+  // Exactly one of the three frames is on at any moment, and the built CSS really runs them.
+  const visibleNow = () =>
+    frames.evaluateAll((els) => els.filter((e) => getComputedStyle(e).opacity === '1').length);
+  for (let i = 0; i < 5; i++) {
+    await expect.poll(visibleNow).toBe(1);
+  }
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        document
+          .getAnimations()
+          .map((a) => (a as CSSAnimation).animationName)
+          .filter((n) => n.startsWith('mascot-frame-'))
+          .sort()
+          .join(),
+      ),
+    )
+    .toBe('mascot-frame-1,mascot-frame-2,mascot-frame-3');
+  // The frames take turns: more than one distinct frame is seen on within a few loops.
+  const seen = new Set<number>();
+  await expect
+    .poll(async () => {
+      seen.add(
+        await frames.evaluateAll((els) =>
+          els.findIndex((e) => getComputedStyle(e).opacity === '1'),
+        ),
+      );
+      return seen.size;
+    })
+    .toBeGreaterThanOrEqual(3);
+
+  release();
+  await expect(page.getByText('Calculating…')).toHaveCount(0);
+});
+
+test('the header fits one 48 px row in Full view at 1100 x 600', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 600 });
+  await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  const banner = page.getByRole('banner');
+  await expect(banner.getByRole('heading', { name: 'Pallet Calculator' })).toBeVisible();
+
+  for (const theme of ['harbor', 'light']) {
+    await page.getByLabel('Theme', { exact: true }).selectOption(theme);
+    const result = await banner.evaluate((header) => {
+      const box = header.getBoundingClientRect();
+      const h1 = header.querySelector('h1') as HTMLElement;
+      const lineHeight = parseFloat(getComputedStyle(h1).lineHeight);
+      const outside = [...header.querySelectorAll('button, select, label, h1, [data-mascot-box]')]
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5 || r.right > box.right + 0.5;
+        })
+        .map((el) => `${el.tagName} ${el.textContent ?? ''}`.trim());
+      return { outside, h1Height: h1.getBoundingClientRect().height, lineHeight };
+    });
+    expect(result.outside, theme).toEqual([]);
+    expect(result.h1Height, theme).toBeLessThan(result.lineHeight * 1.6);
+  }
+});

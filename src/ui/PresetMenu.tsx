@@ -71,7 +71,7 @@ export function PresetMenu() {
           id={selectId}
           value={active ? active.id : NO_PRESET}
           onChange={(e) => choose(e.target.value)}
-          className="max-w-56 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+          className="max-w-36 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none xl:max-w-56 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
         >
           <option value={NO_PRESET}>No preset</option>
           {presets.map((p) => (

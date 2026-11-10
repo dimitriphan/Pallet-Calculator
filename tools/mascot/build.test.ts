@@ -202,11 +202,10 @@ describe('mascot poses', () => {
     expect(filled(TAB_ICON).filter((c) => c.ch === 'E')).toHaveLength(2);
   });
 
-  it('the idle figure is 17 wide, 26 to 30 tall, feet on row 30, with room above the leaves', () => {
+  it('the idle figure is 17 wide, 27 tall, feet on row 30, with room above the leaves', () => {
     const box = boundingBox(idle);
     expect(box.right - box.left + 1).toBe(17);
-    expect(box.bottom - box.top + 1).toBeGreaterThanOrEqual(26);
-    expect(box.bottom - box.top + 1).toBeLessThanOrEqual(30);
+    expect(box.bottom - box.top + 1).toBe(27);
     expect(box.bottom).toBe(30);
     expect(box.top).toBeGreaterThanOrEqual(2);
   });

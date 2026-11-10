@@ -120,8 +120,8 @@ recoloured.
   fully outlined in 1 px foam so their boundaries are unmistakable. Light
   uses the same geometry in its existing gray-200 border grey.
 - **Headings:** Exo 2 Light, displayed in capitals with about 0.12em letter
-  spacing. Capitals are a display treatment only; the underlying text and
-  accessible names are unchanged.
+  spacing. The page text is unchanged and the capitals are applied by
+  styling (some browsers expose the capitalised form to screen readers).
 - **Body and numbers:** Barlow Medium, SemiBold for emphasis, with tabular
   figures on every numeric value.
 - **Fonts are bundled with the site** (no request to an outside font

@@ -28,7 +28,7 @@ export function SproutProgress() {
         fill="none"
       />
       {/* A 2 px stem step with a 3 × 2 leaf on the left and a lower 2 × 2 leaf on the right. */}
-      <path d="M90 3h1v2h-1zM87 2h3v2h-3zM91 3h2v2h-2z" fill={GREEN} />
+      <path d="M90 3h1v2h-1zM87 2h3v2h-3zM92 3h2v2h-2z" fill={GREEN} />
     </svg>
   );
 }

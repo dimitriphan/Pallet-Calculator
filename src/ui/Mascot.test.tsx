@@ -115,7 +115,14 @@ describe('Mascot', () => {
     expect(css).toMatch(/@keyframes mascot-frame-1/);
     expect(css).toMatch(/@keyframes mascot-frame-3/);
     expect(css).toMatch(/@keyframes mascot-frame-2/);
-    expect(css).toMatch(/\.mascot-frame\s*\{[^}]*animation:[^}]*0\.72s[^}]*steps\(1/);
+    // Every frame class carries a complete declaration: the minifier drops a partial shared one.
+    for (const n of [1, 2, 3]) {
+      expect(css).toMatch(
+        new RegExp(
+          `\\.mascot-frame-${n}\\s*\\{[^}]*animation:\\s*mascot-frame-${n} 0\\.72s steps\\(1, end\\) infinite;`,
+        ),
+      );
+    }
     expect(css).toMatch(
       /@media \(prefers-reduced-motion: reduce\)\s*\{[^@]*\.mascot-frame\s*\{[^}]*animation:\s*none;[^}]*opacity:\s*0;[^}]*\}\s*\.mascot-frame-2\s*\{[^}]*opacity:\s*1;/,
     );

@@ -101,9 +101,19 @@ button {
 
 .focus-ticks:focus-visible,
 .focus-ticks-inset:focus-visible,
-.focus-ticks-row:focus-visible,
-.focus-ticks-within :focus-visible {
+.focus-ticks-row:focus-visible {
   outline: none;
+}
+
+/* Only where :has() works, so the ticks that replace the outline are drawn too. */
+.focus-ticks-within:has(:focus-visible) :focus-visible {
+  outline: none;
+}
+
+.focus-ticks:focus-visible,
+.focus-ticks-inset:focus-visible,
+.focus-ticks-within:has(:focus-visible) {
+  z-index: 1;
 }
 
 .focus-ticks:focus-visible::after,
@@ -220,19 +230,20 @@ button {
  */
 .mascot-frame {
   opacity: 0;
-  animation: 0.72s steps(1, end) infinite;
 }
 
+/* Each frame carries its whole animation: a shared partial shorthand is collapsed to
+   `animation:none` by the production minifier, which left every frame invisible. */
 .mascot-frame-1 {
-  animation-name: mascot-frame-1;
+  animation: mascot-frame-1 0.72s steps(1, end) infinite;
 }
 
 .mascot-frame-2 {
-  animation-name: mascot-frame-2;
+  animation: mascot-frame-2 0.72s steps(1, end) infinite;
 }
 
 .mascot-frame-3 {
-  animation-name: mascot-frame-3;
+  animation: mascot-frame-3 0.72s steps(1, end) infinite;
 }
 
 @keyframes mascot-frame-1 {
