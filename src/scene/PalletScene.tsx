@@ -26,8 +26,8 @@ function SceneContents() {
   const { layout, inputs, cartons, bounds, measured } = useSceneData();
   const s = useScene((st) => st);
   const invalidate = useThree((st) => st.invalidate);
-  const dark = useResolvedTheme() === 'dark';
-  const theme = sceneTheme(dark ? 'dark' : 'light');
+  const themeName = useResolvedTheme();
+  const theme = sceneTheme(themeName);
 
   const productsShown =
     !!layout &&
@@ -105,7 +105,7 @@ function SceneContents() {
           bounds={measured}
           clear={bounds}
           line={theme.measureLine}
-          chip={dark ? { backgroundColor: theme.chipBg, color: theme.chipText } : undefined}
+          chip={themeName === 'harbor' ? { backgroundColor: theme.chipBg, color: theme.chipText } : undefined}
         />
       )}
       {selected && <SelectionOutline bounds={selected} />}

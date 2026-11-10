@@ -70,15 +70,15 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   // The total boxes tile is drawn as its own text string: jsPDF writes "(260) Tj".
   expect(pdfText).toContain('(260) Tj');
 
-  // Dark theme: applied now, and still applied (and still Basic) after a reload.
+  // Harbor theme: applied now, and still applied (and still Basic) after a reload.
   const theme = page.getByLabel('Theme', { exact: true });
-  await theme.selectOption('dark');
-  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/);
+  await theme.selectOption('harbor');
+  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
   await page.reload();
-  await expect(html).toHaveClass(/(^|\s)dark(\s|$)/);
+  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
   await expect(viewSwitch.getByRole('radio', { name: 'Basic' })).toBeChecked();
   await theme.selectOption('light');
-  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/);
+  await expect(html).not.toHaveClass(/(^|\s)harbor(\s|$)/);
 
   // Full view: the comparison table appears and the original steps follow.
   await viewSwitch.getByRole('radio', { name: 'Full' }).click();

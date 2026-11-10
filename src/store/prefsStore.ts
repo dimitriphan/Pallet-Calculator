@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { STORAGE_KEYS } from '../persistence/keys';
 
 export type ViewMode = 'basic' | 'full';
-export type ThemePref = 'system' | 'light' | 'dark';
+export type ThemePref = 'harbor' | 'light';
 
 export interface PrefsState {
   viewMode: ViewMode;
@@ -15,9 +15,10 @@ export interface PrefsState {
 
 type StoredPrefs = Pick<PrefsState, 'viewMode' | 'theme'>;
 
-const DEFAULTS: StoredPrefs = { viewMode: 'basic', theme: 'system' };
+const DEFAULTS: StoredPrefs = { viewMode: 'basic', theme: 'harbor' };
 const viewModeSchema = z.enum(['basic', 'full']);
-const themeSchema = z.enum(['system', 'light', 'dark']);
+// Stored "dark" and "system" come from the previous version: both open as Harbor.
+const themeSchema = z.enum(['harbor', 'light']).catch('harbor');
 
 /** Each invalid or missing part falls back to its own default. */
 function loadPrefs(storage: Storage | null): StoredPrefs {
@@ -29,7 +30,7 @@ function loadPrefs(storage: Storage | null): StoredPrefs {
         const obj = data as Record<string, unknown>;
         return {
           viewMode: viewModeSchema.catch(DEFAULTS.viewMode).parse(obj.viewMode),
-          theme: themeSchema.catch(DEFAULTS.theme).parse(obj.theme),
+          theme: themeSchema.parse(obj.theme),
         };
       }
     }
@@ -53,11 +54,6 @@ function defaultStorage(): Storage | null {
   } catch {
     return null;
   }
-}
-
-export function resolveTheme(pref: ThemePref, systemDark: boolean): 'light' | 'dark' {
-  if (pref === 'system') return systemDark ? 'dark' : 'light';
-  return pref;
 }
 
 export function createPrefsStore(

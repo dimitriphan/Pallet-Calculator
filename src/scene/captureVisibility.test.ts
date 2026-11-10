@@ -94,6 +94,6 @@ describe('capture grid colours', () => {
       cellColor: light.gridCell,
       sectionColor: light.gridSection,
     });
-    expect(sceneTheme('dark').gridCell).not.toBe(light.gridCell);
+    expect(sceneTheme('harbor').gridCell).not.toBe(light.gridCell);
   });
 });

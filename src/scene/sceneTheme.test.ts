@@ -14,22 +14,21 @@ describe('sceneTheme', () => {
     });
   });
 
-  it('uses a dark background, mid-grey grid lines and light-on-dark chips in dark', () => {
-    const dark = sceneTheme('dark');
-    expect(dark.background).toBe('#111827');
-    expect(dark.gridCell).toBe('#4b5563');
-    expect(dark.gridSection).toBe('#9ca3af');
-    expect(dark.chipBg).toBe('rgba(31, 41, 55, 0.9)');
-    expect(dark.chipText).toBe('#f3f4f6');
-    expect(dark.measureLine).toBe('#d1d5db');
+  it('uses the viewport colour, mist grid lines and deep chips in harbor', () => {
+    expect(sceneTheme('harbor')).toEqual({
+      background: '#284256',
+      gridCell: '#B4C8CF',
+      gridSection: '#B4C8CF',
+      chipBg: '#1E3347',
+      chipText: '#E9F1EE',
+      measureLine: '#E9F1EE',
+    });
   });
 
-  it('differs between the themes in every field but the grid section colour', () => {
-    // The brief fixes the grid section colour at #9ca3af in both themes: a mid-grey that
-    // shows on the light and the dark background alike.
+  it('differs between the themes in every field', () => {
     const light = sceneTheme('light');
-    const dark = sceneTheme('dark');
+    const harbor = sceneTheme('harbor');
     const keys = Object.keys(light) as (keyof SceneTheme)[];
-    expect(keys.filter((k) => light[k] === dark[k])).toEqual(['gridSection']);
+    expect(keys.filter((k) => light[k] === harbor[k])).toEqual([]);
   });
 });

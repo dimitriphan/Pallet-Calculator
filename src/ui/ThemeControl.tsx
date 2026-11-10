@@ -3,12 +3,11 @@ import type { ThemePref } from '../store/prefsStore';
 import { usePrefs, useStores } from './StoreContext';
 
 const OPTIONS: { value: ThemePref; label: string }[] = [
-  { value: 'system', label: 'System' },
+  { value: 'harbor', label: 'Harbor' },
   { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
 ];
 
-/** Theme preference: follow the system, or force light or dark. */
+/** Theme preference: Harbor or Light. */
 export function ThemeControl() {
   const { prefs } = useStores();
   const theme = usePrefs((s) => s.theme);
