@@ -166,8 +166,8 @@ Each check yields none, a caution, or a serious warning.
 - Good: no warnings. Fair: cautions only. Poor: any serious warning.
 - Warnings are plain sentences, for example "Stack is tall for its base
   (1.8 times its shorter side)". They appear on the card, in the table
-  (rating column with a tooltip-free expandable row), and on the build
-  sheet.
+  (a rating column; the sentences themselves are on the card and in the
+  Analytics tab), and on the build sheet.
 - Thresholds live in one constants file with a comment for each, so the
   owner can ask for them to be changed.
 - The rating is advice. The documentation says so, and says crush strength
