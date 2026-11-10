@@ -2,17 +2,19 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useInputsStore, type InputsState } from '../store/inputsStore';
 import { usePresetsStore, type PresetsState } from '../store/presetsStore';
+import { usePrefsStore, type PrefsState } from '../store/prefsStore';
 import { useResultsStore, type ResultsState } from '../store/resultsStore';
 import { useScenariosStore, type ScenariosState } from '../store/scenariosStore';
 import { useSceneStore, type SceneState } from '../store/sceneStore';
 
-/** What a caller may supply; presets and scenarios default to the app's own stores. */
+/** What a caller may supply; presets, scenarios and prefs default to the app's own stores. */
 export interface AppStores {
   inputs: StoreApi<InputsState>;
   results: StoreApi<ResultsState>;
   scene: StoreApi<SceneState>;
   presets?: StoreApi<PresetsState>;
   scenarios?: StoreApi<ScenariosState>;
+  prefs?: StoreApi<PrefsState>;
 }
 
 export type ResolvedStores = Required<AppStores>;
@@ -23,6 +25,7 @@ const defaultStores: ResolvedStores = {
   scene: useSceneStore,
   presets: usePresetsStore,
   scenarios: useScenariosStore,
+  prefs: usePrefsStore,
 };
 
 const StoreContext = createContext<ResolvedStores>(defaultStores);
@@ -58,4 +61,8 @@ export function usePresets<T>(selector: (s: PresetsState) => T): T {
 
 export function useScenarios<T>(selector: (s: ScenariosState) => T): T {
   return useStore(useStores().scenarios, selector);
+}
+
+export function usePrefs<T>(selector: (s: PrefsState) => T): T {
+  return useStore(useStores().prefs, selector);
 }

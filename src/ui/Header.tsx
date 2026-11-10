@@ -1,6 +1,8 @@
 import { ExportMenu } from './ExportMenu';
 import { PresetMenu } from './PresetMenu';
 import { ScenarioDrawer } from './ScenarioDrawer';
+import { ThemeControl } from './ThemeControl';
+import { ViewModeSwitch } from './ViewModeSwitch';
 
 /** App name, with the preset and scenario controls on the right and export. */
 export function Header() {
@@ -11,6 +13,8 @@ export function Header() {
         <PresetMenu />
         <ScenarioDrawer />
         <ExportMenu />
+        <ViewModeSwitch />
+        <ThemeControl />
       </div>
     </header>
   );

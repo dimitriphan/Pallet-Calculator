@@ -10,6 +10,7 @@ import { samplePresets } from '../data/samplePresets';
 import { presetSchema, scenarioSchema } from '../domain/schemas';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { createLocalStorageRepository } from '../persistence/localStorageRepository';
+import { createPrefsStore } from '../store/prefsStore';
 import { createPresetsStore } from '../store/presetsStore';
 import { createResultsStore } from '../store/resultsStore';
 import { createScenariosStore } from '../store/scenariosStore';
@@ -48,7 +49,8 @@ export function makeStores(
     }),
     () => {},
   );
-  return { inputs, results, scene, presets, scenarios };
+  const prefs = createPrefsStore(new FakeStorage(), { viewMode: 'full', theme: 'light' });
+  return { inputs, results, scene, presets, scenarios, prefs };
 }
 
 /** Lets the debounce elapse and any optimizer run settle. */

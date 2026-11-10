@@ -8,9 +8,11 @@ import { StaleBadge } from './ui/StaleBadge';
 import { ProductionSummary } from './ui/ProductionSummary';
 import { StoreProvider, type AppStores } from './ui/StoreContext';
 import { useAutoOptimize } from './ui/useAutoOptimize';
+import { useTheme } from './ui/useTheme';
 
 function Workspace() {
   useAutoOptimize();
+  useTheme();
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100 text-gray-900">
       <Header />
