@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import concernedUrl from '../assets/mascot/concerned.png';
 import headerUrl from '../assets/mascot/header-mark.png';
 import idleUrl from '../assets/mascot/idle.png';
@@ -12,7 +12,6 @@ import { HEADER_MARK_BOX, Mascot } from './Mascot';
 import { POSES } from '../../tools/mascot/poses.mjs';
 import { flush, makeStores, renderApp } from './testUtils';
 import App from '../App';
-import { vi } from 'vitest';
 
 // Read from disk (Vitest runs from the project root): it does not load stylesheets.
 const css = readFileSync('src/index.css', 'utf8');
@@ -46,6 +45,21 @@ describe('Mascot', () => {
     expect(screen.queryAllByRole('img')).toHaveLength(0);
   });
 
+  it('rejects sizes that are not a positive multiple of 32', () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // React rethrows render errors as window errors; keep the output pristine.
+    const mute = (e: ErrorEvent) => e.preventDefault();
+    window.addEventListener('error', mute);
+    for (const size of [48, 0, -32, 33]) {
+      // @ts-expect-error the type only admits whole-number scales; the guard catches computed values
+      expect(() => render(<Mascot pose="idle" size={size} />)).toThrow(/multiple of 32/);
+    }
+    window.removeEventListener('error', mute);
+    quiet.mockRestore();
+    const { container } = render(<Mascot pose="idle" size={64} />);
+    expect(container.querySelector('img')).toHaveAttribute('width', '64');
+  });
+
   it('draws the header mark at exactly 2x, cropped to the head, in a fixed-size box', () => {
     const { container } = render(<Mascot pose="header" />);
     const img = container.querySelector('img')!;
@@ -61,7 +75,7 @@ describe('Mascot', () => {
   });
 
   it('crops to the bounding box of the header mark in the pose map', () => {
-    const rows = POSES.headerMark!;
+    const rows = POSES.headerMark;
     let left = Infinity;
     let top = Infinity;
     let right = -Infinity;

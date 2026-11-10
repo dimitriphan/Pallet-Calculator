@@ -20,7 +20,10 @@ export const HEADER_MARK_BOX = { x: 11, y: 9, width: 10, height: 13 } as const;
 const HEADER_SCALE = 2;
 const CELL = 32;
 
-type Props = { pose: 'header' } | { pose: Exclude<MascotPose, 'header'>; size: number };
+/** Rendered heights of the full-cell poses: whole-number scales (1x to 4x) of the 32 px art. */
+export type MascotSize = 32 | 64 | 96 | 128;
+
+type Props = { pose: 'header' } | { pose: Exclude<MascotPose, 'header'>; size: MascotSize };
 
 /**
  * The small, silent pixel-art mascot. Purely decorative: no name, hidden from assistive tech,
@@ -30,6 +33,8 @@ type Props = { pose: 'header' } | { pose: Exclude<MascotPose, 'header'>; size: n
  */
 export function Mascot(props: Props) {
   const { pose } = props;
+  if (props.pose !== 'header' && !(props.size > 0 && Number.isInteger(props.size / CELL)))
+    throw new Error(`Mascot size must be a positive multiple of ${CELL}, got ${props.size}`);
   const size = props.pose === 'header' ? CELL * HEADER_SCALE : props.size;
   const img = (src: string, className: string, key?: number, style?: CSSProperties) => (
     <img
