@@ -45,7 +45,7 @@ export function RotationFields({
   return (
     <div className="space-y-3">
       <fieldset>
-        <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <legend className="mb-1 text-xs heading text-gray-500 dark:text-gray-400">
           Product rotation
         </legend>
         <div className="grid grid-cols-2 gap-x-2 gap-y-1">
@@ -67,7 +67,7 @@ export function RotationFields({
           ))}
         </div>
         {mode === 'custom' && (
-          <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
+          <div className="mt-2 border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
             <p id={helpId} className="mb-1 text-xs text-gray-600 dark:text-gray-300">
               Product length, width and height along the carton's length, width and height.
             </p>

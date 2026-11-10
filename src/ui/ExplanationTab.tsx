@@ -13,8 +13,8 @@ export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
   const cell = 'px-2 py-1 text-right tabular-nums';
   return (
     <div className="space-y-4">
-      <table className="w-full rounded border border-gray-200 bg-white text-sm dark:border-gray-700 dark:bg-gray-900">
-        <caption className="mb-1 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <table className="w-full border border-gray-200 bg-white text-sm dark:border-gray-700 dark:bg-gray-900">
+        <caption className="mb-1 text-left text-xs heading text-gray-500 dark:text-gray-400">
           Score of layout {ranked.rank}
         </caption>
         <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -38,7 +38,7 @@ export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
             <tr key={name}>
               <th
                 scope="row"
-                className="px-2 py-1 text-left font-normal text-gray-700 dark:text-gray-300"
+                className="px-2 py-1 text-left font-medium text-gray-700 dark:text-gray-300"
               >
                 {name}
               </th>

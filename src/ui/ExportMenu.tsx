@@ -189,7 +189,7 @@ export function ExportMenu() {
           aria-label="Export"
           tabIndex={-1}
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-20 mt-1 w-56 rounded border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+          className="absolute right-0 z-20 mt-1 w-56 border border-gray-200 bg-white py-1 dark:border-gray-600 dark:bg-gray-800"
         >
           {items.map(({ format, label }) => (
             <div key={format}>

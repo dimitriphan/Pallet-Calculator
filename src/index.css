@@ -10,3 +10,26 @@
 .harbor {
   color-scheme: dark;
 }
+
+/* Barlow Medium by default, with tabular figures so digits line up in every column. */
+body {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+input,
+select,
+textarea,
+button {
+  font-variant-numeric: inherit;
+}
+
+@layer components {
+  /* Display headings: Exo 2 Light in capitals. The DOM text is unchanged. */
+  .heading {
+    font-family: theme('fontFamily.heading');
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+}

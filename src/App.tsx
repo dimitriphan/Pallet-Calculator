@@ -33,7 +33,7 @@ function Workspace() {
         <main className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto p-4">
           <div
             data-testid="scene-slot"
-            className="relative min-h-[320px] flex-1 overflow-hidden rounded border border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-900"
+            className="relative min-h-[320px] flex-1 overflow-hidden border border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-900"
           >
             <SceneSlot />
             <StaleBadge className="pointer-events-none absolute bottom-2 left-2 z-10" />

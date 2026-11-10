@@ -68,7 +68,7 @@ export function DetailsPanel() {
                 aria-controls={isActive ? `details-panel-${tab}` : undefined}
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setActive(tab)}
-                className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400 ${
+                className={`-mb-px border-b-2 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400 ${
                   isActive
                     ? 'border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-400'
                     : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'

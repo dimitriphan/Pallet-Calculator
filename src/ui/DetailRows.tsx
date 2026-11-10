@@ -5,15 +5,15 @@ export function DetailRows({ title, rows }: { title?: string; rows: [string, Rea
   return (
     <section className="space-y-1">
       {title && (
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <h3 className="text-xs heading text-gray-500 dark:text-gray-400">
           {title}
         </h3>
       )}
-      <dl className="divide-y divide-gray-100 rounded border border-gray-200 bg-white text-sm dark:divide-gray-800 dark:border-gray-700 dark:bg-gray-900">
+      <dl className="divide-y divide-gray-100 border border-gray-200 bg-white text-sm dark:divide-gray-800 dark:border-gray-700 dark:bg-gray-900">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-baseline justify-between gap-3 px-2 py-1">
             <dt className="text-gray-600 dark:text-gray-300">{label}</dt>
-            <dd className="text-right font-medium tabular-nums text-gray-900 dark:text-gray-100">
+            <dd className="text-right tabular-nums text-gray-900 dark:text-gray-100">
               {value}
             </dd>
           </div>

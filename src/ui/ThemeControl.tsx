@@ -21,7 +21,7 @@ export function ThemeControl() {
         id={id}
         value={theme}
         onChange={(e) => prefs.getState().setTheme(e.target.value as ThemePref)}
-        className="rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+        className="border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
       >
         {OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>

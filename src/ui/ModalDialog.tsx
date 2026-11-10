@@ -9,7 +9,7 @@ interface ModalDialogProps {
 }
 
 const PLACEMENT = {
-  center: 'm-auto w-[40rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-4rem)] rounded-lg',
+  center: 'm-auto w-[40rem] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-4rem)]',
   right: 'my-0 ml-auto mr-0 h-screen max-h-none w-[28rem] max-w-full',
 };
 
@@ -54,10 +54,10 @@ export function ModalDialog({ title, onClose, placement = 'center', children }: 
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={`flex flex-col overflow-hidden border border-gray-300 bg-white p-0 text-gray-900 shadow-xl backdrop:bg-gray-900/40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:backdrop:bg-black/60 ${PLACEMENT[placement]}`}
+      className={`flex flex-col overflow-hidden border border-gray-300 bg-white p-0 text-gray-900 backdrop:bg-gray-900/40 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:backdrop:bg-black/60 ${PLACEMENT[placement]}`}
     >
       <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-        <h2 id={titleId} className="text-base font-semibold">
+        <h2 id={titleId} className="heading text-base">
           {title}
         </h2>
         <button type="button" onClick={onClose} className={BUTTON}>
@@ -70,7 +70,7 @@ export function ModalDialog({ title, onClose, placement = 'center', children }: 
 }
 
 export const BUTTON =
-  'rounded border border-gray-300 bg-white px-2.5 py-1 text-sm text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 dark:disabled:text-gray-500 dark:disabled:hover:bg-gray-800 dark:focus-visible:outline-blue-400';
+  'border border-gray-300 bg-white px-2.5 py-1 text-sm text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 dark:disabled:text-gray-500 dark:disabled:hover:bg-gray-800 dark:focus-visible:outline-blue-400';
 
 export const PRIMARY_BUTTON =
-  'rounded border border-blue-700 bg-blue-700 px-2.5 py-1 text-sm text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:focus-visible:outline-blue-400';
+  'border border-blue-700 bg-blue-700 px-2.5 py-1 text-sm text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:focus-visible:outline-blue-400';

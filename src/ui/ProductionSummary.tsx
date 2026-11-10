@@ -23,7 +23,7 @@ export function ProductionSummary() {
       >
         {tiles.map(([label, value], k) => (
           <div key={label} className="px-4 py-2">
-            <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</dt>
+            <dt className="text-xs text-gray-500 dark:text-gray-400">{label}</dt>
             <dd
               className={`text-xl font-semibold tabular-nums ${
                 k === tiles.length - 1

@@ -16,7 +16,7 @@ const TOGGLES: [ToggleKey, string][] = [
 const BASIC_TOGGLES = new Set<ToggleKey>(['showProducts', 'showMeasurements']);
 
 const BUTTON =
-  'rounded border border-gray-300 bg-white px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus-visible:outline-blue-400';
+  'border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus-visible:outline-blue-400';
 
 /** View toggles and camera buttons for the 3D workspace; a reduced set in Basic mode. */
 export function SceneToolbar({ totalProducts }: { totalProducts: number }) {

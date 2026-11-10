@@ -15,7 +15,7 @@ function visibleInBasic(errorKey: string): boolean {
 }
 
 const LINK_BUTTON =
-  'rounded font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400 dark:hover:text-blue-300 dark:focus-visible:outline-blue-400';
+  'text-blue-700 underline underline-offset-2 hover:text-blue-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400 dark:hover:text-blue-300 dark:focus-visible:outline-blue-400';
 
 /**
  * Basic mode's one line about the settings it does not show: what will be used, or that a
@@ -51,7 +51,7 @@ export function SettingsSummary() {
   if (text === null) return null;
 
   return (
-    <p className={`rounded border px-3 py-2 text-sm ${tone}`}>
+    <p className={`border px-3 py-2 text-sm ${tone}`}>
       {text}{' '}
       <button type="button" onClick={openFull} className={LINK_BUTTON}>
         {action}

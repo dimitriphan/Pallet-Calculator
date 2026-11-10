@@ -32,7 +32,7 @@ export function DimsFieldset({
   const heightHintId = `${idPrefix}-${group}-height-help`;
   return (
     <fieldset className="space-y-2">
-      <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <legend className="mb-1 text-xs heading text-gray-500 dark:text-gray-400">
         {legend}
       </legend>
       <div className="grid grid-cols-3 gap-2">

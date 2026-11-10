@@ -5,7 +5,7 @@ import { SettingsSummary } from './SettingsSummary';
 export function BasicInputs() {
   return (
     <form className="space-y-5 p-4" onSubmit={(e) => e.preventDefault()}>
-      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Inputs</h2>
+      <h2 className="heading text-sm text-gray-900 dark:text-gray-100">Inputs</h2>
       <SizeFieldsets />
       <BoxesPerCartonField />
       <SettingsSummary />

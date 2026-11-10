@@ -38,7 +38,7 @@ export function Measurements({ bounds, clear, line, chip }: Props) {
           style={{ pointerEvents: 'none' }}
         >
           <span
-            className="whitespace-nowrap rounded bg-gray-900/80 px-1.5 py-0.5 text-xs font-medium text-white"
+            className="whitespace-nowrap bg-gray-900/80 px-1.5 py-0.5 text-xs text-white"
             style={chip}
           >
             {l.text}

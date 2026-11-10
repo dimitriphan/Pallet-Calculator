@@ -52,14 +52,14 @@ export function LayoutComparisonTable() {
       <div className="flex items-baseline justify-between">
         <h2
           id="comparison-heading"
-          className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+          className="heading text-sm text-gray-900 dark:text-gray-100"
         >
           Layout comparison
         </h2>
       </div>
       <StatusMessages />
       {rows.length > 0 && (
-        <div className="overflow-x-auto rounded border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+        <div className="overflow-x-auto border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
               <tr>
@@ -108,14 +108,14 @@ export function LayoutComparisonTable() {
                         : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
-                    <td className={`${td} font-medium`}>{ranked.rank}</td>
+                    <td className={td}>{ranked.rank}</td>
                     <td className={td}>{formatDims(cartonDisplayDims(ranked.layout, 'outer'))}</td>
                     <td className={`${td} text-right`}>
                       <span className="flex flex-col items-end gap-0.5">
                         <span className="font-semibold">{ranked.layout.totalProducts}</span>
                         {badge && (
                           <span
-                            className={`whitespace-nowrap rounded px-1.5 text-[11px] font-medium leading-4 ${badge.className}`}
+                            className={`whitespace-nowrap px-1.5 text-[11px] leading-4 ${badge.className}`}
                           >
                             {badge.label}
                           </span>
