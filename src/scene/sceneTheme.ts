@@ -27,11 +27,13 @@ const LIGHT: SceneTheme = {
   measureLine: LIGHT_MEASURE_LINE,
 };
 
-// Harbor: the viewport colour behind mist grid lines, with foam on deep chips and foam lines.
+// Harbor: the viewport colour with faint grid lines, foam on deep chips and foam lines. drei's
+// Grid has no opacity, so the lines are mist pre-blended over the viewport colour: 12% for the
+// cells (#395265) and 30% for the sections (#526A7A); full-strength mist would dominate the view.
 const HARBOR_SCENE: SceneTheme = {
   background: HARBOR.viewport,
-  gridCell: HARBOR.mist,
-  gridSection: HARBOR.mist,
+  gridCell: '#395265',
+  gridSection: '#526A7A',
   chipBg: HARBOR.deep,
   chipText: HARBOR.foam,
   measureLine: HARBOR.foam,

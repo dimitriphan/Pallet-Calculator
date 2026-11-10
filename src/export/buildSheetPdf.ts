@@ -17,6 +17,12 @@ export interface SheetPictures {
   side: string;
 }
 
+/** The print mascot as a PNG data URL (transparent, cropped to the figure) and width / height. */
+export interface SheetMascot {
+  dataUrl: string;
+  aspect: number;
+}
+
 /** Page geometry shared by the planner and the renderer. */
 export const PAGE = {
   width: 8.5,
@@ -167,14 +173,28 @@ function fit(doc: jsPDF, text: string, width: number): string {
 // ---------------------------------------------------------------------------------------
 // Page 1
 
-function drawHeader(doc: jsPDF, sheet: BuildSheet): number {
+const MASCOT_H = 0.55;
+/** Wrapped job-name lines stop at least this far left of the mascot. */
+const MASCOT_GAP = 0.2;
+
+function drawHeader(doc: jsPDF, sheet: BuildSheet, mascot?: SheetMascot): number {
   font(doc, 20, 'bold');
   let base = PAGE.margin + 0.2;
   doc.text(sheet.title, LEFT, base);
+  // Top right, its top level with the cap height of the title (0.718 em of 20 pt).
+  let wrapW = CONTENT_W;
+  let mascotBottom = 0;
+  if (mascot) {
+    const w = MASCOT_H * mascot.aspect;
+    const top = base - (0.718 * 20) / 72;
+    doc.addImage(mascot.dataUrl, 'PNG', RIGHT - w, top, w, MASCOT_H);
+    wrapW = CONTENT_W - w - MASCOT_GAP;
+    mascotBottom = top + MASCOT_H;
+  }
   if (sheet.jobName) {
     font(doc, 14);
     base += 0.1;
-    for (const line of wrap(doc, sheet.jobName, CONTENT_W)) {
+    for (const line of wrap(doc, sheet.jobName, wrapW)) {
       base += lineH(14);
       doc.text(line, LEFT, base);
     }
@@ -187,7 +207,7 @@ function drawHeader(doc: jsPDF, sheet: BuildSheet): number {
     base += lineH(10) + 0.04;
     doc.text(sheet.layoutNote, LEFT, base);
   }
-  const ruleY = base + 0.14;
+  const ruleY = Math.max(base + 0.14, mascotBottom + 0.08);
   rule(doc, LEFT, ruleY, RIGHT, 0.015, BLACK);
   return ruleY + 0.22;
 }
@@ -285,8 +305,13 @@ function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number) {
   });
 }
 
-function drawOverview(doc: jsPDF, sheet: BuildSheet, pictures: SheetPictures | null) {
-  let y = drawHeader(doc, sheet);
+function drawOverview(
+  doc: jsPDF,
+  sheet: BuildSheet,
+  pictures: SheetPictures | null,
+  mascot?: SheetMascot,
+) {
+  let y = drawHeader(doc, sheet, mascot);
   if (sheet.stale) y = drawStaleBox(doc, y);
   y = drawSummary(doc, sheet.summary, y);
   const colW = (CONTENT_W - 0.35) / 2;
@@ -516,10 +541,14 @@ function drawFooter(doc: jsPDF, sheet: BuildSheet, page: number, total: number) 
   lines.forEach((l, k) => doc.text(l, LEFT, FOOTER_RULE_Y + 0.16 + k * lineH(size)));
 }
 
-/** The build sheet as a PDF: page 1 is the overview, then the layer plan. */
+/**
+ * The build sheet as a PDF: page 1 is the overview, then the layer plan. The optional mascot
+ * is drawn once, top right of page 1.
+ */
 export async function renderBuildSheetPdf(
   sheet: BuildSheet,
   pictures: SheetPictures | null,
+  mascot?: SheetMascot,
 ): Promise<Blob> {
   const plan = planPages(sheet);
   const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait', compress: false });
@@ -528,7 +557,7 @@ export async function renderBuildSheetPdf(
     creator: 'Pallet Calculator',
   });
 
-  drawOverview(doc, sheet, pictures);
+  drawOverview(doc, sheet, pictures, mascot);
 
   const byLetter = new Map(sheet.patterns.map((p) => [p.letter, p]));
   const newPage = () => {

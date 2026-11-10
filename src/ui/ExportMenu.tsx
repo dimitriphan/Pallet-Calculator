@@ -4,6 +4,7 @@ import type { SheetPictures } from '../export/buildSheetPdf';
 import { buildCsv } from '../export/csv';
 import { downloadBlob } from '../export/download';
 import { buildExportPayload, exportFilename } from '../export/exportData';
+import { loadPrintMascot } from '../export/mascotImage';
 import { composePng } from '../export/png';
 import { useNoticesStore } from '../store/noticesStore';
 import { BuildSheetDialog } from './BuildSheetDialog';
@@ -130,7 +131,12 @@ export function ExportMenu() {
       const now = new Date();
       const sheet = buildSheetContent({ inputs, result, selectedIndex, jobName, stale, now });
       const { renderBuildSheetPdf } = await import('../export/buildSheetPdf');
-      downloadBlob(await renderBuildSheetPdf(sheet, sheetPictures()), buildSheetFilename(now));
+      // The mascot is decoration: a failed load gives a sheet without it, not a failed export.
+      const mascot = await loadPrintMascot().catch(() => undefined);
+      downloadBlob(
+        await renderBuildSheetPdf(sheet, sheetPictures(), mascot),
+        buildSheetFilename(now),
+      );
     } catch {
       useNoticesStore.getState().push(PDF_FAILED);
     }

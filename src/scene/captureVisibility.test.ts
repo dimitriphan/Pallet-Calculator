@@ -96,4 +96,45 @@ describe('capture grid colours', () => {
     });
     expect(sceneTheme('harbor').gridCell).not.toBe(light.gridCell);
   });
+
+  /** A grid whose uniforms start in the Harbor colours and are flagged with the capture ones. */
+  function harborGrid() {
+    const harbor = sceneTheme('harbor');
+    const material = new ShaderMaterial({
+      uniforms: {
+        cellColor: { value: new Color(harbor.gridCell) },
+        sectionColor: { value: new Color(harbor.gridSection) },
+      },
+    });
+    const grid = new Mesh(undefined, material);
+    grid.userData[CAPTURE_UNIFORM_COLORS] = captureGridColors;
+    const root = new Group();
+    root.add(grid);
+    const hex = (name: string) => (material.uniforms[name]!.value as Color).getHexString();
+    return { root, hex };
+  }
+
+  it('swaps the harbor grid to the light colours during a capture and back after', () => {
+    const { root, hex } = harborGrid();
+    expect([hex('cellColor'), hex('sectionColor')]).toEqual(['395265', '526a7a']);
+    const restore = applyCaptureColors(root);
+    expect([hex('cellColor'), hex('sectionColor')]).toEqual(['d1d5db', '9ca3af']);
+    restore();
+    expect([hex('cellColor'), hex('sectionColor')]).toEqual(['395265', '526a7a']);
+  });
+
+  it('puts the harbor grid back when the render throws', () => {
+    const { root, hex } = harborGrid();
+    const render = () => {
+      const restore = applyCaptureColors(root);
+      try {
+        expect(hex('cellColor')).toBe('d1d5db');
+        throw new Error('lost context');
+      } finally {
+        restore();
+      }
+    };
+    expect(render).toThrow('lost context');
+    expect([hex('cellColor'), hex('sectionColor')]).toEqual(['395265', '526a7a']);
+  });
 });

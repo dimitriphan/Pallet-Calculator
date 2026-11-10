@@ -14,11 +14,11 @@ describe('sceneTheme', () => {
     });
   });
 
-  it('uses the viewport colour, mist grid lines and deep chips in harbor', () => {
+  it('uses the viewport colour, faint pre-blended grid lines and deep chips in harbor', () => {
     expect(sceneTheme('harbor')).toEqual({
       background: '#284256',
-      gridCell: '#B4C8CF',
-      gridSection: '#B4C8CF',
+      gridCell: '#395265',
+      gridSection: '#526A7A',
       chipBg: '#1E3347',
       chipText: '#E9F1EE',
       measureLine: '#E9F1EE',
