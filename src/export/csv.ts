@@ -52,6 +52,7 @@ export function buildCsv(p: ExportPayload): string {
     ['Max carton width (in)', n(i.maxCarton.width)],
     ['Max carton height (in)', n(i.maxCarton.height)],
     ['Target quantity', i.targetQuantity === null ? '' : i.targetQuantity],
+    ['Desired boxes per carton', i.boxesPerCarton === null ? '' : i.boxesPerCarton],
     ['Box leeway (in)', n(i.leeway)],
     ['Carton wall thickness (in)', n(i.wallThickness)],
     ['Pallet overhang (in)', n(i.overhang)],

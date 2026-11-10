@@ -15,7 +15,7 @@ const PREFIX = 'preset-edit';
 const NO_ERRORS: Record<string, string> = {};
 
 type DimsGroup = 'pallet' | 'maxCarton';
-type ScalarField = 'targetQuantity' | 'leeway' | 'wallThickness' | 'overhang';
+type ScalarField = 'boxesPerCarton' | 'targetQuantity' | 'leeway' | 'wallThickness' | 'overhang';
 
 interface PresetEditFormProps {
   preset: Preset;
@@ -107,6 +107,15 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
         <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
           Packing
         </legend>
+        <NumberField
+          id={`${PREFIX}-boxesPerCarton`}
+          label="Desired boxes per carton"
+          value={draft.boxesPerCarton}
+          placeholder="Blank = best fit"
+          suffix="boxes"
+          error={errors.boxesPerCarton}
+          onChange={(v) => setField('boxesPerCarton', v)}
+        />
         <NumberField
           id={`${PREFIX}-targetQuantity`}
           label="Desired box quantity"

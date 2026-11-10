@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { flush, renderApp } from './testUtils';
+import { flush, renderApp, summaryTile } from './testUtils';
 
 const NOTICE =
   'A 5-inch pallet is automatically included. Available stacking height has been reduced by 5 inches.';
@@ -79,5 +79,50 @@ describe('InputsPanel', () => {
         'No carton fits: the product box (plus leeway and walls) is larger than the maximum carton dimensions.',
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Desired boxes per carton', () => {
+  async function typeCount(user: Awaited<ReturnType<typeof renderApp>>['user'], text: string) {
+    const input = screen.getByRole('textbox', { name: 'Desired boxes per carton' });
+    await user.clear(input);
+    await user.type(input, text);
+    await flush();
+  }
+
+  it('is in the Packing group with its placeholder, above the desired box quantity', async () => {
+    await renderApp();
+    const packing = screen.getByRole('group', { name: 'Packing' });
+    const labels = within(packing)
+      .getAllByRole('textbox')
+      .map((t) => t.getAttribute('aria-label') ?? t.id);
+    const count = within(packing).getByRole('textbox', { name: 'Desired boxes per carton' });
+    const qty = within(packing).getByRole('textbox', { name: 'Desired box quantity' });
+    expect(labels.length).toBeGreaterThan(1);
+    expect(count).toHaveAttribute('placeholder', 'Blank = best fit');
+    expect(count.compareDocumentPosition(qty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('changes the boxes-per-carton tile when a reachable count is typed', async () => {
+    const { user } = await renderApp();
+    await typeCount(user, '6');
+    expect(summaryTile('Boxes per carton')).toBe('6');
+  });
+
+  it('shows the empty message and no table rows for an unreachable count', async () => {
+    const { user } = await renderApp();
+    await typeCount(user, '7');
+    expect(
+      screen.getByText(
+        'No carton holding exactly 7 boxes fits within the maximum carton dimensions. Counts that do fit: 6 and 8.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Layout comparison' })).not.toBeInTheDocument();
+  });
+
+  it('flags non-numeric text', async () => {
+    const { user } = await renderApp();
+    await typeCount(user, 'x');
+    expect(screen.getByText('Enter a number')).toBeInTheDocument();
   });
 });

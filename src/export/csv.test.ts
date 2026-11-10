@@ -110,4 +110,16 @@ describe('buildCsv', () => {
     expect(out).toContain(`Cartons needed for target,${p.analytics.target.cartonsNeeded}`);
     expect(out).toContain(`Layers needed for target,${p.analytics.target.layersNeeded}`);
   });
+
+  it('writes the desired boxes per carton right after the target quantity', () => {
+    expect(lines).toContain('Desired boxes per carton,');
+    const i6 = { ...CUBES, boxesPerCarton: 2 };
+    const p = buildExportPayload(i6, optimize(i6), 0, NOW);
+    const out = buildCsv(p).split('\r\n');
+    expect(out).toContain('Desired boxes per carton,2');
+    expect(out.indexOf('Desired boxes per carton,2')).toBe(
+      out.findIndex((l) => l.startsWith('Target quantity,')) + 1,
+    );
+    expect(p.inputs.boxesPerCarton).toBe(2);
+  });
 });

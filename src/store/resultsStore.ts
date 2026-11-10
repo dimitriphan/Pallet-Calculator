@@ -32,6 +32,7 @@ function sameInputs(a: Inputs, b: Inputs): boolean {
     sameDims(a.product, b.product) &&
     sameDims(a.maxCarton, b.maxCarton) &&
     a.targetQuantity === b.targetQuantity &&
+    a.boxesPerCarton === b.boxesPerCarton &&
     a.leeway === b.leeway &&
     a.wallThickness === b.wallThickness &&
     a.overhang === b.overhang &&

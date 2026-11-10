@@ -230,6 +230,19 @@ describe('resultsStore', () => {
     expect(store.getState().stale).toBe(false);
   });
 
+  it('re-runs when only boxesPerCarton differs, and skips when it is equal', async () => {
+    const run = vi.fn().mockResolvedValue(result(1));
+    const store = createResultsStore(run);
+    const six: Inputs = { ...DEFAULT_INPUTS, boxesPerCarton: 6 };
+    await store.getState().request(six);
+    await store.getState().request({ ...six });
+    expect(run).toHaveBeenCalledTimes(1);
+    await store.getState().request(DEFAULT_INPUTS);
+    expect(run).toHaveBeenCalledTimes(2);
+    await store.getState().request({ ...six, boxesPerCarton: 7 });
+    expect(run).toHaveBeenCalledTimes(3);
+  });
+
   it('retry bypasses the unchanged-inputs short-circuit', async () => {
     const run = vi.fn().mockResolvedValue(result(1));
     const store = createResultsStore(run);

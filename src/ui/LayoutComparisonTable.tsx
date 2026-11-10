@@ -5,14 +5,8 @@ import {
   type TargetStatus,
 } from '../engine/analytics/analytics';
 import { formatDims, formatNumber } from '../engine/units/units';
+import { emptyMessage } from './emptyMessage';
 import { useResults } from './StoreContext';
-
-const EMPTY_COPY = {
-  NO_CARTON_FITS:
-    'No carton fits: the product box (plus leeway and walls) is larger than the maximum carton dimensions.',
-  CARTON_EXCEEDS_PALLET:
-    'No layout fits: the smallest possible carton is larger than the usable pallet space.',
-} as const;
 
 const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; className: string }> = {
   met: { label: 'Target met', className: 'bg-green-100 text-green-800' },
@@ -81,6 +75,8 @@ export function LayoutComparisonTable() {
     [result, inputs],
   );
 
+  const message = result && inputs ? emptyMessage(result, inputs) : null;
+
   const onKeyDown = (e: KeyboardEvent, index: number) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -98,15 +94,11 @@ export function LayoutComparisonTable() {
         </h2>
       </div>
       <StatusLine />
-      {/* NO_CARTON_WITH_COUNT gets its message together with the boxes-per-carton field. */}
-      {result &&
-        result.layouts.length === 0 &&
-        result.emptyReason &&
-        result.emptyReason !== 'NO_CARTON_WITH_COUNT' && (
-          <p className="rounded border border-gray-200 bg-white px-3 py-4 text-sm text-gray-700">
-            {EMPTY_COPY[result.emptyReason]}
-          </p>
-        )}
+      {message && (
+        <p className="rounded border border-gray-200 bg-white px-3 py-4 text-sm text-gray-700">
+          {message}
+        </p>
+      )}
       {rows.length > 0 && (
         <div className="overflow-x-auto rounded border border-gray-200 bg-white">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">

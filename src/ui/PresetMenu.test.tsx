@@ -286,3 +286,24 @@ describe('PresetDialog', () => {
     expect(stores.presets.getState().presets).toHaveLength(2);
   });
 });
+
+describe('PresetMenu boxes per carton', () => {
+  it('saves the desired boxes per carton in a new preset and restores it when chosen', async () => {
+    const { user, stores } = await renderApp();
+    const count = screen.getByRole('textbox', { name: 'Desired boxes per carton' });
+    await user.type(count, '6');
+    await flush();
+    await user.click(screen.getByRole('button', { name: 'Save as new' }));
+    const dialog = screen.getByRole('dialog', { name: 'Save as new preset' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Six per carton');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(
+      stores.presets.getState().presets.find((p) => p.name === 'Six per carton'),
+    ).toMatchObject({ boxesPerCarton: 6 });
+
+    await choosePreset(user, GMA);
+    expect(screen.getByRole('textbox', { name: 'Desired boxes per carton' })).toHaveValue('');
+    await choosePreset(user, 'Six per carton');
+    expect(screen.getByRole('textbox', { name: 'Desired boxes per carton' })).toHaveValue('6');
+  });
+});

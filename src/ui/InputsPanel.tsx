@@ -71,6 +71,15 @@ export function InputsPanel() {
           Packing
         </legend>
         <NumberField
+          id="field-boxesPerCarton"
+          label="Desired boxes per carton"
+          value={draft.boxesPerCarton}
+          placeholder="Blank = best fit"
+          suffix="boxes"
+          error={errors.boxesPerCarton}
+          onChange={(v) => setField('boxesPerCarton', v)}
+        />
+        <NumberField
           id="field-targetQuantity"
           label="Desired box quantity"
           value={draft.targetQuantity}
