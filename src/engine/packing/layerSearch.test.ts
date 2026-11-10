@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { EPS } from '../../domain/constants';
-import { gridLayer, MAX_LAYER_STATES, searchLayer, type LayerSearchResult } from './layerSearch';
+import {
+  gridLayer,
+  layerSearchMode,
+  MAX_LAYER_STATES,
+  MAX_LAYER_WORK,
+  MAX_PATTERN_PAIRS,
+  searchLayer,
+  type LayerSearchResult,
+} from './layerSearch';
 
 interface Rect {
   x0: number;
@@ -202,5 +210,66 @@ describe('searchLayer', () => {
     );
     expect(r.count).toBeGreaterThan(grid);
     expectValid(r, 60, 31, 1.1, 0.7);
+  });
+
+  it('bounds the work of the full search, not just its states', () => {
+    expect(MAX_LAYER_WORK).toBeGreaterThan(0);
+    expect(MAX_PATTERN_PAIRS).toBe(200000);
+    // A thin strip has few states but a huge number of cut positions per state.
+    expect(layerSearchMode(60, 1.0, 0.53, 0.37)).toBe('single-cut');
+    const t = performance.now();
+    const r = searchLayer(60, 1.0, 0.53, 0.37);
+    expect(performance.now() - t).toBeLessThan(300);
+    expect(r.count).toBeGreaterThan(0);
+    expectValid(r, 60, 1.0, 0.53, 0.37);
+  });
+
+  it('uses plain grids only when the normal patterns would be too many to list', () => {
+    expect(layerSearchMode(5000, 42, 0.05, 0.07)).toBe('grids-only');
+    const t = performance.now();
+    const r = searchLayer(5000, 42, 0.05, 0.07);
+    expect(performance.now() - t).toBeLessThan(300);
+    expect(r.count).toBe(
+      Math.max(
+        gridLayer(5000, 42, 0.05, 0.07, false).count,
+        gridLayer(5000, 42, 0.05, 0.07, true).count,
+      ),
+    );
+  });
+
+  it('reports nothing to search for degenerate inputs', () => {
+    expect(layerSearchMode(0, 10, 1, 1)).toBe('none');
+    expect(layerSearchMode(4, 4, 5, 5)).toBe('none');
+  });
+
+  // Realistic pallets with cartons from 3 inches up, including off-grid sizes.
+  const realisticPallets: [number, number][] = [
+    [48, 40],
+    [50, 42],
+    [52, 44],
+  ];
+  const realisticSides = [3, 3.25, 3.5, 4, 4.1, 5, 5.25, 6.3, 7.5, 9, 9.25, 11.75, 13, 17, 21];
+  it.each(realisticPallets)(
+    'keeps a %s x %s pallet on the full search for cartons >= 3 in',
+    (x, y) => {
+      for (const a of realisticSides) {
+        for (const b of realisticSides) {
+          expect({ a, b, mode: layerSearchMode(x, y, a, b) }).toEqual({ a, b, mode: 'full' });
+        }
+      }
+    },
+  );
+
+  it('keeps a 96 x 48 pallet on the full search for the cartons it searched in full before', () => {
+    // Below 3.5 inches some off-grid pairs on a 96-inch pallet already exceeded MAX_LAYER_STATES.
+    const sides = realisticSides.filter((s) => s >= 3.5);
+    for (const a of sides) {
+      for (const b of sides) {
+        expect({ a, b, mode: layerSearchMode(96, 48, a, b) }).toEqual({ a, b, mode: 'full' });
+      }
+    }
+    expect(layerSearchMode(96, 48, 3, 3)).toBe('full');
+    expect(layerSearchMode(96, 48, 13, 17)).toBe('full');
+    expect(layerSearchMode(96, 48, 7.5, 5.25)).toBe('full');
   });
 });

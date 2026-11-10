@@ -1,7 +1,7 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { useStore } from 'zustand';
 import type { Inputs, OptimizeResult, RankedLayout } from '../domain/types';
-import { createWorkerRunner, type RunOptimizer } from '../worker/optimizerClient';
+import { createWorkerRunner, isSuperseded, type RunOptimizer } from '../worker/optimizerClient';
 import { useSceneStore } from './sceneStore';
 
 export interface ResultsState {
@@ -69,6 +69,11 @@ export function createResultsStore(
         } catch (err) {
           if (token !== latest) return;
           inFlight = null;
+          if (isSuperseded(err)) {
+            // Cancelled by a newer run on the same runner: not something to show the user.
+            set({ status: get().result ? 'ready' : 'idle', error: null });
+            return;
+          }
           set({ status: 'error', error: err instanceof Error ? err.message : String(err) });
         }
       })();

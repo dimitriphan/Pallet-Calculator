@@ -9,6 +9,19 @@ interface Reply {
   error?: string;
 }
 
+/** Rejection reason for a run that was cancelled because a newer run started. */
+export class SupersededError extends Error {
+  constructor() {
+    super('Superseded by a newer calculation');
+    this.name = 'SupersededError';
+  }
+}
+
+/** Whether `err` is the rejection of a run cancelled by a newer one (never shown to the user). */
+export function isSuperseded(err: unknown): boolean {
+  return err instanceof SupersededError;
+}
+
 interface Pending {
   resolve(result: OptimizeResult): void;
   reject(error: Error): void;
@@ -16,26 +29,30 @@ interface Pending {
 
 /**
  * Runs the optimizer in one lazily created module Worker, tagging each request with an id.
- * Without Worker support it calls optimize() directly.
+ * A run started while another is pending terminates that worker (a long search cannot be
+ * interrupted from inside), rejects the older run with SupersededError and starts a fresh
+ * worker. Without Worker support it calls optimize() directly.
  */
 export function createWorkerRunner(): RunOptimizer {
   let worker: Worker | null = null;
   let nextId = 1;
   const pending = new Map<number, Pending>();
 
-  const failAll = (message: string) => {
+  const rejectAll = (error: () => Error) => {
     // Drop the worker so the next run starts a fresh one instead of posting to a dead thread.
     worker?.terminate();
     worker = null;
     const all = [...pending.values()];
     pending.clear();
-    for (const p of all) p.reject(new Error(message));
+    for (const p of all) p.reject(error());
   };
+  const failAll = (message: string) => rejectAll(() => new Error(message));
 
   const ensureWorker = (): Worker => {
     if (worker) return worker;
     const w = new Worker(new URL('./optimizer.worker.ts', import.meta.url), { type: 'module' });
     w.onmessage = (e: MessageEvent<Reply>) => {
+      if (worker !== w) return; // a cancelled worker
       const { id, result, error } = e.data;
       const waiting = pending.get(id);
       if (!waiting) return;
@@ -43,8 +60,12 @@ export function createWorkerRunner(): RunOptimizer {
       if (error !== undefined || !result) waiting.reject(new Error(error ?? 'Optimizer failed'));
       else waiting.resolve(result);
     };
-    w.onerror = (e) => failAll(e.message || 'Optimizer worker failed');
-    w.onmessageerror = () => failAll('Optimizer reply could not be read');
+    w.onerror = (e) => {
+      if (worker === w) failAll(e.message || 'Optimizer worker failed');
+    };
+    w.onmessageerror = () => {
+      if (worker === w) failAll('Optimizer reply could not be read');
+    };
     worker = w;
     return w;
   };
@@ -57,6 +78,7 @@ export function createWorkerRunner(): RunOptimizer {
         return Promise.reject(err instanceof Error ? err : new Error(String(err)));
       }
     }
+    if (pending.size > 0) rejectAll(() => new SupersededError());
     return new Promise<OptimizeResult>((resolve, reject) => {
       const id = nextId++;
       pending.set(id, { resolve, reject });

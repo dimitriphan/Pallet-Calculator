@@ -42,19 +42,22 @@ export function optimize(
   const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
   let evaluated = 0;
   let timedOut = false;
+  // Stop at the budget, but only once there is something to show.
+  const overBudget = () => {
+    if (!timedOut && layouts.length > 0 && now() - start >= budgetMs) timedOut = true;
+    return timedOut;
+  };
   for (const { c, bound } of ordered) {
     // Bounds are descending, so once one falls short every later one does too.
     if (best.length >= KEEP_BEST && bound < (best[KEEP_BEST - 1] as number)) break;
-    // Stop at the budget, but only once there is something to show.
-    if (layouts.length > 0 && now() - start >= budgetMs) {
-      timedOut = true;
-      break;
-    }
+    if (overBudget()) break;
     evaluated++;
-    for (const l of buildLayouts(c, i, cache)) {
+    // The same check runs between this carton's layer searches.
+    for (const l of buildLayouts(c, i, cache, overBudget)) {
       layouts.push(l);
       insertDescending(best, l.totalProducts);
     }
+    if (timedOut) break;
   }
 
   if (layouts.length === 0) {

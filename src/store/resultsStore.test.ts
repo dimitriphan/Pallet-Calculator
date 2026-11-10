@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs, OptimizeResult, RankedLayout } from '../domain/types';
-import type { RunOptimizer } from '../worker/optimizerClient';
+import { SupersededError, type RunOptimizer } from '../worker/optimizerClient';
 import { createResultsStore, selectSelected, useResultsStore } from './resultsStore';
 
 const layout = (n: number) => ({ id: n }) as unknown as RankedLayout;
@@ -87,6 +87,19 @@ describe('resultsStore', () => {
     await p1;
     expect(store.getState().status).toBe('ready');
     expect(store.getState().error).toBeNull();
+  });
+
+  it('never reports a superseded run as an error', async () => {
+    const run = vi
+      .fn()
+      .mockResolvedValueOnce(result(1))
+      .mockRejectedValueOnce(new SupersededError());
+    const store = createResultsStore(run);
+    await store.getState().request(inputsA);
+    await store.getState().request(inputsB);
+    expect(store.getState().status).not.toBe('error');
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().result).toEqual(result(1));
   });
 
   it('keeps the previous result on rejection and sets error', async () => {

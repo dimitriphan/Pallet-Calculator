@@ -221,11 +221,21 @@ function bestMix(types: LayerPattern[], usable: number): MixedChoice | null {
   return best;
 }
 
-/** All distinct layouts for one carton; [] if it cannot be placed. */
-export function buildLayouts(c: CartonCandidate, i: Inputs, cache: LayerCache): Layout[] {
+/**
+ * All distinct layouts for one carton; [] if it cannot be placed. `shouldStop` is checked
+ * before every layer search after the first: once it returns true the remaining vertical
+ * axes are skipped, so the result covers only the axes searched so far.
+ */
+export function buildLayouts(
+  c: CartonCandidate,
+  i: Inputs,
+  cache: LayerCache,
+  shouldStop?: () => boolean,
+): Layout[] {
   const h = usableHeight(i);
   const types: LayerPattern[] = [];
-  for (const v of usableVerticalAxes(c, i)) {
+  for (const [k, v] of usableVerticalAxes(c, i).entries()) {
+    if (k > 0 && shouldStop?.()) break;
     const layer = bestLayer(c, v, i, cache);
     if (layer) types.push(layer);
   }

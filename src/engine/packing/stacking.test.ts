@@ -194,6 +194,19 @@ describe('buildLayouts', () => {
     }
   });
 
+  it('stops before the next layer search once shouldStop says so', () => {
+    const c = candidateByKey(MIXED, '1x1x1');
+    const cache: LayerCache = new Map();
+    const layouts = buildLayouts(c, MIXED, cache, () => true);
+    expect(cache.size).toBe(1); // only the first vertical axis was searched
+    expect(layouts.length).toBeGreaterThan(0);
+    expect(layouts.every((l) => verticals(l).size === 1)).toBe(true);
+    // Without a stop the same carton searches every axis.
+    const full = new Map();
+    buildLayouts(c, MIXED, full, () => false);
+    expect(full.size).toBe(3);
+  });
+
   it('adds the mixed stack when two vertical axes beat any single axis', () => {
     const layouts = buildLayouts(candidateByKey(MIXED, '1x1x1'), MIXED, new Map());
     const best = Math.max(...layouts.map((l) => l.totalCartons));

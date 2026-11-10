@@ -4,6 +4,19 @@ import { fitsCount, fitsWithin } from './tolerance';
 /** Above this many (normalX x normalY) rectangle sizes, the full search is replaced by a single-cut fallback. */
 export const MAX_LAYER_STATES = 40000;
 
+/**
+ * Above this estimate of the full search's work, nx * ny * (nx + ny) (every state tries up
+ * to nx + ny cut positions), it is replaced by the single-cut fallback. Chosen so the slowest
+ * accepted search takes roughly 150 ms; realistic pallets stay well below it.
+ */
+export const MAX_LAYER_WORK = 40_000_000;
+
+/** Above this many raw (i, j) pairs on one axis, normal patterns are not listed: plain grids only. */
+export const MAX_PATTERN_PAIRS = 200000;
+
+/** How searchLayer handles a call: nothing fits, full search, single-cut fallback, or plain grids only. */
+export type LayerSearchMode = 'none' | 'full' | 'single-cut' | 'grids-only';
+
 export interface LayerSearchResult {
   count: number;
   blocks: Block[];
@@ -21,6 +34,13 @@ export function gridLayer(
   const rows = fitsCount(rectY, rotated ? a : b);
   if (cols <= 0 || rows <= 0) return { count: 0, blocks: [] };
   return { count: cols * rows, blocks: [{ x: 0, y: 0, cols, rows, rotated }] };
+}
+
+/** Number of (i, j) pairs normalPatterns would list, counting no further than just past `cap`. */
+function patternPairCount(limit: number, a: number, b: number, cap: number): number {
+  let n = 0;
+  for (let i = 0; fitsWithin(i * a, limit) && n <= cap; i++) n += fitsCount(limit - i * a, b) + 1;
+  return n - 1; // the (0, 0) pair is not a pattern
 }
 
 /**
@@ -75,18 +95,50 @@ const GRID_ROTATED = 1;
 const CUT_X = 2;
 const CUT_Y = 3;
 
-/** Best guillotine arrangement of a x b rectangles (either flat rotation) in a rectX x rectY rectangle. */
-export function searchLayer(rectX: number, rectY: number, a: number, b: number): LayerSearchResult {
-  const valid = [rectX, rectY, a, b].every((v) => Number.isFinite(v) && v > 0);
-  if (!valid) return { count: 0, blocks: [] };
+interface LayerSearchPlan {
+  mode: LayerSearchMode;
+  normalX: number[];
+  normalY: number[];
+}
 
+function planLayerSearch(rectX: number, rectY: number, a: number, b: number): LayerSearchPlan {
+  const none: LayerSearchPlan = { mode: 'none', normalX: [], normalY: [] };
+  const valid = [rectX, rectY, a, b].every((v) => Number.isFinite(v) && v > 0);
+  if (!valid) return none;
+  if (betterGrid(rectX, rectY, a, b).count === 0) return none;
+  if (
+    patternPairCount(rectX, a, b, MAX_PATTERN_PAIRS) > MAX_PATTERN_PAIRS ||
+    patternPairCount(rectY, a, b, MAX_PATTERN_PAIRS) > MAX_PATTERN_PAIRS
+  ) {
+    return { ...none, mode: 'grids-only' };
+  }
   const normalX = normalPatterns(rectX, a, b);
   const normalY = normalPatterns(rectY, a, b);
   const nx = normalX.length;
   const ny = normalY.length;
-  if (nx === 0 || ny === 0) return { count: 0, blocks: [] };
+  if (nx === 0 || ny === 0) return none;
+  const fallback = nx * ny > MAX_LAYER_STATES || nx * ny * (nx + ny) > MAX_LAYER_WORK;
+  return { mode: fallback ? 'single-cut' : 'full', normalX, normalY };
+}
 
-  if (nx * ny > MAX_LAYER_STATES) return singleCutFallback(normalX, normalY, a, b);
+/** Which kind of search searchLayer would run for these sizes (for tests and diagnostics). */
+export function layerSearchMode(
+  rectX: number,
+  rectY: number,
+  a: number,
+  b: number,
+): LayerSearchMode {
+  return planLayerSearch(rectX, rectY, a, b).mode;
+}
+
+/** Best guillotine arrangement of a x b rectangles (either flat rotation) in a rectX x rectY rectangle. */
+export function searchLayer(rectX: number, rectY: number, a: number, b: number): LayerSearchResult {
+  const { mode, normalX, normalY } = planLayerSearch(rectX, rectY, a, b);
+  if (mode === 'none') return { count: 0, blocks: [] };
+  if (mode === 'grids-only') return betterGrid(rectX, rectY, a, b);
+  if (mode === 'single-cut') return singleCutFallback(normalX, normalY, a, b);
+  const nx = normalX.length;
+  const ny = normalY.length;
 
   // Bottom-up dynamic programming over every snapped size (normalX[ix], normalY[iy]).
   // Every sub-rectangle of a cut has a strictly smaller index on the cut axis, so
@@ -109,16 +161,24 @@ export function searchLayer(rectX: number, rectY: number, a: number, b: number):
         best = rotated;
         kind = GRID_ROTATED;
       }
+      // As the cut moves right the far side shrinks, so its snapped index (the largest
+      // normal value that fits, as snapIndex finds) only moves down: walk it, no search.
+      let farX = ix;
       for (let k = 0; k < ix && fitsWithin(normalX[k] as number, w / 2); k++) {
-        const total = at(k, iy) + at(snapIndex(w - (normalX[k] as number), normalX), iy);
+        const rest = w - (normalX[k] as number);
+        while (farX >= 0 && !fitsWithin(normalX[farX] as number, rest)) farX--;
+        const total = at(k, iy) + at(farX, iy);
         if (total > best) {
           best = total;
           kind = CUT_X;
           cut = k;
         }
       }
+      let farY = iy;
       for (let k = 0; k < iy && fitsWithin(normalY[k] as number, h / 2); k++) {
-        const total = at(ix, k) + at(ix, snapIndex(h - (normalY[k] as number), normalY));
+        const rest = h - (normalY[k] as number);
+        while (farY >= 0 && !fitsWithin(normalY[farY] as number, rest)) farY--;
+        const total = at(ix, k) + at(ix, farY);
         if (total > best) {
           best = total;
           kind = CUT_Y;

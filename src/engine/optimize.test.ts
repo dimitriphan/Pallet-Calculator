@@ -146,6 +146,14 @@ describe('optimize', () => {
     expect(r.emptyReason).toBeNull();
   });
 
+  it('stays near the time budget on a very long pallet', () => {
+    const t0 = performance.now();
+    const r = optimize({ ...DEFAULT_INPUTS, pallet: { length: 5000, width: 42, height: 72 } });
+    expect(performance.now() - t0).toBeLessThan(6000);
+    expect(r.layouts.length).toBeGreaterThan(0);
+    expect(r.emptyReason).toBeNull();
+  }, 15000);
+
   it('marks the result truncated when the candidate list was capped', () => {
     const r = optimize(
       { ...DEFAULT_INPUTS, product: { length: 0.2, width: 0.2, height: 0.2 } },
