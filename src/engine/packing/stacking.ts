@@ -36,9 +36,16 @@ function footprintSizes(c: CartonCandidate, vertical: ProductAxis): [number, num
   return [c.outer[fa], c.outer[fb]];
 }
 
-/** Bounding size of the blocks (max minus min corner on each axis). */
-function blocksExtent(blocks: Block[], a: number, b: number): { x: number; y: number } {
-  if (blocks.length === 0) return { x: 0, y: 0 };
+/**
+ * Bounding box of the blocks of a layer: minimum corner and size on each axis.
+ * Shared by the layer extent and the placement centring so they can never disagree.
+ */
+export function blocksBounds(
+  blocks: Block[],
+  a: number,
+  b: number,
+): { min: { x: number; y: number }; size: { x: number; y: number } } {
+  if (blocks.length === 0) return { min: { x: 0, y: 0 }, size: { x: 0, y: 0 } };
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -51,7 +58,12 @@ function blocksExtent(blocks: Block[], a: number, b: number): { x: number; y: nu
     maxX = Math.max(maxX, blk.x + blk.cols * dx);
     maxY = Math.max(maxY, blk.y + blk.rows * dy);
   }
-  return { x: maxX - minX, y: maxY - minY };
+  return { min: { x: minX, y: minY }, size: { x: maxX - minX, y: maxY - minY } };
+}
+
+/** Whether a x b is square within tolerance: turning such a carton 90 degrees changes nothing. */
+function isSquare(a: number, b: number): boolean {
+  return fitsWithin(a, b) && fitsWithin(b, a);
 }
 
 function toPattern(
@@ -61,12 +73,16 @@ function toPattern(
   a: number,
   b: number,
 ): LayerPattern {
+  // On a square footprint a turned block is the same block; store it unrotated.
+  const blocks = isSquare(a, b)
+    ? result.blocks.map((blk) => (blk.rotated ? { ...blk, rotated: false } : blk))
+    : result.blocks;
   return {
     vertical,
     height,
     cartonCount: result.count,
-    blocks: result.blocks,
-    extent: blocksExtent(result.blocks, a, b),
+    blocks,
+    extent: blocksBounds(blocks, a, b).size,
   };
 }
 
@@ -97,12 +113,15 @@ export function bestLayer(
   return { ...pattern, vertical, height: c.outer[vertical] };
 }
 
-/** The plain single-grid layers (unrotated, then rotated) that hold at least one carton. */
+/**
+ * The plain single-grid layers (unrotated, then rotated) that hold at least one carton.
+ * On a square footprint the rotated grid is the unrotated one turned, so it is omitted.
+ */
 export function plainLayers(c: CartonCandidate, vertical: ProductAxis, i: Inputs): LayerPattern[] {
   const [a, b] = footprintSizes(c, vertical);
   const { x, y } = usableFootprint(i);
   const out: LayerPattern[] = [];
-  for (const rotated of [false, true]) {
+  for (const rotated of isSquare(a, b) ? [false] : [false, true]) {
     const grid = gridLayer(x, y, a, b, rotated);
     if (grid.count > 0) out.push(toPattern(grid, vertical, c.outer[vertical], a, b));
   }

@@ -1,6 +1,6 @@
 import type { Inputs, Layer, Layout, ProductAxis } from '../../domain/types';
 import { productSize, usableFootprint } from './geometry';
-import { footprintAxes } from './stacking';
+import { blocksBounds, footprintAxes } from './stacking';
 
 /** An axis-aligned box in the engine frame (x along pallet length, y along width, z up). */
 export interface PlacedBox {
@@ -26,18 +26,8 @@ function layerOffset(
   b: number,
   usable: { x: number; y: number },
 ): { x: number; y: number } {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const blk of layer.blocks) {
-    minX = Math.min(minX, blk.x);
-    minY = Math.min(minY, blk.y);
-    maxX = Math.max(maxX, blk.x + blk.cols * (blk.rotated ? b : a));
-    maxY = Math.max(maxY, blk.y + blk.rows * (blk.rotated ? a : b));
-  }
-  if (layer.blocks.length === 0) return { x: 0, y: 0 };
-  return { x: (usable.x - (maxX - minX)) / 2 - minX, y: (usable.y - (maxY - minY)) / 2 - minY };
+  const { min, size } = blocksBounds(layer.blocks, a, b);
+  return { x: (usable.x - size.x) / 2 - min.x, y: (usable.y - size.y) / 2 - min.y };
 }
 
 /** Every carton of the layout: layer by layer, block by block, row by row. */

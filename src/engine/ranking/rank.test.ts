@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../../domain/constants';
 import type { Inputs, Layout, RankedLayout } from '../../domain/types';
 import { cartonKey, generateCartonCandidates } from '../packing/cartons';
-import { buildLayouts, footprintAxes } from '../packing/stacking';
+import { buildLayouts, footprintAxes, layoutSignature } from '../packing/stacking';
 import { externalSignature, rankLayouts } from './rank';
 import { compareRanked } from './score';
 
@@ -60,12 +60,19 @@ function expectWellFormed(r: RankedLayout[]): void {
 
 describe('externalSignature', () => {
   it('collapses a square-footprint rotated / unrotated pair', () => {
+    // buildLayouts no longer emits the turned twin of a square footprint, so build it by hand.
     const ones = allLayouts(CUBES).filter((l) => l.carton.boxesPerCarton === 1);
     const flags = (l: Layout) => l.layers.flatMap((layer) => layer.blocks.map((b) => b.rotated));
     const plain = ones.find((l) => flags(l).every((f) => !f));
-    const turned = ones.find((l) => flags(l).every((f) => f));
-    expect(plain && turned).toBeTruthy();
-    if (!plain || !turned) return;
+    expect(plain).toBeDefined();
+    if (!plain) return;
+    const turnedLayers = plain.layers.map((layer) => ({
+      ...layer,
+      blocks: layer.blocks.map((b) => ({ ...b, rotated: true })),
+    }));
+    const turned: Layout = { ...plain, layers: turnedLayers };
+    turned.id = layoutSignature(turned);
+    expect(flags(turned).every((f) => f)).toBe(true);
     expect(plain.id).not.toBe(turned.id);
     expect(externalSignature(plain)).toBe(externalSignature(turned));
     expect(rankLayouts([plain, turned], CUBES)).toHaveLength(1);

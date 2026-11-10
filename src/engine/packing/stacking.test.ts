@@ -6,6 +6,7 @@ import { usableFootprint, usableHeight } from './geometry';
 import { gridLayer, searchLayer } from './layerSearch';
 import {
   bestLayer,
+  blocksBounds,
   buildLayouts,
   footprintAxes,
   layoutSignature,
@@ -125,6 +126,60 @@ describe('plainLayers', () => {
     const layers = plainLayers(candidateByKey(narrow, '1x2x2'), 'H', narrow);
     expect(layers).toHaveLength(1);
     expect(layers[0]?.blocks).toEqual([{ x: 0, y: 0, cols: 2, rows: 1, rotated: true }]);
+  });
+});
+
+describe('square footprints', () => {
+  const physical = (l: Layout) =>
+    l.layers
+      .map((layer) => {
+        const [fa, fb] = footprintAxes(layer.vertical);
+        const square = l.carton.outer[fa] === l.carton.outer[fb];
+        const blocks = layer.blocks
+          .map((b) => `${b.cols}x${b.rows}${square ? '' : b.rotated ? 'r' : 'u'}`)
+          .sort()
+          .join(',');
+        return `${layer.vertical}:${layer.cartonCount}:${blocks}`;
+      })
+      .join('/');
+
+  it('never returns two layouts of one carton that differ only by turning a square footprint', () => {
+    for (const c of generateCartonCandidates(CUBES)) {
+      const layouts = buildLayouts(c, CUBES, new Map());
+      const keys = layouts.map(physical);
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+  });
+
+  it('keeps only the unrotated plain grid and an unrotated best layer on a square footprint', () => {
+    const c = candidateByKey(CUBES, '1x1x2'); // outer 10 x 10 x 20, H footprint 10 x 10
+    const plain = plainLayers(c, 'H', CUBES);
+    expect(plain).toHaveLength(1);
+    expect(plain[0]?.blocks).toEqual([{ x: 0, y: 0, cols: 4, rows: 4, rotated: false }]);
+    for (const cand of generateCartonCandidates(CUBES)) {
+      for (const v of ['L', 'W', 'H'] as const) {
+        const [fa, fb] = footprintAxes(v);
+        if (cand.outer[fa] !== cand.outer[fb]) continue;
+        const layer = bestLayer(cand, v, CUBES, new Map());
+        for (const b of layer?.blocks ?? []) expect(b.rotated).toBe(false);
+      }
+    }
+  });
+});
+
+describe('blocksBounds', () => {
+  it('returns the minimum corner and bounding size of the blocks', () => {
+    expect(
+      blocksBounds(
+        [
+          { x: 3, y: 4, cols: 2, rows: 1, rotated: false },
+          { x: 3, y: 10, cols: 1, rows: 2, rotated: true },
+        ],
+        7,
+        6,
+      ),
+    ).toEqual({ min: { x: 3, y: 4 }, size: { x: 14, y: 20 } });
+    expect(blocksBounds([], 7, 6)).toEqual({ min: { x: 0, y: 0 }, size: { x: 0, y: 0 } });
   });
 });
 
