@@ -32,5 +32,8 @@ export function explainRanking(
     const y = next.score.total.toFixed(2);
     return `${head} has a higher overall score (${x} vs ${y}) at the same quantity.`;
   }
-  return `${head} uses fewer cartons for the same result.`;
+  if (current.layout.totalCartons < next.layout.totalCartons) {
+    return `${head} uses fewer cartons for the same result.`;
+  }
+  return `${a} and Layout #${next.rank} are equivalent in quantity, score, and carton count; they differ only in carton size or arrangement.`;
 }

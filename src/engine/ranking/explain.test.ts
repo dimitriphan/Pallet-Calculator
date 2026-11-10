@@ -70,6 +70,12 @@ describe('explainRanking', () => {
     );
   });
 
+  it('calls a full tie equivalent instead of claiming fewer cartons', () => {
+    expect(explainRanking(ranked(1, 420, 100, 100, 420), ranked(2, 420, 100, 100, 420), 5)).toBe(
+      'Layout #1 and Layout #2 are equivalent in quantity, score, and carton count; they differ only in carton size or arrangement.',
+    );
+  });
+
   it('describes the last of several layouts', () => {
     expect(explainRanking(ranked(5, 52, 80, 80), null, 5)).toBe(
       'Layout #5 is the lowest-ranked of the 5 layouts shown.',
