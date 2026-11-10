@@ -1,0 +1,129 @@
+import { Grid } from '@react-three/drei';
+import { Canvas, useThree } from '@react-three/fiber';
+import { useEffect, useMemo } from 'react';
+import { PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
+import { useScene, useStores } from '../ui/StoreContext';
+import { CameraRig } from './CameraRig';
+import { CaptureBridge } from './CaptureBridge';
+import { Cartons } from './Cartons';
+import { Envelope } from './Envelope';
+import { Labels } from './Labels';
+import { Measurements } from './Measurements';
+import { Pallet } from './Pallet';
+import { Products } from './Products';
+import { SceneErrorBoundary } from './SceneErrorBoundary';
+import { SceneToolbar } from './SceneToolbar';
+import { selectionBounds } from './sceneGeometry';
+import { SelectionOutline } from './SelectionOutline';
+import { useSceneData } from './useSceneData';
+import { WEBGL_UNAVAILABLE } from './webgl';
+
+/** Everything inside the canvas, drawn from the selected layout and the inputs it came from. */
+function SceneContents() {
+  const { layout, inputs, cartons, bounds } = useSceneData();
+  const s = useScene((st) => st);
+  const invalidate = useThree((st) => st.invalidate);
+
+  const productsShown =
+    !!layout &&
+    s.showProducts &&
+    (layout.totalProducts <= PRODUCT_RENDER_THRESHOLD || s.forceProducts);
+  const selected = useMemo(
+    () => selectionBounds(s.selection, layout, inputs, cartons),
+    [s.selection, layout, inputs, cartons],
+  );
+
+  // The canvas renders on demand: draw a new frame whenever what it shows changes.
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, layout, inputs, s]);
+
+  const select = s.setSelection;
+  return (
+    <>
+      <color attach="background" args={['#f3f4f6']} />
+      <ambientLight intensity={1.4} />
+      <directionalLight position={[80, 160, 120]} intensity={1.6} />
+      <directionalLight position={[-120, 90, -80]} intensity={0.5} />
+      {s.showGrid && (
+        <Grid
+          cellSize={12}
+          sectionSize={60}
+          cellColor="#d1d5db"
+          sectionColor="#9ca3af"
+          cellThickness={0.8}
+          sectionThickness={1.2}
+          infiniteGrid
+          fadeDistance={900}
+          fadeStrength={1.5}
+        />
+      )}
+      {inputs && (
+        <Pallet
+          length={inputs.pallet.length}
+          width={inputs.pallet.width}
+          onPick={() => select({ kind: 'pallet' })}
+        />
+      )}
+      {inputs && s.showEnvelope && <Envelope inputs={inputs} />}
+      {layout && inputs && s.showCartons && (
+        <Cartons
+          cartons={cartons}
+          inputs={inputs}
+          productsShown={productsShown}
+          wireframe={s.showWireframe}
+          onPick={(cartonIndex) => select({ kind: 'carton', cartonIndex })}
+        />
+      )}
+      {layout && inputs && productsShown && (
+        <Products
+          layout={layout}
+          inputs={inputs}
+          wireframe={s.showWireframe}
+          onPick={(cartonIndex, productIndex) =>
+            select({ kind: 'product', cartonIndex, productIndex })
+          }
+        />
+      )}
+      {layout && inputs && s.showLabels && cartons[0] && (
+        <Labels layout={layout} inputs={inputs} first={cartons[0]} />
+      )}
+      {s.showMeasurements && inputs && <Measurements bounds={bounds} />}
+      {selected && <SelectionOutline bounds={selected} />}
+      <CameraRig load={bounds} selected={selected} inputs={inputs} />
+      <CaptureBridge bounds={bounds} />
+    </>
+  );
+}
+
+const Unavailable = () => (
+  <div className="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-600">
+    {WEBGL_UNAVAILABLE}
+  </div>
+);
+
+/** The interactive 3D workspace: toolbar above a canvas showing the selected layout. */
+export default function PalletScene() {
+  const { layout } = useSceneData();
+  const sceneStore = useStores().scene;
+  return (
+    <div className="flex h-full w-full flex-col">
+      <SceneToolbar totalProducts={layout?.totalProducts ?? 0} />
+      <SceneErrorBoundary fallback={<Unavailable />}>
+        <div className="relative min-h-0 flex-1">
+          <Canvas
+            gl={{ preserveDrawingBuffer: true }}
+            dpr={[1, 2]}
+            frameloop="demand"
+            // No tone mapping: the carton, product and pallet colours show as specified.
+            flat
+            camera={{ fov: 40, near: 0.5, far: 20000, position: [120, 100, 160] }}
+            onPointerMissed={() => sceneStore.getState().setSelection(null)}
+          >
+            <SceneContents />
+          </Canvas>
+        </div>
+      </SceneErrorBoundary>
+    </div>
+  );
+}

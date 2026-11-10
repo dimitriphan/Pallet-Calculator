@@ -1,0 +1,94 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_INPUTS } from '../domain/constants';
+import type { Inputs, Layout } from '../domain/types';
+import { cartonPlacements } from '../engine/packing/positions';
+import { dimensionLines, palletParts, selectionBounds } from './sceneGeometry';
+
+const I: Inputs = {
+  ...DEFAULT_INPUTS,
+  pallet: { length: 40, width: 40, height: 25 },
+  product: { length: 10, width: 10, height: 10 },
+  leeway: 0,
+  wallThickness: 0,
+};
+
+const LAYOUT: Layout = {
+  id: 'one-layer',
+  carton: {
+    counts: { L: 2, W: 2, H: 2 },
+    inner: { L: 20, W: 20, H: 20 },
+    outer: { L: 20, W: 20, H: 20 },
+    boxesPerCarton: 8,
+    utilization: 1,
+    emptyVolume: 0,
+  },
+  layers: [
+    {
+      vertical: 'H',
+      height: 20,
+      cartonCount: 4,
+      blocks: [{ x: 0, y: 0, cols: 2, rows: 2, rotated: false }],
+      extent: { x: 40, y: 40 },
+      z: 0,
+    },
+  ],
+  totalCartons: 4,
+  totalProducts: 32,
+};
+
+describe('palletParts', () => {
+  const parts = palletParts(50, 42);
+  const extent = (k: 0 | 1 | 2, f: 'min' | 'max') =>
+    Math[f](...parts.map((p) => p.position[k] + (f === 'min' ? -1 : 1) * (p.size[k] / 2)));
+
+  it('has three 3.5 x 3.5 stringers along the length and seven 1.5-tall deck boards', () => {
+    const stringers = parts.filter((p) => p.size[1] === 3.5);
+    const boards = parts.filter((p) => p.size[1] === 1.5);
+    expect(stringers).toHaveLength(3);
+    expect(stringers.every((s) => s.size[0] === 50 && s.size[2] === 3.5)).toBe(true);
+    expect(boards).toHaveLength(7);
+    expect(boards.every((b) => b.size[2] === 42)).toBe(true);
+  });
+
+  it('is exactly length x width, 5 tall, centred on the origin', () => {
+    expect([extent(0, 'min'), extent(0, 'max')]).toEqual([-25, 25]);
+    expect([extent(2, 'min'), extent(2, 'max')]).toEqual([-21, 21]);
+    expect([extent(1, 'min'), extent(1, 'max')]).toEqual([0, 5]);
+  });
+});
+
+describe('dimensionLines', () => {
+  it('labels the overall length, width and height of the bounds', () => {
+    const d = dimensionLines({ min: [-25, 0, -21], max: [25, 60, 21] });
+    expect(d.labels.map((l) => l.text)).toEqual(['50.00 in', '42.00 in', '60.00 in']);
+    // 3 lines, each with 2 end ticks: 9 segments of 2 points.
+    expect(d.segments).toHaveLength(9 * 2);
+  });
+});
+
+describe('selectionBounds', () => {
+  const cartons = cartonPlacements(LAYOUT, I);
+
+  it('returns the scene box of a carton', () => {
+    expect(selectionBounds({ kind: 'carton', cartonIndex: 3 }, LAYOUT, I, cartons)).toEqual({
+      min: [0, 5, 0],
+      max: [20, 25, 20],
+    });
+  });
+
+  it('returns the scene box of a product inside its carton', () => {
+    // Product 7 of carton 0 is the last of 2 x 2 x 2: the upper far corner.
+    expect(
+      selectionBounds({ kind: 'product', cartonIndex: 0, productIndex: 7 }, LAYOUT, I, cartons),
+    ).toEqual({ min: [-10, 15, -10], max: [0, 25, 0] });
+  });
+
+  it('returns the pallet for the pallet and null for nothing or a stale index', () => {
+    expect(selectionBounds({ kind: 'pallet' }, LAYOUT, I, cartons)).toEqual({
+      min: [-20, 0, -20],
+      max: [20, 5, 20],
+    });
+    expect(selectionBounds(null, LAYOUT, I, cartons)).toBeNull();
+    expect(selectionBounds({ kind: 'carton', cartonIndex: 9 }, LAYOUT, I, cartons)).toBeNull();
+  });
+});
