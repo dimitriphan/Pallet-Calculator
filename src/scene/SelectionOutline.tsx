@@ -1,5 +1,6 @@
 import { Line } from '@react-three/drei';
 import { useMemo } from 'react';
+import { HIDE_IN_ORTHO_CAPTURE } from './captureVisibility';
 import { boundsEdges, type SceneBounds } from './transforms';
 
 const AMBER = '#f59e0b';
@@ -18,6 +19,15 @@ export function SelectionOutline({ bounds }: { bounds: SceneBounds }) {
   );
   // Drawn over everything so the selection stays visible behind other cartons.
   return (
-    <Line points={points} segments color={AMBER} lineWidth={3} depthTest={false} renderOrder={10} />
+    <group userData={{ [HIDE_IN_ORTHO_CAPTURE]: true }}>
+      <Line
+        points={points}
+        segments
+        color={AMBER}
+        lineWidth={3}
+        depthTest={false}
+        renderOrder={10}
+      />
+    </group>
   );
 }

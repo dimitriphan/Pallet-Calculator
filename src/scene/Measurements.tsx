@@ -1,5 +1,6 @@
 import { Html, Line } from '@react-three/drei';
 import { useMemo } from 'react';
+import { HIDE_IN_ORTHO_CAPTURE } from './captureVisibility';
 import { dimensionLines } from './sceneGeometry';
 import type { SceneBounds } from './transforms';
 
@@ -12,7 +13,7 @@ const INK = '#111827';
 export function Measurements({ bounds, clear }: { bounds: SceneBounds; clear: SceneBounds }) {
   const d = useMemo(() => dimensionLines(bounds, { clearOf: clear }), [bounds, clear]);
   return (
-    <>
+    <group userData={{ [HIDE_IN_ORTHO_CAPTURE]: true }}>
       <Line points={d.segments} segments color={INK} lineWidth={1.5} />
       {d.labels.map((l) => (
         <Html
@@ -27,6 +28,6 @@ export function Measurements({ bounds, clear }: { bounds: SceneBounds; clear: Sc
           </span>
         </Html>
       ))}
-    </>
+    </group>
   );
 }

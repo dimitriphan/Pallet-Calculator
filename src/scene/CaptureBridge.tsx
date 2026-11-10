@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { OrthographicCamera, Vector2 } from 'three';
 import { useStores } from '../ui/StoreContext';
 import { orthoFit } from './cameraFit';
+import { withHiddenForOrthoCapture } from './captureVisibility';
 import type { SceneBounds } from './transforms';
 
 const ASPECT = 3 / 2;
@@ -10,7 +11,8 @@ const ORTHO_SIZE = { width: 1800, height: 1200 };
 
 /**
  * Registers `captureViews` on the scene store: PNG data URLs of the user's current view and of
- * orthographic top and side views of the load, rendered at 1800 x 1200.
+ * orthographic top and side views of the load, rendered at 1800 x 1200 without measurement
+ * lines or the selection outline.
  */
 export function CaptureBridge({ bounds }: { bounds: SceneBounds }) {
   const get = useThree((s) => s.get);
@@ -50,8 +52,10 @@ export function CaptureBridge({ bounds }: { bounds: SceneBounds }) {
       try {
         gl.setPixelRatio(1);
         gl.setSize(ORTHO_SIZE.width, ORTHO_SIZE.height, false);
-        const top = ortho('top');
-        const side = ortho('side');
+        // Measurement lines (labels are DOM overlays, absent here) and the selection outline
+        // are left out of the top and side pictures.
+        const top = withHiddenForOrthoCapture(world, () => ortho('top'));
+        const side = withHiddenForOrthoCapture(world, () => ortho('side'));
         return { current, top, side };
       } finally {
         gl.setPixelRatio(pixelRatio);
