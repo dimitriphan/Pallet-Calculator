@@ -63,14 +63,14 @@ export function PresetMenu() {
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor={selectId} className="text-sm text-gray-700 dark:text-gray-300">
+      <label htmlFor={selectId} className="text-sm text-gray-700 dark:text-harbor-mist">
         Preset
       </label>
       <select
         id={selectId}
         value={active ? active.id : NO_PRESET}
         onChange={(e) => choose(e.target.value)}
-        className="max-w-56 border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-400 dark:focus:ring-blue-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+        className="max-w-56 border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:focus:border-harbor-teal-text dark:focus:ring-harbor-teal-text"
       >
         <option value={NO_PRESET}>No preset</option>
         {presets.map((p) => (
@@ -80,7 +80,7 @@ export function PresetMenu() {
         ))}
       </select>
       {full && modified && (
-        <span className="bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900 dark:bg-amber-900 dark:text-amber-100">
+        <span className="bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900 dark:bg-harbor-sand dark:text-harbor-deep">
           Modified
         </span>
       )}

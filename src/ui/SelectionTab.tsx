@@ -77,5 +77,5 @@ export function SelectionTab({ selection, layout, inputs, analytics }: Selection
     }
   }
 
-  return <p className="text-sm text-gray-600 dark:text-gray-300">{NOTHING}</p>;
+  return <p className="text-sm text-gray-600 dark:text-harbor-mist">{NOTHING}</p>;
 }

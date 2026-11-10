@@ -9,10 +9,8 @@ import { ViewModeSwitch } from './ViewModeSwitch';
 export function Header() {
   const full = usePrefs((s) => s.viewMode) === 'full';
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-900">
-      <h1 className="heading text-base text-gray-900 dark:text-gray-100">
-        Pallet Calculator
-      </h1>
+    <header className="flex h-12 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-harbor-foam dark:bg-harbor-panel">
+      <h1 className="heading text-base text-gray-900 dark:text-harbor-foam">Pallet Calculator</h1>
       <div data-testid="header-actions" className="flex items-center gap-4">
         <PresetMenu />
         {full && <ScenarioDrawer />}

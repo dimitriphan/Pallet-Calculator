@@ -9,6 +9,8 @@
 
 .harbor {
   color-scheme: dark;
+  /* Checkboxes and radios: checked boxes are teal-fill with a light mark. */
+  accent-color: theme('colors.harbor.teal-fill');
 }
 
 /* Barlow Medium by default, with tabular figures so digits line up in every column. */
@@ -31,5 +33,44 @@ button {
     font-weight: 300;
     text-transform: uppercase;
     letter-spacing: 0.12em;
+  }
+
+  /*
+   * Panel frame: a 1 px rule along the top and left edges with a 6 px tick down from the
+   * top-right corner. The existing border grey in Light, foam in Harbor.
+   */
+  .bracket {
+    position: relative;
+    border-top: 1px solid theme('colors.gray.300');
+    border-left: 1px solid theme('colors.gray.300');
+  }
+
+  .bracket::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: 0;
+    width: 1px;
+    height: 6px;
+    background-color: theme('colors.gray.300');
+    pointer-events: none;
+  }
+
+  .harbor .bracket {
+    border-color: theme('colors.harbor.foam');
+  }
+
+  .harbor .bracket::after {
+    background-color: theme('colors.harbor.foam');
+  }
+
+  /* An input (or its wrapper) holding an invalid value: the existing red in Light, a coral edge in Harbor. */
+  .field-invalid {
+    border-color: theme('colors.red.500');
+  }
+
+  .harbor .field-invalid {
+    border-color: theme('colors.harbor.coral');
+    border-left-width: 3px;
   }
 }

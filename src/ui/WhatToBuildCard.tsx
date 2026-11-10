@@ -12,9 +12,7 @@ const NO_LAYOUT = 'Enter the three sizes to see what to build.';
 function Part({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-sm heading text-gray-500 dark:text-gray-400">
-        {title}
-      </h3>
+      <h3 className="text-sm heading text-gray-500 dark:text-harbor-mist">{title}</h3>
       {children}
     </section>
   );
@@ -62,7 +60,7 @@ export function WhatToBuildCard() {
     body = (
       <>
         {ranked.rank !== 1 && best && (
-          <div className="space-y-2 border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100">
+          <div className="space-y-2 border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-foam">
             <p>
               Showing layout {ranked.rank}, chosen in Full view. Layout 1 fits{' '}
               {best.layout.totalProducts} boxes.
@@ -70,18 +68,18 @@ export function WhatToBuildCard() {
             <button
               type="button"
               onClick={showBest}
-              className="border border-blue-300 bg-white px-2 py-1 text-sm text-blue-800 hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-blue-700 dark:bg-gray-900 dark:text-blue-200 dark:hover:bg-blue-900 dark:focus-visible:outline-blue-400"
+              className="border border-blue-300 bg-white px-2 py-1 text-sm text-blue-800 hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline dark:focus-visible:outline-harbor-teal-text"
             >
               Use layout 1
             </button>
           </div>
         )}
         <Part title="Carton">
-          <dl className="divide-y divide-gray-100 border border-gray-200 dark:divide-gray-800 dark:border-gray-700">
+          <dl className="bracket divide-y divide-gray-100 dark:divide-harbor-foam/40">
             {carton.map(([label, value]) => (
               <div key={label} className="px-3 py-1.5">
-                <dt className="text-xs text-gray-600 dark:text-gray-300">{label}</dt>
-                <dd className="text-base tabular-nums text-gray-900 dark:text-gray-100">
+                <dt className="text-xs text-gray-600 dark:text-harbor-mist">{label}</dt>
+                <dd className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
                   {value}
                 </dd>
               </div>
@@ -94,7 +92,7 @@ export function WhatToBuildCard() {
             {stackRuns(layout).map((run) => (
               <li
                 key={run.from}
-                className="border-l-4 border-blue-500 bg-gray-50 px-3 py-2 text-base text-gray-900 dark:border-blue-400 dark:bg-gray-800 dark:text-gray-100"
+                className="border-l-4 border-blue-500 bg-gray-50 px-3 py-2 text-base text-gray-900 dark:border-l-2 dark:border-harbor-teal dark:bg-harbor-raised dark:text-harbor-foam"
               >
                 {describeRun(run)}
               </li>
@@ -102,14 +100,14 @@ export function WhatToBuildCard() {
           </ol>
         </Part>
         <Part title="Finished load">
-          <p className="text-base tabular-nums text-gray-900 dark:text-gray-100">
+          <p className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
             {`${formatNumber(p.loadLength)} × ${formatNumber(p.loadWidth)} × ${formatNumber(p.totalLoadHeight)} in (including pallet)`}
           </p>
         </Part>
       </>
     );
   } else if (!running) {
-    body = <p className="text-sm text-gray-600 dark:text-gray-300">{NO_LAYOUT}</p>;
+    body = <p className="text-sm text-gray-600 dark:text-harbor-mist">{NO_LAYOUT}</p>;
   } else {
     // "Calculating…" above says a first calculation is under way.
     return null;
@@ -118,14 +116,14 @@ export function WhatToBuildCard() {
   return (
     <section
       aria-labelledby={headingId}
-      className="space-y-4 border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+      className="bracket space-y-4 bg-white p-4 dark:bg-harbor-panel"
     >
       <div className="flex items-center justify-between gap-2">
         <h2
           ref={heading}
           id={headingId}
           tabIndex={-1}
-          className="heading text-lg text-gray-900 focus:outline-none dark:text-gray-100"
+          className="heading text-lg text-gray-900 focus:outline-none dark:text-harbor-foam"
         >
           What to build
         </h2>

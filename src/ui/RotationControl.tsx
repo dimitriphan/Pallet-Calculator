@@ -45,14 +45,14 @@ export function RotationFields({
   return (
     <div className="space-y-3">
       <fieldset>
-        <legend className="mb-1 text-xs heading text-gray-500 dark:text-gray-400">
+        <legend className="mb-1 text-xs heading text-gray-500 dark:text-harbor-mist">
           Product rotation
         </legend>
         <div className="grid grid-cols-2 gap-x-2 gap-y-1">
           {MODES.map((m) => (
             <label
               key={m.value}
-              className="flex items-center gap-1.5 text-sm text-gray-800 dark:text-gray-200"
+              className="flex items-center gap-1.5 text-sm text-gray-800 dark:text-harbor-foam"
             >
               <input
                 type="radio"
@@ -60,15 +60,15 @@ export function RotationFields({
                 value={m.value}
                 checked={mode === m.value}
                 onChange={() => chooseMode(m.value)}
-                className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400"
+                className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:accent-harbor-teal-fill dark:focus-visible:outline-harbor-teal-text"
               />
               {m.label}
             </label>
           ))}
         </div>
         {mode === 'custom' && (
-          <div className="mt-2 border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800">
-            <p id={helpId} className="mb-1 text-xs text-gray-600 dark:text-gray-300">
+          <div className="mt-2 border border-gray-200 bg-gray-50 p-2 dark:border-harbor-foam/40 dark:bg-harbor-raised">
+            <p id={helpId} className="mb-1 text-xs text-gray-600 dark:text-harbor-mist">
               Product length, width and height along the carton's length, width and height.
             </p>
             <div
@@ -81,33 +81,33 @@ export function RotationFields({
               {CODES.map((code) => (
                 <label
                   key={code}
-                  className="flex items-center gap-1.5 font-mono text-sm text-gray-800 dark:text-gray-200"
+                  className="flex items-center gap-1.5 font-mono text-sm text-gray-800 dark:text-harbor-foam"
                 >
                   <input
                     type="checkbox"
                     checked={custom.includes(code)}
                     onChange={() => toggleOrientation(code)}
                     aria-invalid={error ? 'true' : 'false'}
-                    className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400"
+                    className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:accent-harbor-teal-fill dark:focus-visible:outline-harbor-teal-text"
                   />
                   {code}
                 </label>
               ))}
             </div>
             {error && (
-              <p id={errorId} className="mt-1 text-xs text-red-700 dark:text-red-400">
+              <p id={errorId} className="mt-1 text-xs text-red-700 dark:text-harbor-coral-text">
                 {error}
               </p>
             )}
           </div>
         )}
       </fieldset>
-      <label className="flex items-center gap-1.5 text-sm text-gray-800 dark:text-gray-200">
+      <label className="flex items-center gap-1.5 text-sm text-gray-800 dark:text-harbor-foam">
         <input
           type="checkbox"
           checked={keepUpright}
           onChange={(e) => setKeepCartonsUpright(e.target.checked)}
-          className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400"
+          className="h-3.5 w-3.5 accent-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:accent-harbor-teal-fill dark:focus-visible:outline-harbor-teal-text"
         />
         Keep cartons upright
       </label>

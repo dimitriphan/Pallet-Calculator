@@ -36,7 +36,7 @@ export function DetailsPanel() {
 
   let content;
   if (!selected)
-    content = <p className="text-sm text-gray-600 dark:text-gray-300">No layout to show yet.</p>;
+    content = <p className="text-sm text-gray-600 dark:text-harbor-mist">No layout to show yet.</p>;
   else if (active === 'Analytics') content = <AnalyticsTab analytics={selected.analytics} />;
   else if (active === 'Explanation') content = <ExplanationTab ranked={selected.ranked} />;
   else
@@ -51,7 +51,7 @@ export function DetailsPanel() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="sticky top-0 z-10 flex items-center border-b border-gray-200 bg-white px-2 dark:border-gray-700 dark:bg-gray-900">
+      <div className="sticky top-0 z-10 flex items-center border-b border-gray-200 bg-white px-2 dark:border-harbor-foam/40 dark:bg-harbor-panel">
         <div role="tablist" aria-label="Details" className="flex" onKeyDown={onKeyDown}>
           {TABS.map((tab, k) => {
             const isActive = tab === active;
@@ -68,10 +68,10 @@ export function DetailsPanel() {
                 aria-controls={isActive ? `details-panel-${tab}` : undefined}
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => setActive(tab)}
-                className={`-mb-px border-b-2 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400 ${
+                className={`-mb-px border-b-2 px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-harbor-teal-text ${
                   isActive
-                    ? 'border-blue-600 text-blue-700 dark:border-blue-400 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'
+                    ? 'border-blue-600 text-blue-700 dark:border-harbor-teal dark:text-harbor-teal-text'
+                    : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-harbor-mist dark:hover:text-harbor-foam'
                 }`}
               >
                 {tab}
@@ -86,7 +86,7 @@ export function DetailsPanel() {
         id={`details-panel-${active}`}
         aria-labelledby={`details-tab-${active}`}
         tabIndex={0}
-        className="flex-1 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-blue-400"
+        className="flex-1 p-4 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-harbor-teal-text"
       >
         {content}
       </div>

@@ -30,7 +30,7 @@ const PNG_FAILED = 'PNG export failed. Try again after the 3D view has loaded.';
 const PDF_FAILED = 'Build sheet could not be created. Try again.';
 
 const ITEM =
-  'block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:text-gray-100 dark:hover:bg-gray-700 dark:focus:bg-gray-700 dark:disabled:text-gray-500 dark:disabled:hover:bg-gray-800';
+  'block w-full px-3 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:text-gray-400 disabled:hover:bg-white dark:text-harbor-foam dark:hover:bg-harbor-raised dark:focus:bg-harbor-raised dark:disabled:text-harbor-mist dark:disabled:hover:bg-harbor-panel';
 
 /**
  * Export of the selected layout as a PDF build sheet, JSON, CSV, or a three-view PNG
@@ -189,7 +189,7 @@ export function ExportMenu() {
           aria-label="Export"
           tabIndex={-1}
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-20 mt-1 w-56 border border-gray-200 bg-white py-1 dark:border-gray-600 dark:bg-gray-800"
+          className="absolute right-0 z-20 mt-1 w-56 border border-gray-200 bg-white py-1 dark:border-harbor-foam dark:bg-harbor-panel"
         >
           {items.map(({ format, label }) => (
             <div key={format}>
@@ -205,7 +205,7 @@ export function ExportMenu() {
                 {label}
               </button>
               {format === 'png' && hasLayout && !captureViews && (
-                <p className="px-3 pb-1.5 text-xs text-gray-600 dark:text-gray-300">{NO_3D}</p>
+                <p className="px-3 pb-1.5 text-xs text-gray-600 dark:text-harbor-mist">{NO_3D}</p>
               )}
             </div>
           ))}
