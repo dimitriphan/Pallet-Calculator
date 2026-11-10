@@ -7,6 +7,8 @@ import { gridLayer } from './packing/layerSearch';
 import { footprintAxes } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { optimize, TIME_BUDGET_MS } from './optimize';
+import { cartonPlacements } from './packing/positions';
+import { boxesOutside, overlappingPairs } from './packing/testSupport';
 
 /** Case I: 10-inch cube, no leeway or walls, max carton 20 x 20 x 10, pallet 40 x 40 x 25. */
 const CUBES: Inputs = {
@@ -153,6 +155,75 @@ describe('optimize', () => {
     expect(r.layouts.length).toBeGreaterThan(0);
     expect(r.emptyReason).toBeNull();
   }, 15000);
+
+  describe('desired boxes per carton', () => {
+    it('gives the Round 1 result when blank', () => {
+      const blank = optimize({ ...DEFAULT_INPUTS, boxesPerCarton: null });
+      expect(blank).toEqual(optimize(DEFAULT_INPUTS));
+      expect(blank.layouts[0]!.layout).toMatchObject({ totalProducts: 260, totalCartons: 52 });
+      expect('nearestCounts' in blank).toBe(false);
+    });
+
+    const six = { ...DEFAULT_INPUTS, boxesPerCarton: 6 };
+    const r6 = optimize(six);
+
+    it('uses only cartons of exactly N boxes', () => {
+      expect(r6.emptyReason).toBeNull();
+      expect(r6.truncated).toBe(false);
+      expect(r6.layouts.length).toBeGreaterThan(0);
+      expect(r6.layouts.every((l) => l.layout.carton.boxesPerCarton === 6)).toBe(true);
+      expect(r6.layouts.every((l) => l.layout.totalProducts === 6 * l.layout.totalCartons)).toBe(
+        true,
+      );
+      expect('nearestCounts' in r6).toBe(false);
+    });
+
+    it('places every carton of N inside the usable space without overlaps', () => {
+      const { x, y } = usableFootprint(six);
+      const size = { x, y, z: usableHeight(six) };
+      for (const { layout } of r6.layouts) {
+        const placed = cartonPlacements(layout, six);
+        expect(placed).toHaveLength(layout.totalCartons);
+        expect(overlappingPairs(placed)).toBe(0);
+        expect(boxesOutside(placed, size)).toBe(0);
+      }
+    });
+
+    it('reports NO_CARTON_WITH_COUNT with the nearest achievable counts', () => {
+      expect(optimize({ ...DEFAULT_INPUTS, boxesPerCarton: 7 })).toEqual({
+        layouts: [],
+        candidatesEvaluated: 0,
+        emptyReason: 'NO_CARTON_WITH_COUNT',
+        truncated: false,
+        nearestCounts: { below: 6, above: 8 },
+      });
+      expect(optimize({ ...DEFAULT_INPUTS, boxesPerCarton: 50 })).toMatchObject({
+        layouts: [],
+        emptyReason: 'NO_CARTON_WITH_COUNT',
+        nearestCounts: { below: 10, above: null },
+      });
+    });
+
+    it('reports NO_CARTON_FITS when no carton fits at all', () => {
+      const r = optimize({
+        ...DEFAULT_INPUTS,
+        product: { length: 30, width: 8, height: 4 },
+        boxesPerCarton: 2,
+      });
+      expect(r).toMatchObject({ layouts: [], emptyReason: 'NO_CARTON_FITS' });
+      expect('nearestCounts' in r).toBe(false);
+    });
+
+    it('reports CARTON_EXCEEDS_PALLET when cartons of N exist but none can be placed', () => {
+      const r = optimize({
+        ...DEFAULT_INPUTS,
+        pallet: { length: 50, width: 42, height: 5.5 },
+        boxesPerCarton: 6,
+      });
+      expect(r).toMatchObject({ layouts: [], emptyReason: 'CARTON_EXCEEDS_PALLET' });
+      expect('nearestCounts' in r).toBe(false);
+    });
+  });
 
   it('marks the result truncated when the candidate list was capped', () => {
     const r = optimize(

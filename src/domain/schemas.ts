@@ -7,7 +7,7 @@ import type { Inputs, InputsDraft, OrientationCode, Preset, Scenario } from './t
 const POSITIVE = 'Must be greater than 0';
 const NEGATIVE = 'Cannot be negative';
 const PALLET_HEIGHT_MSG = `Pallet height must be greater than ${PALLET_HEIGHT} inches`;
-const TARGET_MSG = 'Enter a whole number of 1 or more';
+const WHOLE_NUMBER_MSG = 'Enter a whole number of 1 or more';
 const CUSTOM_MSG = 'Select at least one orientation';
 
 const dimension = z.number({ error: 'Enter a number' }).gt(0, { error: POSITIVE });
@@ -20,13 +20,17 @@ const palletDims = z.object({
   height: z.number({ error: 'Enter a number' }).gt(PALLET_HEIGHT, { error: PALLET_HEIGHT_MSG }),
 });
 
+const wholeNumber = z.number().int({ error: WHOLE_NUMBER_MSG }).min(1, { error: WHOLE_NUMBER_MSG });
+
 const orientation = z.enum(['LWH', 'LHW', 'WLH', 'WHL', 'HLW', 'HWL']);
 
 const inputsShape = {
   pallet: palletDims,
   product: dims,
   maxCarton: dims,
-  targetQuantity: z.number().int({ error: TARGET_MSG }).min(1, { error: TARGET_MSG }).nullable(),
+  targetQuantity: wholeNumber.nullable(),
+  // Added in Round 2: data saved before it has no such key and reads as blank.
+  boxesPerCarton: wholeNumber.nullable().default(null),
   leeway: nonNegative,
   wallThickness: nonNegative,
   overhang: nonNegative,
@@ -52,6 +56,7 @@ export const presetSchema: z.ZodType<Preset> = z
     wallThickness: inputsShape.wallThickness,
     overhang: inputsShape.overhang,
     targetQuantity: inputsShape.targetQuantity,
+    boxesPerCarton: inputsShape.boxesPerCarton,
     rotationMode: inputsShape.rotationMode,
     customOrientations: inputsShape.customOrientations,
     keepCartonsUpright: inputsShape.keepCartonsUpright,
@@ -94,6 +99,7 @@ export function draftFromInputs(inputs: Inputs): InputsDraft {
     product: dimsDraft(inputs.product),
     maxCarton: dimsDraft(inputs.maxCarton),
     targetQuantity: inputs.targetQuantity === null ? '' : String(inputs.targetQuantity),
+    boxesPerCarton: inputs.boxesPerCarton === null ? '' : String(inputs.boxesPerCarton),
     leeway: String(inputs.leeway),
     wallThickness: String(inputs.wallThickness),
     overhang: String(inputs.overhang),
@@ -134,19 +140,25 @@ export function parseDraft(draft: InputsDraft): ParseResult {
     height: num(`${key}.height`, draft[key].height),
   });
 
-  let targetQuantity: number | null = null;
-  if (draft.targetQuantity.trim() !== '') {
-    const parsed = parseNumber(draft.targetQuantity);
-    if (typeof parsed === 'string')
-      errors.targetQuantity = parsed === 'Required' ? TARGET_MSG : parsed;
-    else targetQuantity = parsed;
-  }
+  // Optional whole numbers: blank is null; the schema checks whole and at least 1.
+  const optionalWhole = (key: 'targetQuantity' | 'boxesPerCarton'): number | null => {
+    if (draft[key].trim() === '') return null;
+    const parsed = parseNumber(draft[key]);
+    if (typeof parsed === 'string') {
+      errors[key] = parsed === 'Required' ? WHOLE_NUMBER_MSG : parsed;
+      return null;
+    }
+    return parsed;
+  };
+  const targetQuantity = optionalWhole('targetQuantity');
+  const boxesPerCarton = optionalWhole('boxesPerCarton');
 
   const candidate: Inputs = {
     pallet: dimsOf('pallet'),
     product: dimsOf('product'),
     maxCarton: dimsOf('maxCarton'),
     targetQuantity,
+    boxesPerCarton,
     leeway: num('leeway', draft.leeway),
     wallThickness: num('wallThickness', draft.wallThickness),
     overhang: num('overhang', draft.overhang),

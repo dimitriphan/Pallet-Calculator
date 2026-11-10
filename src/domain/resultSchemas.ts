@@ -61,8 +61,12 @@ const rankedLayout = z.object({
 export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   layouts: z.array(rankedLayout),
   candidatesEvaluated: num,
-  emptyReason: z.enum(['NO_CARTON_FITS', 'CARTON_EXCEEDS_PALLET']).nullable(),
+  emptyReason: z
+    .enum(['NO_CARTON_FITS', 'CARTON_EXCEEDS_PALLET', 'NO_CARTON_WITH_COUNT'])
+    .nullable(),
   truncated: z.boolean(),
+  // Added in Round 2: optional, so results saved before it still load.
+  nearestCounts: z.object({ below: num.nullable(), above: num.nullable() }).optional(),
 });
 
 /** Analytics as stored, where fields added after the first release may be missing. */

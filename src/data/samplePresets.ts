@@ -12,6 +12,7 @@ function fromDefaults(id: string, name: string, pallet: Preset['pallet']): Prese
     wallThickness: d.wallThickness,
     overhang: d.overhang,
     targetQuantity: d.targetQuantity,
+    boxesPerCarton: null,
     rotationMode: d.rotationMode,
     customOrientations: [...d.customOrientations],
     keepCartonsUpright: d.keepCartonsUpright,

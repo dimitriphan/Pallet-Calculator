@@ -9,6 +9,7 @@ export function presetFieldsOf(i: Inputs): Omit<Preset, 'id' | 'name' | 'advance
     wallThickness: i.wallThickness,
     overhang: i.overhang,
     targetQuantity: i.targetQuantity,
+    boxesPerCarton: i.boxesPerCarton,
     rotationMode: i.rotationMode,
     customOrientations: [...i.customOrientations],
     keepCartonsUpright: i.keepCartonsUpright,

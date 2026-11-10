@@ -1,5 +1,5 @@
 import type { Inputs, Layout, OptimizeResult } from '../domain/types';
-import { generateCartonCandidatesWithInfo } from './packing/cartons';
+import { achievableCounts, generateCartonCandidatesWithInfo } from './packing/cartons';
 import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
 import { buildLayouts, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
@@ -29,7 +29,7 @@ export function optimize(
     emptyReason,
     truncated: capped,
   });
-  if (candidates.length === 0) return empty('NO_CARTON_FITS');
+  if (candidates.length === 0) return noCandidates(i, empty);
   if (!(usableHeight(i) > 0)) return empty('CARTON_EXCEEDS_PALLET');
 
   const available = availableVolume(i);
@@ -68,6 +68,26 @@ export function optimize(
     candidatesEvaluated: evaluated,
     emptyReason: null,
     truncated: capped || timedOut,
+  };
+}
+
+/**
+ * The empty result when no carton was generated. With a desired boxes per carton N, cartons
+ * of other counts may still fit: then report the nearest achievable counts on each side.
+ */
+function noCandidates(
+  i: Inputs,
+  empty: (reason: OptimizeResult['emptyReason']) => OptimizeResult,
+): OptimizeResult {
+  const n = i.boxesPerCarton;
+  if (n === null) return empty('NO_CARTON_FITS');
+  const counts = achievableCounts(i);
+  if (counts.length === 0) return empty('NO_CARTON_FITS');
+  const below = counts.filter((c) => c < n);
+  const above = counts.filter((c) => c > n);
+  return {
+    ...empty('NO_CARTON_WITH_COUNT'),
+    nearestCounts: { below: below.at(-1) ?? null, above: above[0] ?? null },
   };
 }
 

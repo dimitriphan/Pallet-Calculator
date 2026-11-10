@@ -14,6 +14,7 @@ export interface Inputs {
   product: Dims;
   maxCarton: Dims;
   targetQuantity: number | null;
+  boxesPerCarton: number | null; // null = the optimizer chooses
   leeway: number;
   wallThickness: number;
   overhang: number;
@@ -28,6 +29,7 @@ export interface InputsDraft {
   product: Record<keyof Dims, string>;
   maxCarton: Record<keyof Dims, string>;
   targetQuantity: string;
+  boxesPerCarton: string; // '' = blank
   leeway: string;
   wallThickness: string;
   overhang: string;
@@ -90,13 +92,15 @@ export interface RankedLayout {
   explanation: string;
 }
 
-export type EmptyReason = 'NO_CARTON_FITS' | 'CARTON_EXCEEDS_PALLET';
+export type EmptyReason = 'NO_CARTON_FITS' | 'CARTON_EXCEEDS_PALLET' | 'NO_CARTON_WITH_COUNT';
 
 export interface OptimizeResult {
   layouts: RankedLayout[];
   candidatesEvaluated: number;
   emptyReason: EmptyReason | null;
   truncated: boolean;
+  /** Only with NO_CARTON_WITH_COUNT: the nearest achievable boxes per carton on each side. */
+  nearestCounts?: { below: number | null; above: number | null };
 }
 
 export interface Preset {
@@ -108,6 +112,7 @@ export interface Preset {
   wallThickness: number;
   overhang: number;
   targetQuantity: number | null;
+  boxesPerCarton: number | null;
   rotationMode: RotationMode;
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;

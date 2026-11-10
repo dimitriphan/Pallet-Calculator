@@ -21,7 +21,13 @@ export interface InputsState {
 
 const DIM_GROUPS = ['pallet', 'product', 'maxCarton'] as const;
 const DIM_KEYS = ['length', 'width', 'height'] as const;
-const SCALAR_FIELDS = ['targetQuantity', 'leeway', 'wallThickness', 'overhang'] as const;
+const SCALAR_FIELDS = [
+  'targetQuantity',
+  'boxesPerCarton',
+  'leeway',
+  'wallThickness',
+  'overhang',
+] as const;
 
 const dimsDraftSchema = z.object({ length: z.string(), width: z.string(), height: z.string() });
 const orientationSchema = z.enum(['LWH', 'LHW', 'WLH', 'WHL', 'HLW', 'HWL']);
@@ -30,6 +36,8 @@ const draftShapeSchema = z.object({
   product: dimsDraftSchema,
   maxCarton: dimsDraftSchema,
   targetQuantity: z.string(),
+  // Added in Round 2: a draft remembered before it has no such key and reads as blank.
+  boxesPerCarton: z.string().default(''),
   leeway: z.string(),
   wallThickness: z.string(),
   overhang: z.string(),

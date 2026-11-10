@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../../domain/constants';
 import type { CartonCandidate } from '../../domain/types';
 import {
+  achievableCounts,
   cartonKey,
   generateCartonCandidates,
   generateCartonCandidatesWithInfo,
@@ -123,5 +124,110 @@ describe('generateCartonCandidatesWithInfo', () => {
         (r.candidates[k] as CartonCandidate).boxesPerCarton,
       );
     }
+  });
+});
+
+describe('exact boxes per carton', () => {
+  it('lists the achievable counts of the unrestricted candidates, ascending', () => {
+    expect(achievableCounts(DEFAULT_INPUTS)).toEqual([1, 2, 3, 4, 5, 6, 8, 10]);
+    expect(achievableCounts({ ...DEFAULT_INPUTS, boxesPerCarton: 7 })).toEqual([
+      1, 2, 3, 4, 5, 6, 8, 10,
+    ]);
+    expect(
+      achievableCounts({ ...DEFAULT_INPUTS, product: { length: 30, width: 8, height: 4 } }),
+    ).toEqual([]);
+  });
+
+  it('returns only cartons of exactly N boxes, not truncated', () => {
+    const ten = generateCartonCandidatesWithInfo({ ...DEFAULT_INPUTS, boxesPerCarton: 10 });
+    expect(ten.truncated).toBe(false);
+    expect(ten.candidates.map((c) => c.counts)).toEqual([{ L: 1, W: 2, H: 5 }]);
+    expect(
+      generateCartonCandidates({ ...DEFAULT_INPUTS, boxesPerCarton: 6 }).map((c) => c.counts),
+    ).toEqual([{ L: 1, W: 2, H: 3 }]);
+    expect(generateCartonCandidates({ ...DEFAULT_INPUTS, boxesPerCarton: 7 })).toEqual([]);
+  });
+
+  it('builds the same carton as the unrestricted path', () => {
+    const all = generateCartonCandidates(DEFAULT_INPUTS);
+    for (const n of [1, 2, 3, 4, 5, 6, 8, 10]) {
+      expect(generateCartonCandidates({ ...DEFAULT_INPUTS, boxesPerCarton: n })).toEqual(
+        all.filter((c) => c.boxesPerCarton === n),
+      );
+    }
+  });
+
+  it('agrees with the unrestricted candidates filtered by count, for every N', () => {
+    const i = {
+      ...DEFAULT_INPUTS,
+      rotationMode: 'upright' as const,
+      product: { length: 2, width: 3, height: 5 },
+      leeway: 0,
+      wallThickness: 0,
+      maxCarton: { length: 20, width: 18, height: 16 },
+    };
+    const all = generateCartonCandidates(i);
+    expect(generateCartonCandidatesWithInfo(i).truncated).toBe(false);
+    for (let n = 1; n <= 40; n++) {
+      const exact = generateCartonCandidatesWithInfo({ ...i, boxesPerCarton: n });
+      expect(exact.truncated).toBe(false);
+      expect(exact.candidates.map(cartonKey).sort()).toEqual(
+        all
+          .filter((c) => c.boxesPerCarton === n)
+          .map(cartonKey)
+          .sort(),
+      );
+    }
+  });
+
+  it('merges physically identical cartons of N under full rotation', () => {
+    const cube = {
+      ...DEFAULT_INPUTS,
+      product: { length: 5, width: 5, height: 5 },
+      leeway: 0,
+      wallThickness: 0,
+      maxCarton: { length: 10, width: 5, height: 5 },
+    };
+    expect(generateCartonCandidates({ ...cube, boxesPerCarton: 2 })).toEqual(
+      generateCartonCandidates(cube).filter((c) => c.boxesPerCarton === 2),
+    );
+    expect(generateCartonCandidates({ ...cube, boxesPerCarton: 2 })).toHaveLength(1);
+    expect(
+      generateCartonCandidates({ ...cube, rotationMode: 'upright', boxesPerCarton: 2 }),
+    ).toHaveLength(3);
+  });
+
+  it('is not limited by the candidate cap for a tiny product', () => {
+    const t0 = performance.now();
+    const r = generateCartonCandidatesWithInfo({
+      ...DEFAULT_INPUTS,
+      product: { length: 0.2, width: 0.2, height: 0.2 },
+      boxesPerCarton: 1000,
+    });
+    expect(performance.now() - t0).toBeLessThan(1000);
+    expect(r.truncated).toBe(false);
+    expect(r.candidates.length).toBeGreaterThan(0);
+    expect(r.candidates.every((c) => c.boxesPerCarton === 1000)).toBe(true);
+    // The unrestricted list is capped at the biggest cartons and holds none of 1000.
+    const capped = generateCartonCandidatesWithInfo({
+      ...DEFAULT_INPUTS,
+      product: { length: 0.2, width: 0.2, height: 0.2 },
+    });
+    expect(capped.candidates.some((c) => c.boxesPerCarton === 1000)).toBe(false);
+  });
+
+  it('returns quickly for large counts', () => {
+    for (const n of [999983, 1000000]) {
+      const t = performance.now();
+      generateCartonCandidatesWithInfo({ ...DEFAULT_INPUTS, boxesPerCarton: n });
+      expect(performance.now() - t).toBeLessThan(500);
+    }
+    const t = performance.now();
+    generateCartonCandidatesWithInfo({
+      ...DEFAULT_INPUTS,
+      product: { length: 0.01, width: 0.01, height: 0.01 },
+      boxesPerCarton: 720720,
+    });
+    expect(performance.now() - t).toBeLessThan(500);
   });
 });

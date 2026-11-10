@@ -32,6 +32,7 @@ const other: Inputs = {
   pallet: { length: 48, width: 40, height: 60 },
   maxCarton: { length: 20, width: 10, height: 10 },
   targetQuantity: 100,
+  boxesPerCarton: 6,
   leeway: 1,
   wallThickness: 0.5,
   overhang: 2,
@@ -71,6 +72,49 @@ describe('presets store', () => {
       true,
     );
     usePresetsStore.getState().remove(p.id);
+  });
+
+  it('stores boxesPerCarton, copies it back and counts it as a preset change', () => {
+    const { store } = setup();
+    const p = store.getState().create('Six', other);
+    expect(p.boxesPerCarton).toBe(6);
+    expect(presetToInputs(p, DEFAULT_INPUTS).boxesPerCarton).toBe(6);
+    const loaded = presetToInputs(p, DEFAULT_INPUTS);
+    expect(inputsMatchPreset(loaded, p)).toBe(true);
+    expect(inputsMatchPreset({ ...loaded, boxesPerCarton: null }, p)).toBe(false);
+    expect(inputsMatchPreset({ ...loaded, boxesPerCarton: 7 }, p)).toBe(false);
+  });
+
+  it('sample presets leave boxesPerCarton blank', () => {
+    expect(samplePresets.every((p) => p.boxesPerCarton === null)).toBe(true);
+  });
+
+  it('loads presets stored by Round 1, reading boxesPerCarton as null', () => {
+    const storage = new FakeStorage();
+    const round1 = samplePresets.map((p) => {
+      const copy = structuredClone(p) as unknown as Record<string, unknown>;
+      delete copy.boxesPerCarton;
+      return copy;
+    });
+    storage.setItem(STORAGE_KEYS.presets, JSON.stringify({ version: 1, items: round1 }));
+    const { store, notices } = setup(storage);
+    expect(notices).toEqual([]);
+    expect(store.getState().presets).toEqual(samplePresets);
+  });
+
+  it('imports every preset of a Round 1 export, reading boxesPerCarton as null', () => {
+    const { store } = setup();
+    const round1 = JSON.parse(store.getState().exportJson()) as {
+      presets: Record<string, unknown>[];
+    };
+    for (const p of round1.presets) delete p.boxesPerCarton;
+    expect(store.getState().importJson(JSON.stringify(round1))).toEqual({
+      imported: 2,
+      skipped: 0,
+    });
+    const imported = store.getState().presets.slice(2);
+    expect(imported).toHaveLength(2);
+    expect(imported.every((p) => p.boxesPerCarton === null)).toBe(true);
   });
 
   it('creates, updates, activates and removes with persistence', () => {

@@ -98,11 +98,15 @@ export function LayoutComparisonTable() {
         </h2>
       </div>
       <StatusLine />
-      {result && result.layouts.length === 0 && result.emptyReason && (
-        <p className="rounded border border-gray-200 bg-white px-3 py-4 text-sm text-gray-700">
-          {EMPTY_COPY[result.emptyReason]}
-        </p>
-      )}
+      {/* NO_CARTON_WITH_COUNT gets its message together with the boxes-per-carton field. */}
+      {result &&
+        result.layouts.length === 0 &&
+        result.emptyReason &&
+        result.emptyReason !== 'NO_CARTON_WITH_COUNT' && (
+          <p className="rounded border border-gray-200 bg-white px-3 py-4 text-sm text-gray-700">
+            {EMPTY_COPY[result.emptyReason]}
+          </p>
+        )}
       {rows.length > 0 && (
         <div className="overflow-x-auto rounded border border-gray-200 bg-white">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">

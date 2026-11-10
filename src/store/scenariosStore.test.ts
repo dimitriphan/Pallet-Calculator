@@ -65,6 +65,18 @@ describe('scenarios store', () => {
     expect(got).toEqual(s);
   });
 
+  it('loads a scenario stored by Round 1, reading boxesPerCarton as null', () => {
+    const storage = new FakeStorage();
+    const s = setup(storage).store.getState().save('Old', DEFAULT_INPUTS, result, 1);
+    const round1 = structuredClone(s) as unknown as { inputs: Record<string, unknown> };
+    delete round1.inputs.boxesPerCarton;
+    storage.setItem(STORAGE_KEYS.scenarios, JSON.stringify({ version: 1, items: [round1] }));
+    const reloaded = setup(storage);
+    expect(reloaded.notices).toEqual([]);
+    expect(reloaded.store.getState().scenarios).toEqual([s]);
+    expect(reloaded.store.getState().scenarios[0]!.inputs.boxesPerCarton).toBeNull();
+  });
+
   it('keeps state and reports when storage is full', () => {
     const storage = new FakeStorage();
     storage.failWrites = true;

@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from './constants';
 import { computeAnalytics } from '../engine/analytics/analytics';
 import { optimize } from '../engine/optimize';
-import { draftFromInputs, inputsSchema, parseDraft, scenarioSchema } from './schemas';
-import type { InputsDraft } from './types';
+import { optimizeResultSchema } from './resultSchemas';
+import { draftFromInputs, inputsSchema, parseDraft, presetSchema, scenarioSchema } from './schemas';
+import type { InputsDraft, Preset } from './types';
 
 function err(draft: InputsDraft): Record<string, string> {
   const r = parseDraft(draft);
@@ -66,6 +67,25 @@ describe('parseDraft', () => {
     );
     expect(parseDraft({ ...d, rotationMode: 'custom', customOrientations: ['LWH'] }).ok).toBe(true);
   });
+  it('validates the desired boxes per carton', () => {
+    expect(parseDraft({ ...d, boxesPerCarton: '' })).toMatchObject({
+      ok: true,
+      inputs: { boxesPerCarton: null },
+    });
+    expect(parseDraft({ ...d, boxesPerCarton: '   ' })).toMatchObject({
+      ok: true,
+      inputs: { boxesPerCarton: null },
+    });
+    expect(parseDraft({ ...d, boxesPerCarton: ' 6 ' })).toMatchObject({
+      ok: true,
+      inputs: { boxesPerCarton: 6 },
+    });
+    for (const bad of ['0', '2.5'])
+      expect(err({ ...d, boxesPerCarton: bad }).boxesPerCarton).toBe(
+        'Enter a whole number of 1 or more',
+      );
+    expect(err({ ...d, boxesPerCarton: 'abc' }).boxesPerCarton).toBe('Enter a number');
+  });
   it('reports several errors at once', () => {
     const errors = err({ ...withProductLength('x'), leeway: '' });
     expect(Object.keys(errors).sort()).toEqual(['leeway', 'product.length']);
@@ -77,6 +97,67 @@ describe('inputsSchema', () => {
     const r = inputsSchema.safeParse({ ...DEFAULT_INPUTS, leeway: -1 });
     expect(r.success).toBe(false);
     expect(r.error?.issues[0]?.message).toBe('Cannot be negative');
+  });
+
+  it('accepts Round 1 inputs without boxesPerCarton and reads them as null', () => {
+    const round1Inputs: Record<string, unknown> = { ...DEFAULT_INPUTS };
+    delete round1Inputs.boxesPerCarton;
+    expect(inputsSchema.parse(round1Inputs).boxesPerCarton).toBeNull();
+    expect(inputsSchema.parse({ ...DEFAULT_INPUTS, boxesPerCarton: 6 }).boxesPerCarton).toBe(6);
+  });
+
+  it('rejects a boxesPerCarton that is not a whole number of 1 or more', () => {
+    for (const bad of [0, 2.5, -1, '6'])
+      expect(inputsSchema.safeParse({ ...DEFAULT_INPUTS, boxesPerCarton: bad }).success).toBe(
+        false,
+      );
+  });
+});
+
+describe('presetSchema', () => {
+  const preset: Preset = {
+    id: 'p1',
+    name: 'Mine',
+    pallet: DEFAULT_INPUTS.pallet,
+    maxCarton: DEFAULT_INPUTS.maxCarton,
+    leeway: DEFAULT_INPUTS.leeway,
+    wallThickness: DEFAULT_INPUTS.wallThickness,
+    overhang: DEFAULT_INPUTS.overhang,
+    targetQuantity: DEFAULT_INPUTS.targetQuantity,
+    boxesPerCarton: 4,
+    rotationMode: DEFAULT_INPUTS.rotationMode,
+    customOrientations: [],
+    keepCartonsUpright: false,
+    advanced: {},
+  };
+
+  it('keeps a stored boxesPerCarton', () => {
+    expect(presetSchema.parse(structuredClone(preset))).toEqual(preset);
+  });
+
+  it('accepts a Round 1 preset without boxesPerCarton and reads it as null', () => {
+    const round1Preset: Record<string, unknown> = { ...preset };
+    delete round1Preset.boxesPerCarton;
+    expect(presetSchema.parse(round1Preset)).toEqual({ ...preset, boxesPerCarton: null });
+  });
+});
+
+describe('optimizeResultSchema', () => {
+  it('accepts the new empty reason with the nearest achievable counts', () => {
+    const r = {
+      layouts: [],
+      candidatesEvaluated: 0,
+      emptyReason: 'NO_CARTON_WITH_COUNT',
+      truncated: false,
+      nearestCounts: { below: 6, above: null },
+    };
+    expect(optimizeResultSchema.parse(r)).toEqual(r);
+  });
+
+  it('accepts a Round 1 result without nearestCounts', () => {
+    const r = optimize(DEFAULT_INPUTS);
+    expect('nearestCounts' in r).toBe(false);
+    expect(optimizeResultSchema.parse(structuredClone(r))).toEqual(r);
   });
 });
 
@@ -105,6 +186,17 @@ describe('scenarioSchema', () => {
     delete old.analytics.carton.layerOrientations;
     const parsed = scenarioSchema.safeParse(old);
     expect(parsed.success).toBe(true);
+    expect(parsed.data?.analytics).toEqual(analytics);
+  });
+
+  it('loads a Round 1 scenario without boxesPerCarton, reading it as null', () => {
+    const old = structuredClone(scenario) as unknown as { inputs: Record<string, unknown> };
+    delete old.inputs.boxesPerCarton;
+    expect('boxesPerCarton' in old.inputs).toBe(false);
+    const parsed = scenarioSchema.safeParse(old);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.inputs).toEqual(DEFAULT_INPUTS);
+    expect(parsed.data?.inputs.boxesPerCarton).toBeNull();
     expect(parsed.data?.analytics).toEqual(analytics);
   });
 });

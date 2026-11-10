@@ -12,6 +12,7 @@ export const DEFAULT_INPUTS: Inputs = {
   product: { length: 12, width: 8, height: 4 },
   maxCarton: { length: 24, width: 18, height: 16 },
   targetQuantity: null,
+  boxesPerCarton: null,
   leeway: 0.5,
   wallThickness: 0.25,
   overhang: 0,

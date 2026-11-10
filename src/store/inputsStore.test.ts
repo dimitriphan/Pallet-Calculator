@@ -66,11 +66,41 @@ describe('inputsStore', () => {
     expect(createInputsStore(storage).getState().draft.pallet.length).toBe('60');
   });
 
+  it('sets the desired boxes per carton', () => {
+    const store = createInputsStore(new FakeStorage());
+    expect(store.getState().draft.boxesPerCarton).toBe('');
+    store.getState().setField('boxesPerCarton', '6');
+    expect(store.getState().draft.boxesPerCarton).toBe('6');
+    expect(store.getState().parsed).toEqual({
+      ok: true,
+      inputs: { ...DEFAULT_INPUTS, boxesPerCarton: 6 },
+    });
+    store.getState().setField('boxesPerCarton.x', '7');
+    expect(store.getState().draft.boxesPerCarton).toBe('6');
+  });
+
+  it('restores a remembered Round 1 draft without boxesPerCarton and reads it as blank', () => {
+    const storage = new FakeStorage();
+    const round1 = draftFromInputs({ ...DEFAULT_INPUTS, leeway: 2 }) as unknown as Record<
+      string,
+      unknown
+    >;
+    delete round1.boxesPerCarton;
+    expect('boxesPerCarton' in round1).toBe(false);
+    storage.setItem(STORAGE_KEYS.inputs, JSON.stringify(round1));
+    const s = createInputsStore(storage).getState();
+    expect(s.draft.leeway).toBe('2');
+    expect(s.draft.boxesPerCarton).toBe('');
+    expect(s.draft).toEqual(draftFromInputs({ ...DEFAULT_INPUTS, leeway: 2 }));
+    expect(s.parsed).toEqual({ ok: true, inputs: { ...DEFAULT_INPUTS, leeway: 2 } });
+  });
+
   it('falls back to defaults for malformed or wrongly shaped stored drafts', () => {
     for (const bad of [
       'not json',
       '{"pallet":1}',
       JSON.stringify({ ...draftFromInputs(DEFAULT_INPUTS), leeway: 5 }),
+      JSON.stringify({ ...draftFromInputs(DEFAULT_INPUTS), boxesPerCarton: 5 }),
     ]) {
       const storage = new FakeStorage();
       storage.setItem(STORAGE_KEYS.inputs, bad);
@@ -98,6 +128,7 @@ describe('inputsStore', () => {
       pallet: { length: 48, width: 40, height: 60 },
       maxCarton: DEFAULT_INPUTS.maxCarton,
       targetQuantity: 100,
+      boxesPerCarton: 4,
       leeway: 1,
       wallThickness: DEFAULT_INPUTS.wallThickness,
       overhang: DEFAULT_INPUTS.overhang,
@@ -111,6 +142,7 @@ describe('inputsStore', () => {
     expect(s.draft.pallet).toEqual({ length: '48', width: '40', height: '60' });
     expect(s.draft.leeway).toBe('1');
     expect(s.draft.targetQuantity).toBe('100');
+    expect(s.draft.boxesPerCarton).toBe('4');
     expect(s.parsed.ok).toBe(false);
     store.getState().setField('product.length', '12');
     expect(store.getState().parsed).toEqual({
