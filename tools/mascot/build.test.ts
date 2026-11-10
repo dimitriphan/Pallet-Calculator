@@ -36,6 +36,61 @@ function diff(a: Grid, b: Grid) {
   return cells(a).filter((c) => b[c.y]![c.x] !== c.ch);
 }
 
+/** First row holding a head pixel (main brown). */
+function headTop(grid: Grid): number {
+  return grid.findIndex((row) => row.includes('B'));
+}
+
+/** Leaf pixels (above the head) grouped by edge contact, ordered left to right. */
+function leafGroups(grid: Grid) {
+  const top = headTop(grid);
+  const left = filled(grid).filter((c) => c.ch === 'G' && c.y < top);
+  const groups: { x: number; y: number }[][] = [];
+  const seen = new Set<string>();
+  for (const start of left) {
+    if (seen.has(`${start.x},${start.y}`)) continue;
+    const group: { x: number; y: number }[] = [];
+    const queue = [start];
+    seen.add(`${start.x},${start.y}`);
+    while (queue.length > 0) {
+      const c = queue.pop()!;
+      group.push({ x: c.x, y: c.y });
+      for (const n of left) {
+        const key = `${n.x},${n.y}`;
+        if (!seen.has(key) && Math.abs(n.x - c.x) + Math.abs(n.y - c.y) === 1) {
+          seen.add(key);
+          queue.push(n);
+        }
+      }
+    }
+    groups.push(group);
+  }
+  return groups.sort((a, b) => Math.min(...a.map((c) => c.x)) - Math.min(...b.map((c) => c.x)));
+}
+
+/** True when the cell is transparent and figure pixels lie beyond it in all four directions. */
+function enclosed(grid: Grid, x: number, y: number): boolean {
+  const row = grid[y]!;
+  const column = grid.map((r) => r[x]);
+  return (
+    row[x] === '.' &&
+    row.slice(0, x).replace(/\./g, '').length > 0 &&
+    row.slice(x + 1).replace(/\./g, '').length > 0 &&
+    column.slice(0, y).some((ch) => ch !== '.') &&
+    column.slice(y + 1).some((ch) => ch !== '.')
+  );
+}
+
+/** Rows of the head ring (head top to the row above the bandana) holding an enclosed hole. */
+function openingRows(grid: Grid): number[] {
+  const end = grid.findIndex((row) => row.includes('K'));
+  const rows: number[] = [];
+  for (let y = headTop(grid); y < (end < 0 ? grid.length : end); y++) {
+    if ([...grid[y]!].some((_, x) => enclosed(grid, x, y))) rows.push(y);
+  }
+  return rows;
+}
+
 function runsOf(row: string): number {
   return row.split('.').filter((part) => part.length > 0).length;
 }
@@ -88,6 +143,53 @@ describe('mascot poses', () => {
         expect(row, name).toHaveLength(32);
         for (const ch of row) expect(KEYS, `${name} uses ${ch}`).toContain(ch);
       }
+    }
+  });
+
+  it('the palette is exactly the five mascot colours plus transparent', () => {
+    expect(PALETTE).toEqual({
+      B: '#945743',
+      S: '#79432F',
+      K: '#35403A',
+      G: '#7BCF80',
+      E: '#99E550',
+      '.': null,
+    });
+  });
+
+  it('the tab icon has a ring opening of at least 2 x 2, a stem and two separate leaves', () => {
+    const hasHole = TAB_ICON.some((row, y) =>
+      [...row].some(
+        (_, x) =>
+          enclosed(TAB_ICON, x, y) &&
+          enclosed(TAB_ICON, x + 1, y) &&
+          enclosed(TAB_ICON, x, y + 1) &&
+          enclosed(TAB_ICON, x + 1, y + 1),
+      ),
+    );
+    expect(hasHole).toBe(true);
+    expect(TAB_ICON.slice(0, headTop(TAB_ICON)).join('')).toContain('S');
+    expect(leafGroups(TAB_ICON)).toHaveLength(2);
+  });
+
+  it("idle's head opening is open through on consecutive rows, including the eye row", () => {
+    const rows = openingRows(idle);
+    const eyeRow = idle.findIndex((row) => row.includes('E'));
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    expect(rows).toEqual(rows.map((_, i) => rows[0]! + i));
+    expect(rows).toContain(eyeRow);
+  });
+
+  it('working and print raise each leaf tip exactly one row above idle', () => {
+    const idleLeaves = leafGroups(idle);
+    expect(idleLeaves).toHaveLength(2);
+    for (const frame of [...working, POSES.print]) {
+      const leaves = leafGroups(frame);
+      expect(leaves).toHaveLength(2);
+      leaves.forEach((leaf, i) => {
+        const topOf = (g: { y: number }[]) => Math.min(...g.map((c) => c.y));
+        expect(topOf(leaf)).toBe(topOf(idleLeaves[i]!) - 1);
+      });
     }
   });
 
