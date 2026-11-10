@@ -130,6 +130,10 @@ carton's length, width, and height, in that order. For Custom, an orientation
 is used inside the carton only if ticked, and the carton may be placed on the
 pallet only in ways that leave the product in a ticked orientation.
 
+Cartons can always be spun flat on the pallet, so what a ticked orientation
+controls in practice is which product dimension is vertical (the third letter
+of its code). LWH and WLH, for example, have the same effect.
+
 Consequence: a restrictive product setting also restricts how the carton may
 be turned on the pallet. "Keep Upright" for the product means cartons are
 never tipped.
@@ -202,6 +206,11 @@ independently.
 Packing and ranking run in a web worker. The main thread sends validated
 inputs and receives the ranked layouts. A new request supersedes an in-flight
 one; stale results are discarded. Input changes are debounced by about 300 ms.
+
+Cartons are evaluated in order of their best possible total, and evaluation
+stops after a 4 second budget. If the budget is reached, the result is marked
+as truncated and the UI says so. Very small boxes on a large pallet are the
+only expected trigger.
 
 ## 6. Ranking
 
