@@ -2,6 +2,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { AnalyticsTab } from './AnalyticsTab';
 import { ExplanationTab } from './ExplanationTab';
 import { SelectionTab } from './SelectionTab';
+import { StaleBadge } from './StaleBadge';
 import { useScene } from './StoreContext';
 import { useSelectedAnalytics } from './useSelectedAnalytics';
 
@@ -49,37 +50,35 @@ export function DetailsPanel() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <div
-        role="tablist"
-        aria-label="Details"
-        className="sticky top-0 z-10 flex border-b border-gray-200 bg-white px-2"
-        onKeyDown={onKeyDown}
-      >
-        {TABS.map((tab, k) => {
-          const isActive = tab === active;
-          return (
-            <button
-              key={tab}
-              ref={(el) => {
-                tabRefs.current[k] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`details-tab-${tab}`}
-              aria-selected={isActive}
-              aria-controls={isActive ? `details-panel-${tab}` : undefined}
-              tabIndex={isActive ? 0 : -1}
-              onClick={() => setActive(tab)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 ${
-                isActive
-                  ? 'border-blue-600 text-blue-700'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {tab}
-            </button>
-          );
-        })}
+      <div className="sticky top-0 z-10 flex items-center border-b border-gray-200 bg-white px-2">
+        <div role="tablist" aria-label="Details" className="flex" onKeyDown={onKeyDown}>
+          {TABS.map((tab, k) => {
+            const isActive = tab === active;
+            return (
+              <button
+                key={tab}
+                ref={(el) => {
+                  tabRefs.current[k] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`details-tab-${tab}`}
+                aria-selected={isActive}
+                aria-controls={isActive ? `details-panel-${tab}` : undefined}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActive(tab)}
+                className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 ${
+                  isActive
+                    ? 'border-blue-600 text-blue-700'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
+        <StaleBadge className="ml-auto" />
       </div>
       <div
         role="tabpanel"

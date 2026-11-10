@@ -37,6 +37,7 @@ export function buildCsv(p: ExportPayload): string {
   const rows: Row[] = [
     ['Exported at', p.exportedAt],
     ['Selected layout', sel.rank],
+    ['Status', p.status],
     ['Pallet length (in)', n(i.pallet.length)],
     ['Pallet width (in)', n(i.pallet.width)],
     ['Pallet height (in)', n(i.pallet.height)],

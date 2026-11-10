@@ -51,4 +51,16 @@ describe('captionLines', () => {
     expect(text).toMatch(/Carton: [\d.]+ × [\d.]+ × [\d.]+ in/);
     expect(text).toContain('2026-11-10');
   });
+
+  it('says when the result is out of date', () => {
+    const r = optimize(DEFAULT_INPUTS);
+    const now = new Date('2026-11-10T09:05:03Z');
+    const note = 'Out of date: inputs changed after this calculation';
+    expect(captionLines(buildExportPayload(DEFAULT_INPUTS, r, 0, now)).join('\n')).not.toContain(
+      note,
+    );
+    expect(captionLines(buildExportPayload(DEFAULT_INPUTS, r, 0, now, true)).join('\n')).toContain(
+      note,
+    );
+  });
 });

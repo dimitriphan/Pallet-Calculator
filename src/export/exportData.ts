@@ -1,8 +1,15 @@
 import type { Dims, Inputs, OptimizeResult, RankedLayout } from '../domain/types';
 import { cartonDisplayDims, computeAnalytics, type Analytics } from '../engine/analytics/analytics';
 
+/** What every export says when the result shown is older than the current inputs. */
+export const STALE_NOTE = 'Out of date: inputs changed after this calculation';
+
 export interface ExportPayload {
   exportedAt: string;
+  /** True when the inputs changed after this calculation (the result is shown out of date). */
+  stale: boolean;
+  /** "Current", or STALE_NOTE when stale. */
+  status: string;
   inputs: Inputs;
   selectedLayout: RankedLayout;
   analytics: Analytics;
@@ -24,11 +31,14 @@ export function buildExportPayload(
   result: OptimizeResult,
   selectedIndex: number,
   now: Date,
+  stale = false,
 ): ExportPayload {
   const selectedLayout = result.layouts[selectedIndex];
   if (!selectedLayout) throw new Error(`No layout at index ${selectedIndex}`);
   return {
     exportedAt: now.toISOString(),
+    stale,
+    status: stale ? STALE_NOTE : 'Current',
     inputs,
     selectedLayout,
     analytics: computeAnalytics(selectedLayout.layout, inputs),

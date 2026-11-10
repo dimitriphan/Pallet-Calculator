@@ -4,6 +4,7 @@ import { Header } from './ui/Header';
 import { InputsPanel } from './ui/InputsPanel';
 import { LayoutComparisonTable } from './ui/LayoutComparisonTable';
 import { Notices } from './ui/Notices';
+import { StaleBadge } from './ui/StaleBadge';
 import { ProductionSummary } from './ui/ProductionSummary';
 import { StoreProvider, type AppStores } from './ui/StoreContext';
 import { useAutoOptimize } from './ui/useAutoOptimize';
@@ -21,9 +22,10 @@ function Workspace() {
         <main className="min-w-0 space-y-4 overflow-y-auto p-4">
           <div
             data-testid="scene-slot"
-            className="h-[420px] overflow-hidden rounded border border-gray-300 bg-white"
+            className="relative h-[420px] overflow-hidden rounded border border-gray-300 bg-white"
           >
             <SceneSlot />
+            <StaleBadge className="pointer-events-none absolute bottom-2 left-2 z-10" />
           </div>
           <LayoutComparisonTable />
         </main>

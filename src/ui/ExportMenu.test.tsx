@@ -1,7 +1,7 @@
 import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useNoticesStore } from '../store/noticesStore';
-import { renderApp } from './testUtils';
+import { flush, renderApp } from './testUtils';
 
 const mocks = vi.hoisted(() => ({
   composePng: vi.fn(),
@@ -48,6 +48,21 @@ describe('ExportMenu', () => {
     const parsed = JSON.parse(await blob.text()) as { selectedLayout: { rank: number } };
     expect(parsed.selectedLayout.rank).toBe(1);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('exports an out-of-date result, saying so', async () => {
+    const { user } = await renderApp();
+    const length = screen.getAllByRole('textbox', { name: 'Length' })[0]!;
+    await user.clear(length);
+    await user.type(length, 'abc');
+    await flush();
+    await openMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'JSON' }));
+    const [blob] = mocks.downloadBlob.mock.calls[0] as [Blob, string];
+    expect(JSON.parse(await blob.text())).toMatchObject({
+      stale: true,
+      status: 'Out of date: inputs changed after this calculation',
+    });
   });
 
   it('downloads a CSV', async () => {

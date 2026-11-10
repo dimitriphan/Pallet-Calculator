@@ -82,6 +82,14 @@ describe('buildCsv', () => {
     expect(csvField('1,5')).toBe('"1,5"');
   });
 
+  it('states whether the result is out of date', () => {
+    expect(lines[3]).toBe('Status,Current');
+    const stale = buildCsv(buildExportPayload(CUBES, optimize(CUBES), 0, NOW, true));
+    expect(stale.split('\r\n')).toContain(
+      'Status,Out of date: inputs changed after this calculation',
+    );
+  });
+
   it('records the target when one is set', () => {
     const p = buildExportPayload({ ...CUBES, targetQuantity: 10 }, optimize(CUBES), 0, NOW);
     const out = buildCsv(p).split('\r\n');

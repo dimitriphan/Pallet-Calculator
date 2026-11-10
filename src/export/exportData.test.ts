@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
-import { buildExportPayload, exportFilename } from './exportData';
+import { buildExportPayload, exportFilename, STALE_NOTE } from './exportData';
 
 const CUBES: Inputs = {
   ...DEFAULT_INPUTS,
@@ -40,6 +40,15 @@ describe('buildExportPayload', () => {
 
   it('survives a JSON round trip', () => {
     expect(JSON.parse(JSON.stringify(payload))).toEqual(payload);
+  });
+
+  it('marks a current result as current and an out-of-date one as stale', () => {
+    expect(payload).toMatchObject({ stale: false, status: 'Current' });
+    expect(buildExportPayload(CUBES, result, 0, NOW, true)).toMatchObject({
+      stale: true,
+      status: 'Out of date: inputs changed after this calculation',
+    });
+    expect(STALE_NOTE).toBe('Out of date: inputs changed after this calculation');
   });
 
   it('throws on an index with no layout', () => {

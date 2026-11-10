@@ -27,6 +27,7 @@ export function ExportMenu() {
   const inputs = useResults((s) => s.inputs);
   const result = useResults((s) => s.result);
   const selectedIndex = useResults((s) => s.selectedIndex);
+  const stale = useResults((s) => s.stale);
   const captureViews = useScene((s) => s.captureViews);
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -97,7 +98,7 @@ export function ExportMenu() {
     close(true);
     if (!inputs || !result) return;
     const now = new Date();
-    const payload = buildExportPayload(inputs, result, selectedIndex, now);
+    const payload = buildExportPayload(inputs, result, selectedIndex, now, stale);
     const name = exportFilename(format, now);
     if (format === 'json') {
       downloadBlob(

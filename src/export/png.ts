@@ -39,7 +39,11 @@ export function captionLines(p: ExportPayload): string[] {
     ].join('   |   '),
     `Load: ${formatDims({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight })} in (including pallet)`,
     `Carton: ${formatDims(carton.outer)} in (outer)`,
-    `Layout ${p.selectedLayout.rank}   |   Exported ${p.exportedAt}`,
+    [
+      `Layout ${p.selectedLayout.rank}`,
+      `Exported ${p.exportedAt}`,
+      ...(p.stale ? [p.status] : []),
+    ].join('   |   '),
   ];
 }
 
