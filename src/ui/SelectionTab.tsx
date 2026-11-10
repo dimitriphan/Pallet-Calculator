@@ -2,11 +2,10 @@ import { PALLET_HEIGHT } from '../domain/constants';
 import type { Inputs, Layout } from '../domain/types';
 import type { Analytics } from '../engine/analytics/analytics';
 import { cartonPlacements, productsInCarton } from '../engine/packing/positions';
-import { formatDims, formatNumber } from '../engine/units/units';
 import type { Selection } from '../store/sceneStore';
 import { DetailRows } from './DetailRows';
+import { dimsText, fmtPct, lengthText, useUnit } from './format';
 
-const inches = (v: number) => `${formatNumber(v)} in`;
 const NOTHING = 'Click an object in the 3D view to see its details.';
 
 interface SelectionTabProps {
@@ -18,24 +17,29 @@ interface SelectionTabProps {
 
 /** Details of whatever is selected in the 3D view. */
 export function SelectionTab({ selection, layout, inputs, analytics }: SelectionTabProps) {
+  const unit = useUnit();
+  const length = (v: number) => lengthText(v, unit);
   if (selection?.kind === 'pallet') {
     const p = analytics.pallet;
     return (
       <DetailRows
         title="Pallet"
         rows={[
-          ['Overall utilization', `${formatNumber(analytics.totals.utilizationPct)}%`],
+          ['Overall utilization', fmtPct(analytics.totals.utilizationPct)],
           ['Total cartons', String(analytics.totals.cartons)],
           ['Total products', String(analytics.totals.products)],
           [
             'Load dimensions (L × W × H)',
-            `${formatDims({
-              length: p.loadLength,
-              width: p.loadWidth,
-              height: p.totalLoadHeight - PALLET_HEIGHT,
-            })} in`,
+            dimsText(
+              {
+                length: p.loadLength,
+                width: p.loadWidth,
+                height: p.totalLoadHeight - PALLET_HEIGHT,
+              },
+              unit,
+            ),
           ],
-          ['Total height with pallet', inches(p.totalLoadHeight)],
+          ['Total height with pallet', length(p.totalLoadHeight)],
         ]}
       />
     );
@@ -50,10 +54,10 @@ export function SelectionTab({ selection, layout, inputs, analytics }: Selection
           rows={[
             [
               'Dimensions as placed (x × y × z)',
-              `${formatDims({ length: carton.dx, width: carton.dy, height: carton.dz })} in`,
+              dimsText({ length: carton.dx, width: carton.dy, height: carton.dz }, unit),
             ],
             ['Products in carton', String(layout.carton.boxesPerCarton)],
-            ['Carton utilization', `${formatNumber(layout.carton.utilization * 100)}%`],
+            ['Carton utilization', fmtPct(layout.carton.utilization * 100)],
             ['Layer', String(carton.layerIndex + 1)],
           ]}
         />
@@ -66,10 +70,10 @@ export function SelectionTab({ selection, layout, inputs, analytics }: Selection
           <DetailRows
             title={`Product ${selection.productIndex + 1} in carton ${selection.cartonIndex + 1}`}
             rows={[
-              ['Dimensions (L × W × H)', `${formatDims(inputs.product)} in`],
-              ['X (from load corner)', inches(product.x)],
-              ['Y (from load corner)', inches(product.y)],
-              ['Z (above pallet top)', inches(product.z)],
+              ['Dimensions (L × W × H)', dimsText(inputs.product, unit)],
+              ['X (from load corner)', length(product.x)],
+              ['Y (from load corner)', length(product.y)],
+              ['Z (above pallet top)', length(product.z)],
             ]}
           />
         );

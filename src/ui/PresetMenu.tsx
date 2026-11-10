@@ -1,8 +1,8 @@
 import { useId, useState } from 'react';
-import { DEFAULT_INPUTS } from '../domain/constants';
-import { draftFromInputs, parseDraft } from '../domain/schemas';
-import type { InputsDraft, Preset } from '../domain/types';
+import type { Preset } from '../domain/types';
+import type { InputsState } from '../store/inputsStore';
 import { inputsMatchPreset } from '../store/presetsStore';
+import { defaultDraft, parseInUnit } from '../store/unitFields';
 import { BUTTON, ModalDialog } from './ModalDialog';
 import { NamePrompt } from './NamePrompt';
 import { PresetDialog } from './PresetDialog';
@@ -15,8 +15,21 @@ const NO_PRESET = '';
  * Whether the draft's preset-covered fields (everything but the product) parse and equal the
  * preset's. The product is swapped for the default so a product being edited does not matter.
  */
-function coveredFieldsMatch(draft: InputsDraft, preset: Preset): boolean {
-  const parsed = parseDraft({ ...draft, product: draftFromInputs(DEFAULT_INPUTS).product });
+function coveredFieldsMatch(
+  { draft, origins, unit }: Pick<InputsState, 'draft' | 'origins' | 'unit'>,
+  preset: Preset,
+): boolean {
+  const placeholder = defaultDraft(unit);
+  const parsed = parseInUnit(
+    { ...draft, product: placeholder.draft.product },
+    {
+      ...origins,
+      'product.length': placeholder.origins['product.length'],
+      'product.width': placeholder.origins['product.width'],
+      'product.height': placeholder.origins['product.height'],
+    },
+    unit,
+  );
   return parsed.ok && inputsMatchPreset(parsed.inputs, preset);
 }
 
@@ -29,6 +42,8 @@ export function PresetMenu() {
   const presets = usePresets((s) => s.presets);
   const activeId = usePresets((s) => s.activePresetId);
   const draft = useInputs((s) => s.draft);
+  const origins = useInputs((s) => s.origins);
+  const unit = useInputs((s) => s.unit);
   const parsed = useInputs((s) => s.parsed);
   const full = usePrefs((s) => s.viewMode) === 'full';
   const [managing, setManaging] = useState(false);
@@ -36,7 +51,7 @@ export function PresetMenu() {
   const selectId = useId();
 
   const active = presets.find((p) => p.id === activeId);
-  const modified = !!active && !coveredFieldsMatch(draft, active);
+  const modified = !!active && !coveredFieldsMatch({ draft, origins, unit }, active);
 
   const choose = (id: string) => {
     const preset = presets.find((p) => p.id === id);
@@ -71,7 +86,7 @@ export function PresetMenu() {
           id={selectId}
           value={active ? active.id : NO_PRESET}
           onChange={(e) => choose(e.target.value)}
-          className="max-w-36 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none xl:max-w-56 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+          className="max-w-32 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none xl:max-w-56 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
         >
           <option value={NO_PRESET}>No preset</option>
           {presets.map((p) => (

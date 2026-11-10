@@ -4,7 +4,16 @@ import {
   cartonDisplayDims,
   type TargetStatus,
 } from '../engine/analytics/analytics';
-import { formatDims, formatNumber } from '../engine/units/units';
+import {
+  fmtDecimal,
+  fmtPct,
+  formatDims,
+  formatVolume,
+  unitLabel,
+  useUnit,
+  volumeLabel,
+  withUnit,
+} from './format';
 import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
 
@@ -30,6 +39,7 @@ export function LayoutComparisonTable() {
   const inputs = useResults((s) => s.inputs);
   const selectedIndex = useResults((s) => s.selectedIndex);
   const select = useResults((s) => s.select);
+  const unit = useUnit();
 
   const rows = useMemo(
     () =>
@@ -65,7 +75,7 @@ export function LayoutComparisonTable() {
                   #
                 </th>
                 <th scope="col" className={th}>
-                  Carton (in)
+                  {withUnit('Carton', unitLabel(unit))}
                 </th>
                 <th scope="col" className={`${th} text-right`}>
                   Products
@@ -80,7 +90,7 @@ export function LayoutComparisonTable() {
                   Utilization
                 </th>
                 <th scope="col" className={`${th} text-right`}>
-                  Remaining volume (in³)
+                  {withUnit('Remaining volume', volumeLabel(unit))}
                 </th>
                 <th scope="col" className={`${th} text-right`}>
                   Score
@@ -107,7 +117,9 @@ export function LayoutComparisonTable() {
                     }`}
                   >
                     <td className={td}>{ranked.rank}</td>
-                    <td className={td}>{formatDims(cartonDisplayDims(ranked.layout, 'outer'))}</td>
+                    <td className={td}>
+                      {formatDims(cartonDisplayDims(ranked.layout, 'outer'), unit)}
+                    </td>
                     <td className={`${td} text-right`}>
                       <span className="flex flex-col items-end gap-0.5">
                         <span className="font-semibold">{ranked.layout.totalProducts}</span>
@@ -123,12 +135,12 @@ export function LayoutComparisonTable() {
                     <td className={`${td} text-right`}>{ranked.layout.totalCartons}</td>
                     <td className={`${td} text-right`}>{ranked.layout.layers.length}</td>
                     <td className={`${td} text-right`}>
-                      {formatNumber(analytics.totals.utilizationPct)}%
+                      {fmtPct(analytics.totals.utilizationPct)}
                     </td>
                     <td className={`${td} text-right`}>
-                      {formatNumber(analytics.totals.remainingVolume)}
+                      {formatVolume(analytics.totals.remainingVolume, unit)}
                     </td>
-                    <td className={`${td} text-right`}>{formatNumber(ranked.score.total)}</td>
+                    <td className={`${td} text-right`}>{fmtDecimal(ranked.score.total)}</td>
                   </tr>
                 );
               })}

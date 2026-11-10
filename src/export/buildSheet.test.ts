@@ -224,3 +224,53 @@ describe('buildSheetContent, variations', () => {
     expect(s.layoutLabel).toBe('Layout 2 of 5');
   });
 });
+
+describe('buildSheetContent in another unit', () => {
+  const sheet = (unit: 'in' | 'cm' | 'mm', over: Partial<Inputs> = {}) => {
+    const inputs = { ...DEFAULT_INPUTS, ...over };
+    return buildSheetContent({
+      inputs,
+      result: Object.keys(over).length === 0 ? RESULT : optimize(inputs),
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+      unit,
+    });
+  };
+
+  it('is the same sheet as before in inches', () => {
+    expect(sheet('in')).toEqual({ ...build(), unit: 'in' });
+    expect(build().unit).toBe('in');
+  });
+
+  it('writes every length in centimetres', () => {
+    const s = sheet('cm', { overhang: 2 });
+    expect(s.unit).toBe('cm');
+    expect(sheet('cm').carton[0]?.value).toBe('53.3 × 33.0 × 22.9 cm');
+    expect(s.palletAndLoad).toEqual([
+      { label: 'Pallet', value: '127.0 × 106.7 cm, 12.7 cm tall' },
+      { label: 'Overhang', value: '5.1 cm total, 2.5 cm each side' },
+      { label: 'Usable stacking height', value: '170.2 cm' },
+      {
+        label: 'Finished load',
+        value: expect.stringMatching(/^[\d.]+ × [\d.]+ × [\d.]+ cm including pallet$/),
+      },
+    ]);
+    expect(s.patterns[0]?.facts[1]?.value).toMatch(/^\d+\.\d × \d+\.\d cm/);
+    expect(s.patterns[0]?.facts[2]?.value).toMatch(/^\d+\.\d cm$/);
+    expect(s.stacking[0]?.topHeight).toMatch(/^\d+\.\d cm$/);
+    expect(s.drawingKey?.palletSize).toBe('127.0 × 106.7 cm');
+    expect(s.footer.startsWith('Using 1.3 cm leeway, 0.6 cm carton walls, 5.1 cm overhang')).toBe(
+      true,
+    );
+    // The drawing stays in inches: only the words change.
+    expect(s.patterns[0]?.drawing.pallet).toEqual({ x: 1, y: 1, dx: 50, dy: 42 });
+  });
+
+  it('writes millimetres without decimals', () => {
+    const s = sheet('mm');
+    expect(s.palletAndLoad[0]?.value).toBe('1270 × 1067 mm, 127 mm tall');
+    expect(strings(s).join(' ')).not.toMatch(/\d in\b/);
+  });
+});

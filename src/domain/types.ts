@@ -1,4 +1,5 @@
 import type { Analytics } from '../engine/analytics/analytics';
+import type { Unit } from '../engine/units/units';
 
 export interface Dims {
   length: number;
@@ -36,6 +37,16 @@ export interface InputsDraft {
   rotationMode: RotationMode;
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;
+}
+
+/**
+ * Where a length or weight field's text came from: the text, the unit it was in, and its
+ * exact value in inches or pounds (null when the text is not a number).
+ */
+export interface FieldOrigin {
+  text: string;
+  unit: Unit;
+  canonical: number | null;
 }
 
 export interface CartonCandidate {

@@ -1,5 +1,6 @@
 import { Html, Line } from '@react-three/drei';
 import { useMemo, type CSSProperties } from 'react';
+import type { Unit } from '../engine/units/units';
 import { CAPTURE_COLOR, HIDE_IN_ORTHO_CAPTURE } from './captureVisibility';
 import { dimensionLines } from './sceneGeometry';
 import { LIGHT_MEASURE_LINE } from './sceneTheme';
@@ -12,14 +13,16 @@ interface Props {
   line: string;
   /** Colours of the number chips; omitted, they keep the dark chip of the light theme. */
   chip?: CSSProperties;
+  /** Unit of the numbers. */
+  unit: Unit;
 }
 
 /**
  * Length and width of the load (the cartons) and its height from the floor, drawn clear of
  * `clear` (the load with its pallet).
  */
-export function Measurements({ bounds, clear, line, chip }: Props) {
-  const d = useMemo(() => dimensionLines(bounds, { clearOf: clear }), [bounds, clear]);
+export function Measurements({ bounds, clear, line, chip, unit }: Props) {
+  const d = useMemo(() => dimensionLines(bounds, { clearOf: clear, unit }), [bounds, clear, unit]);
   return (
     <group userData={{ [HIDE_IN_ORTHO_CAPTURE]: true }}>
       <Line

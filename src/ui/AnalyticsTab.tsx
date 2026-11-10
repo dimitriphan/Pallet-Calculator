@@ -4,20 +4,14 @@ import {
   type Analytics,
   type LayerOrientation,
 } from '../engine/analytics/analytics';
-import { formatDims, formatNumber } from '../engine/units/units';
 import { DetailRows } from './DetailRows';
+import { areaText, dimsText, fmtPct, lengthText, pairText, useUnit, volumeText } from './format';
 
 const TARGET_LABEL = {
   met: 'Target met',
   exceeded: 'Target exceeded',
   notAchievable: 'Target not achievable',
 } as const;
-
-const inches = (v: number) => `${formatNumber(v)} in`;
-const dims = (d: Parameters<typeof formatDims>[0]) => `${formatDims(d)} in`;
-const area = (v: number) => `${formatNumber(v)} in²`;
-const volume = (v: number) => `${formatNumber(v)} in³`;
-const pct = (v: number) => `${formatNumber(v)}%`;
 
 /** One layer type per line; the text still reads "Length up: 1 layer; Width up: 6 layers". */
 function OrientationLines({ list }: { list: LayerOrientation[] }) {
@@ -31,6 +25,12 @@ function OrientationLines({ list }: { list: LayerOrientation[] }) {
 
 /** Every analytics figure of the selected layout. */
 export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
+  const unit = useUnit();
+  const length = (v: number) => lengthText(v, unit);
+  const dims = (d: Parameters<typeof dimsText>[0]) => dimsText(d, unit);
+  const area = (v: number) => areaText(v, unit);
+  const volume = (v: number) => volumeText(v, unit);
+  const pct = (v: number) => fmtPct(v);
   const p = a.pallet;
   const t = a.target;
   const target: [string, string][] =
@@ -78,11 +78,8 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
         title="Pallet"
         rows={[
           ['Pallet limitation', dims(p.dims)],
-          ['Usable stacking height', inches(p.usableHeight)],
-          [
-            'Usable footprint',
-            `${formatNumber(p.usableFootprint.x)} × ${formatNumber(p.usableFootprint.y)} in`,
-          ],
+          ['Usable stacking height', length(p.usableHeight)],
+          ['Usable footprint', pairText(p.usableFootprint.x, p.usableFootprint.y, unit)],
           ['Layers', String(p.layers)],
           [
             'Cartons per layer',
@@ -90,11 +87,11 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
               ? String(p.cartonsPerLayerMin)
               : `${p.cartonsPerLayerMin}–${p.cartonsPerLayerMax}`,
           ],
-          ['Load length', inches(p.loadLength)],
-          ['Load width', inches(p.loadWidth)],
-          ['Total load height (with pallet)', inches(p.totalLoadHeight)],
+          ['Load length', length(p.loadLength)],
+          ['Load width', length(p.loadWidth)],
+          ['Total load height (with pallet)', length(p.totalLoadHeight)],
           ['Volume utilization', pct(p.volumeUtilizationPct)],
-          ['Remaining height', inches(p.remainingHeight)],
+          ['Remaining height', length(p.remainingHeight)],
           ['Remaining footprint (fullest layer)', area(p.remainingFootprintArea)],
         ]}
       />

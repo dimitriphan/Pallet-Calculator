@@ -68,6 +68,17 @@ describe('dimensionLines', () => {
     // 3 lines, each with 2 end ticks: 9 segments of 2 points.
     expect(d.segments).toHaveLength(9 * 2);
   });
+
+  it('labels in the display unit without moving the lines', () => {
+    const b = { min: [-25, 0, -21], max: [25, 60, 21] } as const;
+    const inches = dimensionLines({ min: [...b.min], max: [...b.max] });
+    const cm = dimensionLines({ min: [...b.min], max: [...b.max] }, { unit: 'cm' });
+    const mm = dimensionLines({ min: [...b.min], max: [...b.max] }, { unit: 'mm' });
+    expect(cm.labels.map((l) => l.text)).toEqual(['127.0 cm', '106.7 cm', '152.4 cm']);
+    expect(mm.labels.map((l) => l.text)).toEqual(['1270 mm', '1067 mm', '1524 mm']);
+    expect(cm.segments).toEqual(inches.segments);
+    expect(cm.labels.map((l) => l.position)).toEqual(inches.labels.map((l) => l.position));
+  });
 });
 
 describe('withMeasurements', () => {

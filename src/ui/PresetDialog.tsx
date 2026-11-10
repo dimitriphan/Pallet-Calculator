@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { downloadBlob } from '../export/download';
-import { formatDims, formatNumber } from '../engine/units/units';
 import type { Preset } from '../domain/types';
 import { BUTTON, ModalDialog, PRIMARY_BUTTON } from './ModalDialog';
+import { dimsText, lengthText, useUnit } from './format';
 import { PresetEditForm } from './PresetEditForm';
 import { usePresets, useStores } from './StoreContext';
 
@@ -12,6 +12,7 @@ type Mode = { kind: 'list' } | { kind: 'edit'; id: string } | { kind: 'delete'; 
 export function PresetDialog({ onClose }: { onClose(): void }) {
   const { presets: store } = useStores();
   const presets = usePresets((s) => s.presets);
+  const unit = useUnit();
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
   const [importMessage, setImportMessage] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
@@ -86,7 +87,7 @@ export function PresetDialog({ onClose }: { onClose(): void }) {
                   <div>
                     <p className="text-sm text-gray-900 dark:text-harbor-foam">{p.name}</p>
                     <p className="text-xs tabular-nums text-gray-600 dark:text-harbor-mist">
-                      Pallet {formatDims(p.pallet)} in · leeway {formatNumber(p.leeway)} in
+                      Pallet {dimsText(p.pallet, unit)} · leeway {lengthText(p.leeway, unit)}
                     </p>
                   </div>
                   {pending(p) ? (

@@ -151,3 +151,181 @@ describe('inputsStore', () => {
     });
   });
 });
+
+describe('inputsStore units', () => {
+  const fresh = () => createInputsStore(new FakeStorage());
+
+  it('starts in inches', () => {
+    expect(fresh().getState().unit).toBe('in');
+  });
+
+  it('shows a typed length in another unit without changing what it parses to', () => {
+    const store = fresh();
+    store.getState().setField('product.length', '12');
+    const before = store.getState().parsed;
+    store.getState().setUnit('cm');
+    const s = store.getState();
+    expect(s.unit).toBe('cm');
+    expect(s.draft.product.length).toBe('30.5');
+    expect(s.parsed.ok && s.parsed.inputs.product.length).toBe(12);
+    expect(s.parsed).toEqual(before);
+    store.getState().setUnit('in');
+    expect(store.getState().draft.product.length).toBe('12');
+    expect(store.getState().parsed).toEqual(before);
+  });
+
+  it('restores the exact typed text when switching back', () => {
+    const store = fresh();
+    store.getState().setField('leeway', '0.50');
+    store.getState().setUnit('mm');
+    expect(store.getState().draft.leeway).toBe('13');
+    store.getState().setUnit('cm');
+    expect(store.getState().draft.leeway).toBe('1.3');
+    store.getState().setUnit('in');
+    expect(store.getState().draft.leeway).toBe('0.50');
+  });
+
+  it('parses text typed in centimetres to inches and keeps it across switches', () => {
+    const store = fresh();
+    store.getState().setUnit('cm');
+    store.getState().setField('product.length', '30.5');
+    const parsed = store.getState().parsed;
+    expect(parsed.ok && parsed.inputs.product.length).toBeCloseTo(12.00787, 5);
+    store.getState().setUnit('in');
+    expect(store.getState().draft.product.length).toBe('12.01');
+    expect(store.getState().parsed).toEqual(parsed);
+    store.getState().setUnit('cm');
+    expect(store.getState().draft.product.length).toBe('30.5');
+    expect(store.getState().parsed).toEqual(parsed);
+  });
+
+  it('keeps the parsed result object when only the unit changes', () => {
+    const store = fresh();
+    const before = store.getState().parsed;
+    store.getState().setUnit('mm');
+    expect(store.getState().parsed).toBe(before);
+  });
+
+  it('leaves text that does not parse as typed', () => {
+    const store = fresh();
+    store.getState().setField('pallet.width', 'abc');
+    store.getState().setUnit('cm');
+    expect(store.getState().draft.pallet.width).toBe('abc');
+    store.getState().setUnit('mm');
+    expect(store.getState().draft.pallet.width).toBe('abc');
+    const p = store.getState().parsed;
+    expect(!p.ok && p.errors['pallet.width']).toBe('Enter a number');
+  });
+
+  it('never converts counts', () => {
+    const store = fresh();
+    store.getState().setField('targetQuantity', '120');
+    store.getState().setField('boxesPerCarton', '6');
+    store.getState().setUnit('mm');
+    expect(store.getState().draft.targetQuantity).toBe('120');
+    expect(store.getState().draft.boxesPerCarton).toBe('6');
+  });
+
+  it('writes replaced inputs in the current unit and parses them back exactly', () => {
+    const store = fresh();
+    store.getState().setUnit('mm');
+    const odd: Inputs = { ...DEFAULT_INPUTS, product: { length: 12.345, width: 8, height: 4 } };
+    store.getState().replaceInputs(odd);
+    expect(store.getState().draft.pallet).toEqual({
+      length: '1270',
+      width: '1067',
+      height: '1829',
+    });
+    expect(store.getState().draft.leeway).toBe('13');
+    expect(store.getState().parsed).toEqual({ ok: true, inputs: odd });
+    store.getState().replaceInputs(DEFAULT_INPUTS);
+    expect(store.getState().parsed).toEqual({ ok: true, inputs: DEFAULT_INPUTS });
+    store.getState().setUnit('in');
+    expect(store.getState().draft).toEqual(draftFromInputs(DEFAULT_INPUTS));
+  });
+
+  it('reset and applyPreset write in the current unit and keep exact values', () => {
+    const store = fresh();
+    store.getState().setUnit('cm');
+    store.getState().setField('product.length', '30');
+    const fields: Omit<Inputs, 'product'> = {
+      ...DEFAULT_INPUTS,
+      pallet: { length: 48, width: 40, height: 60.125 },
+    };
+    store.getState().applyPreset(fields);
+    const s = store.getState();
+    expect(s.draft.pallet).toEqual({ length: '121.9', width: '101.6', height: '152.7' });
+    expect(s.draft.product.length).toBe('30');
+    expect(s.parsed.ok && s.parsed.inputs.pallet).toEqual(fields.pallet);
+    store.getState().reset();
+    expect(store.getState().draft.pallet.length).toBe('127');
+    expect(store.getState().parsed).toEqual({ ok: true, inputs: DEFAULT_INPUTS });
+  });
+
+  it('a field edited after a switch is read in the unit it was typed in', () => {
+    const store = fresh();
+    store.getState().setUnit('cm');
+    store.getState().setField('pallet.length', '100');
+    const p = store.getState().parsed;
+    expect(p.ok && p.inputs.pallet.length).toBeCloseTo(100 / 2.54, 12);
+  });
+
+  it('remembers the unit and origins across reloads', () => {
+    const storage = new FakeStorage();
+    const a = createInputsStore(storage);
+    a.getState().setField('product.length', '12.3456');
+    a.getState().setUnit('cm');
+    const parsed = a.getState().parsed;
+    const b = createInputsStore(storage);
+    expect(b.getState().unit).toBe('cm');
+    expect(b.getState().draft.product.length).toBe('31.4');
+    expect(b.getState().parsed).toEqual(parsed);
+    b.getState().setUnit('in');
+    expect(b.getState().draft.product.length).toBe('12.3456');
+  });
+
+  it('reads a draft remembered before units existed as inches, as before', () => {
+    const storage = new FakeStorage();
+    const old = {
+      ...draftFromInputs(DEFAULT_INPUTS),
+      leeway: '0.75',
+      pallet: { length: '48.5', width: '40', height: '60' },
+    };
+    storage.setItem(STORAGE_KEYS.inputs, JSON.stringify(old));
+    const s = createInputsStore(storage).getState();
+    expect(s.unit).toBe('in');
+    expect(s.draft).toEqual(old);
+    expect(s.parsed).toEqual({
+      ok: true,
+      inputs: { ...DEFAULT_INPUTS, leeway: 0.75, pallet: { length: 48.5, width: 40, height: 60 } },
+    });
+  });
+
+  it('starts an empty store in the unit it is given', () => {
+    const s = createInputsStore(new FakeStorage(), { unit: 'mm' }).getState();
+    expect(s.unit).toBe('mm');
+    expect(s.draft.pallet.length).toBe('1270');
+    expect(s.parsed).toEqual({ ok: true, inputs: DEFAULT_INPUTS });
+  });
+
+  it('a remembered unit wins over the unit it is given', () => {
+    const storage = new FakeStorage();
+    createInputsStore(storage).getState().setUnit('cm');
+    expect(createInputsStore(storage, { unit: 'mm' }).getState().unit).toBe('cm');
+  });
+
+  it('ignores remembered origins that do not match the text', () => {
+    const storage = new FakeStorage();
+    const draft = draftFromInputs(DEFAULT_INPUTS);
+    storage.setItem(
+      STORAGE_KEYS.inputs,
+      JSON.stringify({
+        ...draft,
+        unit: 'in',
+        origins: { 'product.length': { text: '99', unit: 'in', canonical: 99 }, leeway: 'junk' },
+      }),
+    );
+    const s = createInputsStore(storage).getState();
+    expect(s.parsed).toEqual({ ok: true, inputs: DEFAULT_INPUTS });
+  });
+});

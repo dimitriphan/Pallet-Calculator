@@ -12,7 +12,8 @@ import {
 } from '../engine/analytics/analytics';
 import { describeLayerList, stackPatterns } from '../engine/analytics/stack';
 import { cartonPlacements } from '../engine/packing/positions';
-import { formatDims, formatNumber } from '../engine/units/units';
+import type { Unit } from '../engine/units/units';
+import { dimsText, fmtCount, lengthText, pairText } from '../ui/format';
 import { settingsSummary } from '../ui/settingsSummary';
 
 export interface SheetRow {
@@ -68,6 +69,8 @@ export interface BuildSheet {
   }[];
   footer: string;
   layoutLabel: string;
+  /** The unit every length in the text is in; drawing coordinates stay in inches. */
+  unit: Unit;
 }
 
 const MAX_JOB_NAME = 80;
@@ -101,8 +104,6 @@ function safeDeep<T>(value: T): T {
   return value;
 }
 
-const inches = (n: number) => `${formatNumber(n)} in`;
-
 function localMinute(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -123,8 +124,13 @@ export function buildSheetContent(a: {
   jobName: string;
   stale: boolean;
   now: Date;
+  /** Display unit of the text; inches when omitted. */
+  unit?: Unit;
 }): BuildSheet {
   const { inputs, result, selectedIndex } = a;
+  const unit = a.unit ?? 'in';
+  const length = (n: number) => lengthText(n, unit);
+  const sizeText = (x: number, y: number) => pairText(x, y, unit);
   const ranked = result.layouts[selectedIndex];
   if (!ranked) throw new Error(`No layout at index ${selectedIndex}`);
   const layout = ranked.layout;
@@ -173,7 +179,7 @@ export function buildSheetContent(a: {
     const first = cartons[0];
     const mixed = layer.blocks.some((b) => b.rotated) && layer.blocks.some((b) => !b.rotated);
     const footprintText = first
-      ? `${formatNumber(first.dx)} × ${formatNumber(first.dy)} in${mixed ? ' (some turned 90°)' : ''}`
+      ? `${sizeText(first.dx, first.dy)}${mixed ? ' (some turned 90°)' : ''}`
       : '';
     return {
       letter: p.letter,
@@ -181,7 +187,7 @@ export function buildSheetContent(a: {
       facts: [
         { label: 'Cartons in layer', value: String(p.cartonsPerLayer) },
         { label: 'Carton footprint as placed', value: footprintText },
-        { label: 'Layer height', value: inches(p.height) },
+        { label: 'Layer height', value: length(p.height) },
         { label: 'Side facing up', value: SIDE_UP[p.vertical] },
         {
           label: 'Blocks (rows × columns)',
@@ -202,32 +208,31 @@ export function buildSheetContent(a: {
       layer: i + 1,
       pattern: letterOfLayer.get(i + 1) ?? '',
       cartons: layer.cartonCount,
-      height: inches(layer.height),
-      topHeight: inches(top),
+      height: length(layer.height),
+      topHeight: length(top),
     };
   });
 
   const palletAndLoad: SheetRow[] = [
     {
       label: 'Pallet',
-      value: `${formatNumber(inputs.pallet.length)} × ${formatNumber(inputs.pallet.width)} in, ${inches(PALLET_HEIGHT)} tall`,
+      value: `${sizeText(inputs.pallet.length, inputs.pallet.width)}, ${length(PALLET_HEIGHT)} tall`,
     },
     ...(inputs.overhang > 0
       ? [
           {
             label: 'Overhang',
-            value: `${inches(inputs.overhang)} total, ${inches(inputs.overhang / 2)} each side`,
+            value: `${length(inputs.overhang)} total, ${length(inputs.overhang / 2)} each side`,
           },
         ]
       : []),
-    { label: 'Usable stacking height', value: inches(pallet.usableHeight) },
+    { label: 'Usable stacking height', value: length(pallet.usableHeight) },
     {
       label: 'Finished load',
-      value: `${formatNumber(pallet.loadLength)} × ${formatNumber(pallet.loadWidth)} × ${formatNumber(pallet.totalLoadHeight)} in including pallet`,
+      value: `${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} including pallet`,
     },
   ];
 
-  const sizeText = (x: number, y: number) => `${formatNumber(x)} × ${formatNumber(y)} in`;
   const palletSize = sizeText(palletRect.dx, palletRect.dy);
   const limitSize = sizeText(footprint.x, footprint.y);
   const drawingKey: DrawingKey | null =
@@ -256,8 +261,8 @@ export function buildSheetContent(a: {
       { label: 'Total boxes per pallet', value: String(summary.totalBoxes) },
     ],
     carton: [
-      { label: 'Outer size', value: `${formatDims(cartonDisplayDims(layout, 'outer'))} in` },
-      { label: 'Inner size', value: `${formatDims(cartonDisplayDims(layout, 'inner'))} in` },
+      { label: 'Outer size', value: dimsText(cartonDisplayDims(layout, 'outer'), unit) },
+      { label: 'Inner size', value: dimsText(cartonDisplayDims(layout, 'inner'), unit) },
       { label: 'Boxes per carton', value: String(layout.carton.boxesPerCarton) },
       {
         label: 'Boxes inside',
@@ -269,11 +274,12 @@ export function buildSheetContent(a: {
     drawingKey,
     stacking,
     footer:
-      settingsSummary(inputs) +
+      settingsSummary(inputs, unit) +
       ` Desired boxes per carton: ${
-        inputs.boxesPerCarton !== null ? formatNumber(inputs.boxesPerCarton, 0) : 'best fit'
+        inputs.boxesPerCarton !== null ? fmtCount(inputs.boxesPerCarton) : 'best fit'
       }.`,
     layoutLabel: `Layout ${selectedIndex + 1} of ${result.layouts.length}`,
+    unit,
   };
   return safeDeep(sheet);
 }

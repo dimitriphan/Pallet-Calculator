@@ -3,8 +3,17 @@ import {
   describeLayerOrientations,
   type TargetStatus,
 } from '../engine/analytics/analytics';
-import { formatNumber } from '../engine/units/units';
 import type { RotationMode } from '../domain/types';
+import type { Unit } from '../engine/units/units';
+import {
+  fmtDecimal,
+  fmtPct,
+  formatLength,
+  formatVolume,
+  unitLabel,
+  volumeLabel,
+  withUnit,
+} from '../ui/format';
 import type { ExportPayload } from './exportData';
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
@@ -33,39 +42,46 @@ const TARGET: Record<TargetStatus, string> = {
 
 type Row = [string, string | number];
 
-/** Two sections: Metric,Value rows, a blank line, then the layout comparison table. */
-export function buildCsv(p: ExportPayload): string {
+/**
+ * Two sections: Metric,Value rows, a blank line, then the layout comparison table. Lengths and
+ * volumes are in `unit` (cm³ for mm), with the unit in each title.
+ */
+export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   const { inputs: i, analytics: a, selectedLayout: sel } = p;
-  const n = (v: number) => formatNumber(v);
+  const n = (v: number) => fmtDecimal(v);
+  const len = (v: number) => formatLength(v, unit);
+  const vol = (v: number) => formatVolume(v, unit);
+  const L = (title: string) => withUnit(title, unitLabel(unit));
+  const V = (title: string) => withUnit(title, volumeLabel(unit));
   const yesNo = (v: boolean) => (v ? 'Yes' : 'No');
   const rows: Row[] = [
     ['Exported at', p.exportedAt],
     ['Selected layout', sel.rank],
     ['Status', p.status],
-    ['Pallet length (in)', n(i.pallet.length)],
-    ['Pallet width (in)', n(i.pallet.width)],
-    ['Pallet height (in)', n(i.pallet.height)],
-    ['Product length (in)', n(i.product.length)],
-    ['Product width (in)', n(i.product.width)],
-    ['Product height (in)', n(i.product.height)],
-    ['Max carton length (in)', n(i.maxCarton.length)],
-    ['Max carton width (in)', n(i.maxCarton.width)],
-    ['Max carton height (in)', n(i.maxCarton.height)],
+    [L('Pallet length'), len(i.pallet.length)],
+    [L('Pallet width'), len(i.pallet.width)],
+    [L('Pallet height'), len(i.pallet.height)],
+    [L('Product length'), len(i.product.length)],
+    [L('Product width'), len(i.product.width)],
+    [L('Product height'), len(i.product.height)],
+    [L('Max carton length'), len(i.maxCarton.length)],
+    [L('Max carton width'), len(i.maxCarton.width)],
+    [L('Max carton height'), len(i.maxCarton.height)],
     ['Target quantity', i.targetQuantity === null ? '' : i.targetQuantity],
     ['Desired boxes per carton', i.boxesPerCarton === null ? '' : i.boxesPerCarton],
-    ['Box leeway (in)', n(i.leeway)],
-    ['Carton wall thickness (in)', n(i.wallThickness)],
-    ['Pallet overhang (in)', n(i.overhang)],
+    [L('Box leeway'), len(i.leeway)],
+    [L('Carton wall thickness'), len(i.wallThickness)],
+    [L('Pallet overhang'), len(i.overhang)],
     ['Product rotation', ROTATION[i.rotationMode]],
     ['Custom orientations', i.rotationMode === 'custom' ? i.customOrientations.join(' ') : ''],
     ['Keep cartons upright', yesNo(i.keepCartonsUpright)],
-    ['Usable stacking height (in)', n(a.pallet.usableHeight)],
-    ['Carton inner length (in)', n(a.carton.inner.length)],
-    ['Carton inner width (in)', n(a.carton.inner.width)],
-    ['Carton inner height (in)', n(a.carton.inner.height)],
-    ['Carton outer length (in)', n(a.carton.outer.length)],
-    ['Carton outer width (in)', n(a.carton.outer.width)],
-    ['Carton outer height (in)', n(a.carton.outer.height)],
+    [L('Usable stacking height'), len(a.pallet.usableHeight)],
+    [L('Carton inner length'), len(a.carton.inner.length)],
+    [L('Carton inner width'), len(a.carton.inner.width)],
+    [L('Carton inner height'), len(a.carton.inner.height)],
+    [L('Carton outer length'), len(a.carton.outer.length)],
+    [L('Carton outer width'), len(a.carton.outer.width)],
+    [L('Carton outer height'), len(a.carton.outer.height)],
     ['Boxes along product length × width × height', describeBoxCounts(a.carton.counts)],
     ['Product side facing up', describeLayerOrientations(a.carton.layerOrientations)],
     ['Boxes per carton', a.summary.boxesPerCarton],
@@ -73,14 +89,14 @@ export function buildCsv(p: ExportPayload): string {
     ['Layers', a.summary.layers],
     ['Cartons per pallet', a.summary.cartonsPerPallet],
     ['Total boxes per pallet', a.summary.totalBoxes],
-    ['Load length (in)', n(a.pallet.loadLength)],
-    ['Load width (in)', n(a.pallet.loadWidth)],
-    ['Load total height (in)', n(a.pallet.totalLoadHeight)],
-    ['Volume used (in³)', n(a.totals.volumeUsed)],
-    ['Volume available (in³)', n(a.totals.volumeAvailable)],
+    [L('Load length'), len(a.pallet.loadLength)],
+    [L('Load width'), len(a.pallet.loadWidth)],
+    [L('Load total height'), len(a.pallet.totalLoadHeight)],
+    [V('Volume used'), vol(a.totals.volumeUsed)],
+    [V('Volume available'), vol(a.totals.volumeAvailable)],
     ['Utilization (%)', n(a.totals.utilizationPct)],
-    ['Remaining volume (in³)', n(a.totals.remainingVolume)],
-    ['Remaining height (in)', n(a.pallet.remainingHeight)],
+    [V('Remaining volume'), vol(a.totals.remainingVolume)],
+    [L('Remaining height'), len(a.pallet.remainingHeight)],
     ['Target status', TARGET[a.target.status]],
     ['Maximum quantity possible', a.target.maxPossible],
     ['Cartons needed for target', a.target.cartonsNeeded ?? ''],
@@ -93,22 +109,22 @@ export function buildCsv(p: ExportPayload): string {
 
   const header = [
     '#',
-    'Carton (in)',
+    L('Carton'),
     'Products',
     'Cartons',
     'Layers',
     'Utilization',
-    'Remaining volume (in³)',
+    V('Remaining volume'),
     'Score',
   ];
   const table = p.comparison.map((c) => [
     c.rank,
-    `${n(c.carton.length)} × ${n(c.carton.width)} × ${n(c.carton.height)}`,
+    `${len(c.carton.length)} × ${len(c.carton.width)} × ${len(c.carton.height)}`,
     c.products,
     c.cartons,
     c.layers,
-    `${n(c.utilizationPct)}%`,
-    n(c.remainingVolume),
+    fmtPct(c.utilizationPct),
+    vol(c.remainingVolume),
     n(c.score),
   ]);
 

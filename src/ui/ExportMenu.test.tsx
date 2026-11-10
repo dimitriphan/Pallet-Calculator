@@ -96,6 +96,7 @@ describe('ExportMenu', () => {
     expect(mocks.composePng).toHaveBeenCalledWith(
       VIEWS,
       expect.objectContaining({ exportedAt: expect.any(String) }),
+      'in',
     );
     expect(mocks.downloadBlob.mock.calls[0]?.[1]).toMatch(/\.png$/);
     expect(useNoticesStore.getState().notices).toEqual([]);
@@ -326,5 +327,31 @@ describe('ExportMenu, build sheet', () => {
     const item = screen.getByRole('menuitem', { name: 'Build sheet (PDF)' });
     expect(item).toBeDisabled();
     expect(item).toHaveAttribute('title', 'Run a calculation first');
+  });
+});
+
+describe('exports follow the display unit', () => {
+  it('writes the CSV, PNG caption and build sheet in the unit chosen', async () => {
+    const { user, stores } = await renderApp();
+    act(() => stores.scene.getState().setCaptureViews(() => VIEWS));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Units' }), 'cm');
+    await flush();
+
+    await openMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'CSV' }));
+    const [blob] = mocks.downloadBlob.mock.calls[0] as [Blob, string];
+    const csv = new TextDecoder().decode(new Uint8Array(await blob.arrayBuffer()).slice(3));
+    expect(csv.split('\r\n')).toContain('Pallet length (cm),127.0');
+
+    await openMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'PNG' }));
+    expect(mocks.composePng.mock.calls[0]?.[2]).toBe('cm');
+
+    await openMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Build sheet (PDF)' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save PDF' }));
+    const [sheet] = mocks.renderBuildSheetPdf.mock.calls[0] as [BuildSheet];
+    expect(sheet.unit).toBe('cm');
+    expect(sheet.carton[0]?.value).toBe('53.3 × 33.0 × 22.9 cm');
   });
 });

@@ -7,7 +7,8 @@
  * increasing DOWN the page, as in the app's Top view.
  */
 import { jsPDF } from 'jspdf';
-import { formatNumber } from '../engine/units/units';
+import type { Unit } from '../engine/units/units';
+import { lengthText } from '../ui/format';
 import type { BuildSheet, DrawingKey, SheetPattern, SheetRow } from './buildSheet';
 import { STALE_NOTE } from './exportData';
 
@@ -377,6 +378,7 @@ function drawLayerDrawing(
   key: DrawingKey | null,
   x: number,
   y: number,
+  unit: Unit,
 ) {
   const labelW = 0.3;
   const below = 0.48;
@@ -430,8 +432,8 @@ function drawLayerDrawing(
   doc.line(dimX - tick, py + ph, dimX + tick, py + ph);
 
   font(doc, 9);
-  doc.text(`${formatNumber(pallet.dx)} in`, px + pw / 2, dimY + 0.16, { align: 'center' });
-  const widthText = `${formatNumber(pallet.dy)} in`;
+  doc.text(lengthText(pallet.dx, unit), px + pw / 2, dimY + 0.16, { align: 'center' });
+  const widthText = lengthText(pallet.dy, unit);
   doc.text(widthText, dimX - 0.07, py + ph / 2 + doc.getTextWidth(widthText) / 2, { angle: 90 });
   font(doc, 8, 'normal', GREY_TEXT);
   doc.text('Top view, pallet length across', ox + w / 2, oy + h + 0.4, { align: 'center' });
@@ -454,12 +456,18 @@ function drawFacts(doc: jsPDF, facts: SheetRow[], x: number, y: number, w: numbe
   });
 }
 
-function drawPatternBlock(doc: jsPDF, pattern: SheetPattern, key: DrawingKey | null, y: number) {
+function drawPatternBlock(
+  doc: jsPDF,
+  pattern: SheetPattern,
+  key: DrawingKey | null,
+  y: number,
+  unit: Unit,
+) {
   font(doc, 13, 'bold');
   doc.text(pattern.heading, LEFT, y + 0.2);
   rule(doc, LEFT, y + 0.3, RIGHT, 0.012, BLACK);
   const top = y + 0.42;
-  drawLayerDrawing(doc, pattern.drawing, key, LEFT, top);
+  drawLayerDrawing(doc, pattern.drawing, key, LEFT, top, unit);
   const factsX = LEFT + DRAW_W + 0.35;
   drawFacts(doc, pattern.facts, factsX, top - 0.04, RIGHT - factsX);
 }
@@ -568,7 +576,8 @@ export async function renderBuildSheetPdf(
     newPage();
     letters.forEach((letter, i) => {
       const pattern = byLetter.get(letter);
-      if (pattern) drawPatternBlock(doc, pattern, sheet.drawingKey, PAGE.bodyTop + i * BLOCK_H);
+      if (pattern)
+        drawPatternBlock(doc, pattern, sheet.drawingKey, PAGE.bodyTop + i * BLOCK_H, sheet.unit);
     });
   }
   for (const part of plan.stackingParts) {

@@ -1,7 +1,7 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
 import { describeRun, stackRuns } from '../engine/analytics/stack';
-import { formatDims, formatNumber } from '../engine/units/units';
+import { dimsText, useUnit } from './format';
 import { Mascot } from './Mascot';
 import { StaleBadge } from './StaleBadge';
 import { useStatusContent } from './StatusMessages';
@@ -33,6 +33,7 @@ export function WhatToBuildCard() {
   const running = useResults((s) => s.status === 'running');
   const { error, empty } = useStatusContent();
   const heading = useRef<HTMLHeadingElement>(null);
+  const unit = useUnit();
 
   const showBest = () => {
     select(0);
@@ -50,8 +51,8 @@ export function WhatToBuildCard() {
     const layout = ranked.layout;
     const p = analytics.pallet;
     const carton: [string, string][] = [
-      ['Outer size', `${formatDims(cartonDisplayDims(layout, 'outer'))} in`],
-      ['Inner size', `${formatDims(cartonDisplayDims(layout, 'inner'))} in`],
+      ['Outer size', dimsText(cartonDisplayDims(layout, 'outer'), unit)],
+      ['Inner size', dimsText(cartonDisplayDims(layout, 'inner'), unit)],
       ['Boxes per carton', String(layout.carton.boxesPerCarton)],
       [
         'Boxes inside',
@@ -104,7 +105,7 @@ export function WhatToBuildCard() {
         <div className="root-divider" aria-hidden="true" />
         <Part title="Finished load">
           <p className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
-            {`${formatNumber(p.loadLength)} × ${formatNumber(p.loadWidth)} × ${formatNumber(p.totalLoadHeight)} in (including pallet)`}
+            {`${dimsText({ length: p.loadLength, width: p.loadWidth, height: p.totalLoadHeight }, unit)} (including pallet)`}
           </p>
         </Part>
       </>

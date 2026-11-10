@@ -6,7 +6,8 @@ import type { Inputs, InputsDraft, OrientationCode, Preset, Scenario } from './t
 
 const POSITIVE = 'Must be greater than 0';
 const NEGATIVE = 'Cannot be negative';
-const PALLET_HEIGHT_MSG = `Pallet height must be greater than ${PALLET_HEIGHT} inches`;
+/** In inches, as the engine is; the interface shows the limit in the display unit. */
+export const PALLET_HEIGHT_MSG = `Pallet height must be greater than ${PALLET_HEIGHT} inches`;
 const WHOLE_NUMBER_MSG = 'Enter a whole number of 1 or more';
 const CUSTOM_MSG = 'Select at least one orientation';
 
@@ -115,18 +116,27 @@ export type ParseResult =
 const NUMERIC = /^\d+(\.\d+)?$|^\.\d+$/;
 
 /** Parses typed text to a number, or returns an error message. */
-function parseNumber(raw: string): number | string {
+export function parseNumber(raw: string): number | string {
   const text = raw.trim();
   if (text === '') return 'Required';
   if (!NUMERIC.test(text)) return 'Enter a number';
   return Number(text);
 }
 
-export function parseDraft(draft: InputsDraft): ParseResult {
+/**
+ * Parses a draft. `known` gives exact values (inches, pounds) by field path for fields whose
+ * text is shown in another unit; any other field's text is read as inches.
+ */
+export function parseDraft(
+  draft: InputsDraft,
+  known: Readonly<Record<string, number>> = {},
+): ParseResult {
   const errors: Record<string, string> = {};
   // Fields that failed text parsing get a harmless placeholder so the schema can still
   // validate every other field in the same pass.
   const num = (key: string, raw: string): number => {
+    const exact = known[key];
+    if (exact !== undefined) return exact;
     const parsed = parseNumber(raw);
     if (typeof parsed === 'string') {
       errors[key] = parsed;

@@ -1,9 +1,17 @@
 import { useId, useState } from 'react';
 import { DEFAULT_INPUTS } from '../domain/constants';
-import { draftFromInputs, parseDraft } from '../domain/schemas';
-import type { InputsDraft, OrientationCode, Preset, RotationMode } from '../domain/types';
+import type { OrientationCode, Preset, RotationMode } from '../domain/types';
 import { presetToInputs } from '../store/presetsStore';
+import {
+  draftInUnit,
+  isNumericPath,
+  NUMERIC_FIELDS,
+  parseInUnit,
+  typedOrigin,
+  withDraftText,
+} from '../store/unitFields';
 import { DimsFieldset } from './DimsFieldset';
+import { useUnit } from './format';
 import { BUTTON, PRIMARY_BUTTON } from './ModalDialog';
 import { NumberField } from './NumberField';
 import { presetFieldsOf } from './presetFields';
@@ -14,9 +22,6 @@ const MAX_LABELS = { length: 'Max length', width: 'Max width', height: 'Max heig
 const PREFIX = 'preset-edit';
 const NO_ERRORS: Record<string, string> = {};
 
-type DimsGroup = 'pallet' | 'maxCarton';
-type ScalarField = 'boxesPerCarton' | 'targetQuantity' | 'leeway' | 'wallThickness' | 'overhang';
-
 interface PresetEditFormProps {
   preset: Preset;
   onSave(patch: Omit<Preset, 'id'>): void;
@@ -24,28 +29,32 @@ interface PresetEditFormProps {
 }
 
 /**
- * Edits a copy of a preset's fields. Validation reuses the inputs panel's parser, with the
- * product left at a valid placeholder because presets do not store one.
+ * Edits a copy of a preset's fields, shown in the display unit. Validation reuses the inputs
+ * panel's parser and field rule (an untouched field saves its exact value), with the product
+ * left at a valid placeholder because presets do not store one.
  */
 export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps) {
+  const unit = useUnit();
   const [name, setName] = useState(preset.name);
-  const [draft, setDraft] = useState<InputsDraft>(() =>
-    draftFromInputs(presetToInputs(preset, DEFAULT_INPUTS)),
+  const [{ draft, origins }, setForm] = useState(() =>
+    draftInUnit(presetToInputs(preset, DEFAULT_INPUTS), unit),
   );
+  const setDraft = (update: (d: typeof draft) => typeof draft) =>
+    setForm((f) => ({ ...f, draft: update(f.draft) }));
   const nameId = useId();
-  const parsed = parseDraft(draft);
+  const parsed = parseInUnit(draft, origins, unit);
   const errors = parsed.ok ? NO_ERRORS : parsed.errors;
   const nameError = name.trim() === '' ? 'Enter a name' : undefined;
 
-  const setField = (path: string, value: string) =>
-    setDraft((d) => {
-      const [group, key] = path.split('.');
-      if (key !== undefined) {
-        const g = group as DimsGroup;
-        return { ...d, [g]: { ...d[g], [key]: value } };
-      }
-      return { ...d, [group as ScalarField]: value };
-    });
+  const setField = (path: string, value: string) => {
+    if (!isNumericPath(path)) return;
+    const kind = NUMERIC_FIELDS[path];
+    setForm((f) => ({
+      draft: withDraftText(f.draft, path, value),
+      origins:
+        kind === 'count' ? f.origins : { ...f.origins, [path]: typedOrigin(kind, value, unit) },
+    }));
+  };
   const setMode = (rotationMode: RotationMode) => setDraft((d) => ({ ...d, rotationMode }));
   const toggle = (code: OrientationCode) =>
     setDraft((d) => ({

@@ -73,3 +73,22 @@ describe('captionLines', () => {
     );
   });
 });
+
+describe('captionLines in another unit', () => {
+  const p = buildExportPayload(
+    DEFAULT_INPUTS,
+    optimize(DEFAULT_INPUTS),
+    0,
+    new Date('2026-11-10T09:05:03Z'),
+  );
+
+  it('is unchanged in inches', () => {
+    expect(captionLines(p, 'in')).toEqual(captionLines(p));
+    expect(captionLines(p)[1]).toBe('Load: 47.00 × 42.00 × 72.00 in (including pallet)');
+  });
+
+  it('gives the load and carton in the unit', () => {
+    expect(captionLines(p, 'cm')[1]).toBe('Load: 119.4 × 106.7 × 182.9 cm (including pallet)');
+    expect(captionLines(p, 'mm')[2]).toBe('Carton: 533 × 330 × 229 mm (outer)');
+  });
+});

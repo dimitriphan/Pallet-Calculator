@@ -2,6 +2,7 @@ import { Grid } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { PRODUCT_FORCE_LIMIT, PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
+import { useUnit } from '../ui/format';
 import { useScene, useStores } from '../ui/StoreContext';
 import { useResolvedTheme } from '../ui/useTheme';
 import { CameraRig } from './CameraRig';
@@ -28,6 +29,7 @@ function SceneContents() {
   const invalidate = useThree((st) => st.invalidate);
   const themeName = useResolvedTheme();
   const theme = sceneTheme(themeName);
+  const unit = useUnit();
 
   const productsShown =
     !!layout &&
@@ -47,7 +49,7 @@ function SceneContents() {
   // The canvas renders on demand: draw a new frame whenever what it shows changes.
   useEffect(() => {
     invalidate();
-  }, [invalidate, layout, inputs, s, theme]);
+  }, [invalidate, layout, inputs, s, theme, unit]);
 
   const select = s.setSelection;
   return (
@@ -98,13 +100,14 @@ function SceneContents() {
         />
       )}
       {layout && inputs && s.showLabels && cartons[0] && (
-        <Labels layout={layout} inputs={inputs} first={cartons[0]} theme={theme} />
+        <Labels layout={layout} inputs={inputs} first={cartons[0]} theme={theme} unit={unit} />
       )}
       {s.showMeasurements && inputs && (
         <Measurements
           bounds={measured}
           clear={bounds}
           line={theme.measureLine}
+          unit={unit}
           chip={
             themeName === 'harbor'
               ? { backgroundColor: theme.chipBg, color: theme.chipText }

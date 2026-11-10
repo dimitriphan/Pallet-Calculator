@@ -4,7 +4,7 @@ This page lists every rule the calculator follows, and what it cannot do. Read i
 
 ## The rules
 
-**Units and precision.** All sizes are in inches. The tool keeps full precision inside and rounds to 2 decimals only on screen. A size counts as fitting if it is within 0.000000001 inch of the limit, to absorb computer rounding noise.
+**Units and precision.** All sizes are kept in inches inside the tool. The Units menu in the header shows them in inches (2 decimals), centimetres (1 decimal) or millimetres (whole numbers); volumes are in in³, or cm³ for both metric units. Switching units only changes what is shown: the load, the result and saved data never change, and nothing is recalculated. A size you typed comes back exactly as typed when you switch back to the unit you typed it in. The tool keeps full precision inside and rounds only on screen and in exports. A size counts as fitting if it is within 0.000000001 inch of the limit, to absorb computer rounding noise.
 
 **Inputs.** Pallet, product and maximum carton sizes must be above zero. Pallet height must be above 5. Desired quantity is blank or a whole number of at least 1. Leeway, wall thickness and overhang are zero or more. Text, negative numbers and zero sizes are refused with a message next to the field.
 
@@ -67,7 +67,6 @@ A strict product setting also limits how the carton may be turned on the pallet.
 - **Flat layers.** A load is a stack of flat layers. A carton never straddles two layers.
 - **One carton size per layout.** Mixed carton sizes in one load are not supported.
 - **No weight, stability or crush checks.** Tipped cartons and tall columns are allowed without any warning. You must judge whether the load is safe.
-- **Inches only.**
 - **Basic view cannot edit** leeway, walls, overhang, rotation or the target quantity. Use Full view.
 - **Layer order.** Layers are ordered with the fullest layer at the bottom, so a narrower layer can sit under a slightly wider one; check overhang between layers when building mixed stacks.
 
@@ -90,7 +89,7 @@ A strict product setting also limits how the carton may be turned on the pallet.
 - **Build sheet (PDF).** Available in both views. You may type a job name of up to 80 characters.
   - Page 1: title, job name and date, the five production figures, the carton (outer size, inner size, boxes per carton, how boxes sit inside), the pallet and finished load size, and two pictures (the 3D view and the side view). If the result is out of date, a boxed line says so. If a layout other than layout 1 was selected, a line under the date says "Layout N of M selected. Layout 1 fits X boxes."
   - Next pages: one block per distinct layer pattern with a top-down drawing to scale, and a stacking table from bottom to top. The drawing's edge dimensions are always the pallet's length and width, measured along the solid pallet outline. Each block of cartons is labelled "rows × columns" inside the drawing when it has room (the same values are listed as "Blocks (rows × columns)"). With overhang, a key under the drawing says which outline is which, for example "Solid line: pallet 48.00 × 40.00 in. Dashed line: limit with overhang 50.00 × 42.00 in." A long table continues on further pages. Pages 2 onward carry a running header. Every footer lists the settings used, including "Desired boxes per carton: best fit." when blank or "Desired boxes per carton: N." when set, "Layout N of M" and "Page X of Y".
-  - US Letter, portrait, inches only, English only, no company name or logo. The only picture besides the drawings is the small mascot at the top right of page 1.
+  - US Letter, portrait, sizes in the unit chosen in the header, English only, no company name or logo. The only picture besides the drawings is the small mascot at the top right of page 1.
   - The pictures and text are always on a white background, whatever the theme.
   - The layer drawings show carton outlines, not individual product boxes.
   - Letters outside the basic Latin alphabet in a job name (for example Chinese or Cyrillic) print as "?".
@@ -101,7 +100,6 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 - Advanced optimization (stability preference, weights, centre of mass, interlocked layer patterns).
 - Transparent overlays showing unused space.
-- Switching units (centimetres, millimetres).
 - A target-quantity field in Basic view, company branding on exports, shareable links.
 
 The "Advanced Optimization" section is shown but switched off, and has no effect on any result.

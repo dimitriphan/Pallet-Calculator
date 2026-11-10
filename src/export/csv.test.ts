@@ -123,3 +123,31 @@ describe('buildCsv', () => {
     expect(p.inputs.boxesPerCarton).toBe(2);
   });
 });
+
+describe('buildCsv in another unit', () => {
+  const cm = buildCsv(payload, 'cm').split('\r\n');
+  const mm = buildCsv(payload, 'mm').split('\r\n');
+
+  it('is the same file as before in inches', () => {
+    expect(buildCsv(payload, 'in')).toBe(csv);
+  });
+
+  it('titles lengths and volumes with the unit and converts the values', () => {
+    expect(cm).toContain('Pallet length (cm),101.6');
+    expect(cm).toContain('Box leeway (cm),0.0');
+    expect(cm).toContain('Load total height (cm),63.5');
+    expect(mm).toContain('Pallet length (mm),1016');
+    expect(cm.some((l) => /^Volume used \(cm³\),\d+\.\d$/.test(l))).toBe(true);
+    expect(mm.some((l) => /^Volume used \(cm³\),\d+\.\d$/.test(l))).toBe(true);
+    expect(cm).toContain('Total boxes per pallet,32');
+    expect(cm.join('\n')).not.toMatch(/\(in\)|in³/);
+  });
+
+  it('titles the comparison table with the unit', () => {
+    const blank = cm.indexOf('');
+    expect(cm[blank + 1]).toBe(
+      '#,Carton (cm),Products,Cartons,Layers,Utilization,Remaining volume (cm³),Score',
+    );
+    expect(cm[blank + 2]).toMatch(/^1,50\.8 × 25\.4 × 50\.8,/);
+  });
+});

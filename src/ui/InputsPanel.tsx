@@ -1,22 +1,19 @@
 import { PALLET_HEIGHT } from '../domain/constants';
-import { formatNumber } from '../engine/units/units';
+import { inputFieldValue } from '../store/inputsStore';
 import { AdvancedSection } from './AdvancedSection';
 import { DimsFieldset } from './DimsFieldset';
 import { NumberField } from './NumberField';
 import { RotationControl } from './RotationControl';
+import { lengthText, palletNotice, useUnit } from './format';
 import { useInputs } from './StoreContext';
 
 const NO_ERRORS: Record<string, string> = {};
 const DIM_LABELS = { length: 'Length', width: 'Width', height: 'Height' };
 const MAX_LABELS = { length: 'Max length', width: 'Max width', height: 'Max height' };
-const DECIMAL = /^\d+(\.\d+)?$|^\.\d+$/;
 
-/** Usable stacking height from the typed pallet height, or null while that is invalid. */
-function usableHeightOf(text: string): number | null {
-  const t = text.trim();
-  if (!DECIMAL.test(t)) return null;
-  const h = Number(t);
-  return h > PALLET_HEIGHT ? h - PALLET_HEIGHT : null;
+/** Usable stacking height (inches) from the typed pallet height, or null while that is invalid. */
+function usableHeightOf(height: number | null): number | null {
+  return height !== null && height > PALLET_HEIGHT ? height - PALLET_HEIGHT : null;
 }
 
 /**
@@ -27,7 +24,8 @@ export function SizeFieldsets() {
   const draft = useInputs((s) => s.draft);
   const errors = useInputs((s) => (s.parsed.ok ? NO_ERRORS : s.parsed.errors));
   const setField = useInputs((s) => s.setField);
-  const usable = usableHeightOf(draft.pallet.height);
+  const unit = useUnit();
+  const usable = usableHeightOf(useInputs((s) => inputFieldValue(s, 'pallet.height')));
 
   return (
     <>
@@ -41,13 +39,12 @@ export function SizeFieldsets() {
         heightHint={
           <>
             <p className="border border-amber-200 bg-amber-50 px-2 py-1.5 text-amber-900 dark:border-b-0 dark:border-r-0 dark:border-harbor-sand dark:bg-harbor-panel dark:text-harbor-sand">
-              A 5-inch pallet is automatically included. Available stacking height has been reduced
-              by 5 inches.
+              {palletNotice(unit)}
             </p>
             <p className="mt-1 tabular-nums text-gray-700 dark:text-harbor-mist">
               {usable === null
                 ? 'Usable stacking height: —'
-                : `Usable stacking height: ${formatNumber(usable)} in`}
+                : `Usable stacking height: ${lengthText(usable, unit)}`}
             </p>
           </>
         }

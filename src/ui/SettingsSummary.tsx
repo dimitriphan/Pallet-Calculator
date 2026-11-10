@@ -1,3 +1,4 @@
+import { useUnit } from './format';
 import { settingsSummary } from './settingsSummary';
 import { useInputs, useResults, useStores } from './StoreContext';
 import { focusViewModeRadio } from './ViewModeSwitch';
@@ -25,6 +26,7 @@ export function SettingsSummary() {
   const { prefs } = useStores();
   const parsed = useInputs((s) => s.parsed);
   const lastInputs = useResults((s) => s.inputs);
+  const unit = useUnit();
   const openFull = () => {
     // This button unmounts with Basic mode; leave focus on the Full radio it selected.
     focusViewModeRadio('full');
@@ -35,7 +37,7 @@ export function SettingsSummary() {
   let action: string;
   let tone = 'bracket bg-gray-50 text-gray-700 dark:bg-harbor-panel dark:text-harbor-foam';
   if (parsed.ok) {
-    text = settingsSummary(parsed.inputs);
+    text = settingsSummary(parsed.inputs, unit);
     action = 'Change in Full view';
   } else if (!Object.keys(parsed.errors).some(visibleInBasic)) {
     text = HIDDEN_INVALID;
@@ -44,7 +46,7 @@ export function SettingsSummary() {
       'border border-red-200 bg-red-50 text-red-800 dark:border-0 dark:border-l-2 dark:border-harbor-coral dark:bg-harbor-panel dark:text-harbor-coral-text';
   } else {
     // A field on this screen is invalid; describe the settings behind the result still shown.
-    text = lastInputs ? settingsSummary(lastInputs) : null;
+    text = lastInputs ? settingsSummary(lastInputs, unit) : null;
     action = 'Change in Full view';
   }
   if (text === null) return null;
