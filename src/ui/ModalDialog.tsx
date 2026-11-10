@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 interface ModalDialogProps {
   title: string;
@@ -21,6 +21,11 @@ export function ModalDialog({ title, onClose, placement = 'center', children }: 
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const onCloseRef = useRef(onClose);
+  // Captured during the first render, before the dialog takes focus. An effect would run twice
+  // under StrictMode and capture the dialog's own content the second time.
+  const [opener] = useState(() =>
+    document.activeElement instanceof HTMLElement ? document.activeElement : null,
+  );
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -29,7 +34,6 @@ export function ModalDialog({ title, onClose, placement = 'center', children }: 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     // jsdom has no showModal(); the open attribute still makes the dialog visible there.
     if (typeof dialog.showModal === 'function') {
       if (!dialog.open) dialog.showModal();
@@ -41,9 +45,10 @@ export function ModalDialog({ title, onClose, placement = 'center', children }: 
     dialog.addEventListener('cancel', onCancel);
     return () => {
       dialog.removeEventListener('cancel', onCancel);
-      opener?.focus();
+      // Only on a real close: StrictMode's rehearsal unmount leaves the dialog in the page.
+      if (!dialog.isConnected) opener?.focus();
     };
-  }, []);
+  }, [opener]);
 
   return (
     <dialog
