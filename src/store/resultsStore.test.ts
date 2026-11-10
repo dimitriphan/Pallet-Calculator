@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
+import { singleFieldVariants } from '../domain/testSupport';
 import type { Inputs, OptimizeResult, RankedLayout } from '../domain/types';
 import { SupersededError, type RunOptimizer } from '../worker/optimizerClient';
 import { createResultsStore, selectSelected, useResultsStore } from './resultsStore';
@@ -132,6 +133,21 @@ describe('resultsStore', () => {
     const store = createResultsStore(vi.fn().mockRejectedValueOnce(new Error('boom')));
     await store.getState().request(inputsA);
     expect(store.getState()).toMatchObject({ status: 'error', stale: false, result: null });
+  });
+
+  it('runs the optimizer again when any single input field changes', async () => {
+    const variants = singleFieldVariants(DEFAULT_INPUTS);
+    expect(variants.map((v) => v.path)).toContain('boxesPerCarton');
+    expect(variants.map((v) => v.path)).toContain('product.height');
+    for (const { path, inputs } of variants) {
+      const run = vi.fn(async () => result(1));
+      const store = createResultsStore(run);
+      await store.getState().request(DEFAULT_INPUTS);
+      await store.getState().request(structuredClone(DEFAULT_INPUTS));
+      expect(run, `${path} unchanged`).toHaveBeenCalledTimes(1);
+      await store.getState().request(inputs);
+      expect(run, path).toHaveBeenCalledTimes(2);
+    }
   });
 
   it('retry re-runs the last requested inputs', async () => {

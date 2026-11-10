@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
+import { singleFieldVariants } from '../domain/testSupport';
 import type { Inputs } from '../domain/types';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { createLocalStorageRepository } from '../persistence/localStorageRepository';
@@ -51,6 +52,19 @@ describe('presets store', () => {
     written.setItem(STORAGE_KEYS.presets, JSON.stringify({ version: 1, items: [] }));
     expect(setup(written).store.getState().presets).toEqual([]);
     expect(storage.getItem(STORAGE_KEYS.presets)).toBeNull();
+  });
+
+  it('inputsMatchPreset notices a change to any single field a preset covers', () => {
+    const { store } = setup();
+    const p = store.getState().create('Defaults', DEFAULT_INPUTS);
+    expect(inputsMatchPreset(DEFAULT_INPUTS, p)).toBe(true);
+    const variants = singleFieldVariants(DEFAULT_INPUTS);
+    const covered = variants.filter((v) => !v.path.startsWith('product.'));
+    expect(covered.map((v) => v.path)).toContain('boxesPerCarton');
+    for (const { path, inputs } of covered) expect(inputsMatchPreset(inputs, p), path).toBe(false);
+    // The product is not part of a preset.
+    for (const { path, inputs } of variants.filter((v) => v.path.startsWith('product.')))
+      expect(inputsMatchPreset(inputs, p), path).toBe(true);
   });
 
   it('presetToInputs keeps the product and copies every other field', () => {
