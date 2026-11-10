@@ -1,5 +1,6 @@
 import { settingsSummary } from './settingsSummary';
 import { useInputs, useResults, useStores } from './StoreContext';
+import { focusViewModeRadio } from './ViewModeSwitch';
 
 const HIDDEN_INVALID = 'A setting in Full view needs fixing before results can update.';
 
@@ -24,7 +25,11 @@ export function SettingsSummary() {
   const { prefs } = useStores();
   const parsed = useInputs((s) => s.parsed);
   const lastInputs = useResults((s) => s.inputs);
-  const openFull = () => prefs.getState().setViewMode('full');
+  const openFull = () => {
+    // This button unmounts with Basic mode; leave focus on the Full radio it selected.
+    focusViewModeRadio('full');
+    prefs.getState().setViewMode('full');
+  };
 
   let text: string | null;
   let action: string;

@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
 import { describeRun, stackRuns } from '../engine/analytics/stack';
 import { formatDims, formatNumber } from '../engine/units/units';
@@ -23,14 +23,23 @@ function Part({ title, children }: { title: string; children: ReactNode }) {
 /**
  * Basic mode's plain build instructions for the selected layout: the carton, the stack from
  * the bottom, and the finished load. Every number comes from the result, not the draft.
- * Renders nothing when the status messages already explain an empty or failed result.
+ * Renders nothing when the status messages already explain an empty or failed result, or
+ * while a first calculation runs.
  */
 export function WhatToBuildCard() {
   const headingId = useId();
   const selected = useSelectedAnalytics();
   const best = useResults((s) => s.result?.layouts[0] ?? null);
   const select = useResults((s) => s.select);
+  const running = useResults((s) => s.status === 'running');
   const { error, empty } = useStatusContent();
+  const heading = useRef<HTMLHeadingElement>(null);
+
+  const showBest = () => {
+    select(0);
+    // The note and its button go away; keep the keyboard user in the card.
+    heading.current?.focus();
+  };
 
   let body: ReactNode;
   if (selected) {
@@ -56,7 +65,7 @@ export function WhatToBuildCard() {
             </p>
             <button
               type="button"
-              onClick={() => select(0)}
+              onClick={showBest}
               className="rounded border border-blue-300 bg-white px-2 py-1 text-sm font-medium text-blue-800 hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 dark:border-blue-700 dark:bg-gray-900 dark:text-blue-200 dark:hover:bg-blue-900 dark:focus-visible:outline-blue-400"
             >
               Use layout 1
@@ -95,10 +104,11 @@ export function WhatToBuildCard() {
         </Part>
       </>
     );
-  } else if (!empty && !error) {
+  } else if (!empty && !error && !running) {
     body = <p className="text-sm text-gray-600 dark:text-gray-300">{NO_LAYOUT}</p>;
   } else {
-    // The status messages above already say why there is nothing to build.
+    // The status messages above already say why there is nothing to build, or that a
+    // calculation is under way.
     return null;
   }
 
@@ -108,7 +118,12 @@ export function WhatToBuildCard() {
       className="space-y-4 rounded border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 id={headingId} className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h2
+          ref={heading}
+          id={headingId}
+          tabIndex={-1}
+          className="text-lg font-semibold text-gray-900 focus:outline-none dark:text-gray-100"
+        >
           What to build
         </h2>
         <StaleBadge />

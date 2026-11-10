@@ -47,7 +47,8 @@ function Workspace() {
           {full ? (
             <DetailsPanel />
           ) : (
-            <div className="space-y-3 p-4">
+            // While the status live region is empty, the card needs no space-y margin above it.
+            <div className="space-y-3 p-4 [&>[role=status]:empty+*]:!mt-0">
               <StatusMessages />
               <WhatToBuildCard />
             </div>

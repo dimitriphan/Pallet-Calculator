@@ -7,7 +7,17 @@ const MODES: { value: ViewMode; label: string }[] = [
   { value: 'full', label: 'Full' },
 ];
 
-/** Basic / Full radio pair; for now it only stores the preference. */
+const radioId = (mode: ViewMode) => `view-mode-${mode}`;
+
+/**
+ * Moves focus to one of the view radios; for controls that unmount themselves by switching
+ * the view, so keyboard users are not dropped at the top of the page.
+ */
+export function focusViewModeRadio(mode: ViewMode): void {
+  document.getElementById(radioId(mode))?.focus();
+}
+
+/** Basic / Full radio pair. */
 export function ViewModeSwitch() {
   const { prefs } = useStores();
   const viewMode = usePrefs((s) => s.viewMode);
@@ -41,6 +51,7 @@ export function ViewModeSwitch() {
         return (
           <button
             key={m.value}
+            id={radioId(m.value)}
             ref={(el) => {
               refs.current[i] = el;
             }}

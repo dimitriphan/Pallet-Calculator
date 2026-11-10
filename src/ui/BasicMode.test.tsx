@@ -1,8 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import App from '../App';
 import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
-import { flush, renderApp, summaryTile } from './testUtils';
+import { flush, makeStores, renderApp, summaryTile } from './testUtils';
 
 const STALE = 'Showing the last valid result. Fix the highlighted fields to update.';
 const HIDDEN_INVALID = 'A setting in Full view needs fixing before results can update.';
@@ -27,6 +28,22 @@ async function retype(user: User, input: HTMLElement, text: string) {
   await user.clear(input);
   await user.type(input, text);
   await flush();
+}
+
+const USING_DEFAULTS = 'Using 0.50 in leeway, 0.25 in carton walls, no overhang, fully rotatable.';
+
+/** Basic mode whose draft is edited before the first render, so no result ever exists. */
+async function renderBasicWithDraft(edits: [string, string][]) {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  const stores = makeStores(undefined, { viewMode: 'basic' });
+  for (const [path, value] of edits) stores.inputs.getState().setField(path, value);
+  render(<App stores={stores} />);
+  await flush();
+  return stores;
+}
+
+function fullRadio() {
+  return screen.getByRole('radio', { name: 'Full' });
 }
 
 function tableRows() {
@@ -103,6 +120,7 @@ describe('Basic mode', () => {
 
     await user.click(screen.getByRole('button', { name: 'Change in Full view' }));
     expect(stores.prefs.getState().viewMode).toBe('full');
+    expect(fullRadio()).toHaveFocus();
     expect(screen.getByRole('table', { name: 'Layout comparison' })).toBeInTheDocument();
     await flush();
     expect(run.mock.calls.length).toBe(calls);
@@ -123,6 +141,7 @@ describe('Basic mode', () => {
     await user.click(within(card()).getByRole('button', { name: 'Use layout 1' }));
     expect(stores.results.getState().selectedIndex).toBe(0);
     expect(within(card()).queryByText(note)).not.toBeInTheDocument();
+    expect(within(card()).getByRole('heading', { name: 'What to build' })).toHaveFocus();
     expect(within(card()).getByText(DEFAULT_LOAD)).toBeInTheDocument();
     expect(
       within(card()).getByText('Layer 1: 10 cartons, product length side up'),
@@ -138,6 +157,7 @@ describe('Basic mode', () => {
     expect(screen.queryByText(/^Using /)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Open Full view' }));
     expect(stores.prefs.getState().viewMode).toBe('full');
+    expect(fullRadio()).toHaveFocus();
     expect(screen.getByRole('table', { name: 'Layout comparison' })).toBeInTheDocument();
   });
 
@@ -182,20 +202,89 @@ describe('Basic mode', () => {
   });
 
   it('asks for the sizes when there has never been a result', async () => {
-    const { user } = await renderBasic(() => new Promise(() => {}));
-    await retype(user, field('Pallet limitation', 'Length'), 'abc');
+    await renderBasicWithDraft([['pallet.length', 'abc']]);
     expect(
       within(card()).getByText('Enter the three sizes to see what to build.'),
     ).toBeInTheDocument();
   });
+
+  it('shows no card while the first calculation runs', async () => {
+    await renderBasic(() => new Promise(() => {}));
+    expect(screen.getByText('Calculating…')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'What to build' })).not.toBeInTheDocument();
+  });
+
+  it('describes the last valid settings when a visible and a hidden field are both invalid', async () => {
+    const { user } = await renderApp();
+    await retype(user, screen.getByRole('textbox', { name: 'Box leeway' }), 'x');
+    await retype(user, field('Pallet limitation', 'Length'), 'abc');
+    await user.click(screen.getByRole('radio', { name: 'Basic' }));
+
+    expect(field('Pallet limitation', 'Length')).toHaveAccessibleDescription(
+      expect.stringContaining('Enter a number'),
+    );
+    expect(screen.getByText(USING_DEFAULTS)).toBeInTheDocument();
+    expect(screen.queryByText(HIDDEN_INVALID)).not.toBeInTheDocument();
+  });
+
+  it('says nothing about settings when both are invalid and there was never a result', async () => {
+    await renderBasicWithDraft([
+      ['leeway', 'x'],
+      ['pallet.length', 'abc'],
+    ]);
+    expect(screen.queryByText(/^Using /)).not.toBeInTheDocument();
+    expect(screen.queryByText(HIDDEN_INVALID)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Full view/ })).not.toBeInTheDocument();
+  });
+
+  it('points to Full view when no custom orientation is ticked', async () => {
+    const { user } = await renderApp();
+    await user.click(screen.getByRole('radio', { name: 'Custom' }));
+    const group = screen.getByRole('group', { name: 'Product rotation' });
+    for (const box of within(group).getAllByRole('checkbox', {
+      name: /^(LWH|LHW|WLH|WHL|HLW|HWL)$/,
+    }))
+      if ((box as HTMLInputElement).checked) await user.click(box);
+    await flush();
+    await user.click(screen.getByRole('radio', { name: 'Basic' }));
+    expect(screen.getByText(HIDDEN_INVALID)).toBeInTheDocument();
+  });
+
+  it('keeps the same 3D slot when switching views', async () => {
+    const { user } = await renderBasic();
+    const slot = screen.getByTestId('scene-slot');
+    const inner = slot.firstElementChild;
+    expect(inner).not.toBeNull();
+    await user.click(fullRadio());
+    expect(screen.getByTestId('scene-slot')).toBe(slot);
+    expect(slot.firstElementChild).toBe(inner);
+    await user.click(screen.getByRole('radio', { name: 'Basic' }));
+    expect(screen.getByTestId('scene-slot')).toBe(slot);
+    expect(slot.firstElementChild).toBe(inner);
+  });
+
+  it('keeps an empty status live region above the card until there is news', async () => {
+    const { user } = await renderBasic();
+    const aside = screen.getByRole('complementary', { name: 'Details' });
+    const region = within(aside).getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+    await retype(user, field('Pallet limitation', 'Length'), 'abc');
+    expect(within(aside).getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent(STALE);
+  });
 });
 
 describe('Full mode status messages', () => {
-  it('leaves no empty status line under the comparison heading', async () => {
-    await renderApp();
+  it('keeps an empty status live region under the comparison heading until there is news', async () => {
+    const { user } = await renderApp();
     const section = screen
       .getByRole('heading', { name: 'Layout comparison' })
       .closest('section') as HTMLElement;
-    expect(within(section).queryByRole('status')).not.toBeInTheDocument();
+    const region = within(section).getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+    expect(region).toHaveClass('empty:!mt-0');
+    await retype(user, field('Pallet limitation', 'Height'), '4');
+    expect(within(section).getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent(STALE);
   });
 });
