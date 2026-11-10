@@ -162,8 +162,12 @@ Pure TypeScript, no React or DOM. Deterministic.
 ### 5.1 Carton candidates
 
 For each allowed product orientation, enumerate all (nx, ny, nz) >= 1 whose
-carton is valid under 4.3. Merge candidates with the same sorted outer size
-and box count. Record for each: orientation, counts, inner and outer size,
+carton is valid under 4.3. Under Fully Rotatable only, merge candidates that are the same
+physical carton (equal outer size and box count with the same count multiset).
+Under restricted rotation, mirror cartons are physically different and are not
+merged. The top-5 selection also de-duplicates layouts that look identical from
+outside (same sorted outer size, boxes per carton, and per-layer height, count
+and blocks). Record for each: orientation, counts, inner and outer size,
 boxes per carton, carton utilization (product volume / outer carton volume),
 and empty volume.
 
@@ -210,7 +214,11 @@ one; stale results are discarded. Input changes are debounced by about 300 ms.
 Cartons are evaluated in order of their best possible total, and evaluation
 stops after a 4 second budget. If the budget is reached, the result is marked
 as truncated and the UI says so. Very small boxes on a large pallet are the
-only expected trigger.
+only expected trigger. Candidate generation is capped at 8000 candidates (the
+ones holding the most boxes per carton are kept), and the result is marked
+truncated when the cap or the enumeration limit is hit. The time limit applies
+only after at least one layout has been found, so a slow first carton cannot
+produce a false "nothing fits".
 
 ## 6. Ranking
 
@@ -248,7 +256,9 @@ the pallet).
 Each layout carries its three weighted contributions, its final score, and a
 generated sentence comparing it with the next layout, for example: "Layout #1
 ranked above Layout #2 because it fits 48 additional units while maintaining
-similar utilization."
+similar utilization." When two layouts tie on quantity, score and carton count,
+the sentence is: "Layout #A and Layout #B are equivalent in quantity, score,
+and carton count; they differ only in carton size or arrangement."
 
 ## 7. Analytics
 
@@ -338,7 +348,9 @@ result exactly without recalculating.
 A repository interface with one Local Storage implementation, so a REST
 implementation can replace it later. Stored data carries a schema version.
 Everything read from storage or from an imported file is validated with Zod; an
-invalid entry is skipped with a notice. Current inputs are remembered between
+invalid entry is skipped with a notice. Before unreadable or partly readable
+saved data is overwritten, the raw text is copied to a `<key>.backup` key, and
+the notice ends with "A backup copy was kept." Current inputs are remembered between
 visits. A storage-full error is reported to the user without losing the
 on-screen result.
 
