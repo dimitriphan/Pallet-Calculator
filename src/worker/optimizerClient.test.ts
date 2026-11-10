@@ -8,6 +8,11 @@ class FakeWorker {
   posted: { id: number; inputs: unknown }[] = [];
   onmessage: ((e: MessageEvent) => void) | null = null;
   onerror: ((e: ErrorEvent) => void) | null = null;
+  onmessageerror: (() => void) | null = null;
+  terminated = false;
+  terminate() {
+    this.terminated = true;
+  }
   constructor() {
     FakeWorker.instances.push(this);
   }
@@ -74,5 +79,29 @@ describe('createWorkerRunner', () => {
     FakeWorker.instances[0]!.onerror?.({ message: 'crash' } as ErrorEvent);
     await expect(p1).rejects.toThrow('crash');
     await expect(p2).rejects.toThrow('crash');
+  });
+
+  it('recreates the worker after an error', async () => {
+    vi.stubGlobal('Worker', FakeWorker);
+    const run = createWorkerRunner();
+    const p1 = run(DEFAULT_INPUTS);
+    FakeWorker.instances[0]!.onerror?.({ message: 'crash' } as ErrorEvent);
+    await expect(p1).rejects.toThrow('crash');
+    expect(FakeWorker.instances[0]!.terminated).toBe(true);
+    const p2 = run(DEFAULT_INPUTS);
+    expect(FakeWorker.instances).toHaveLength(2);
+    const w = FakeWorker.instances[1]!;
+    w.reply({ id: w.posted[0]!.id, result: 'ok' });
+    await expect(p2).resolves.toBe('ok');
+  });
+
+  it('rejects pending requests on messageerror and recovers', async () => {
+    vi.stubGlobal('Worker', FakeWorker);
+    const run = createWorkerRunner();
+    const p = run(DEFAULT_INPUTS);
+    FakeWorker.instances[0]!.onmessageerror?.();
+    await expect(p).rejects.toThrow();
+    void run(DEFAULT_INPUTS);
+    expect(FakeWorker.instances).toHaveLength(2);
   });
 });

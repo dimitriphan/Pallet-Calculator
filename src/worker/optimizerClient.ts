@@ -24,6 +24,9 @@ export function createWorkerRunner(): RunOptimizer {
   const pending = new Map<number, Pending>();
 
   const failAll = (message: string) => {
+    // Drop the worker so the next run starts a fresh one instead of posting to a dead thread.
+    worker?.terminate();
+    worker = null;
     const all = [...pending.values()];
     pending.clear();
     for (const p of all) p.reject(new Error(message));
@@ -41,6 +44,7 @@ export function createWorkerRunner(): RunOptimizer {
       else waiting.resolve(result);
     };
     w.onerror = (e) => failAll(e.message || 'Optimizer worker failed');
+    w.onmessageerror = () => failAll('Optimizer reply could not be read');
     worker = w;
     return w;
   };

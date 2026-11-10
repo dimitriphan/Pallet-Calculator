@@ -159,6 +159,77 @@ describe('resultsStore', () => {
     expect(store.getState().result).toEqual(result(5));
   });
 
+  it('keeps stale when markStale is called during a run, and stores the result', async () => {
+    const d = deferred();
+    const store = createResultsStore(
+      vi.fn().mockResolvedValueOnce(result(1)).mockReturnValueOnce(d.promise),
+    );
+    await store.getState().request(inputsA);
+    const p = store.getState().request(inputsB);
+    store.getState().markStale();
+    d.resolve(result(2));
+    await p;
+    expect(store.getState()).toMatchObject({ status: 'ready', stale: true, inputs: inputsB });
+    expect(store.getState().result).toEqual(result(2));
+  });
+
+  it('a new request clears the stale mark', async () => {
+    const d = deferred();
+    const store = createResultsStore(
+      vi
+        .fn()
+        .mockResolvedValueOnce(result(1))
+        .mockReturnValueOnce(d.promise)
+        .mockResolvedValueOnce(result(3)),
+    );
+    await store.getState().request(inputsA);
+    const p = store.getState().request(inputsB);
+    store.getState().markStale();
+    await store.getState().request({ ...inputsB, leeway: 7 });
+    d.resolve(result(2));
+    await p;
+    expect(store.getState().stale).toBe(false);
+  });
+
+  it('markStale does nothing without a result', () => {
+    const store = createResultsStore(vi.fn());
+    store.getState().markStale();
+    expect(store.getState().stale).toBe(false);
+  });
+
+  it('skips the runner for unchanged inputs and clears stale', async () => {
+    const run = vi.fn().mockResolvedValue(result(1));
+    const store = createResultsStore(run);
+    await store.getState().request(inputsA);
+    store.getState().markStale();
+    await store.getState().request(structuredClone(inputsA));
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(store.getState().stale).toBe(false);
+  });
+
+  it('retry bypasses the unchanged-inputs short-circuit', async () => {
+    const run = vi.fn().mockResolvedValue(result(1));
+    const store = createResultsStore(run);
+    await store.getState().request(inputsA);
+    store.getState().retry();
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(2));
+  });
+
+  it('shares an in-flight run for equal inputs and clears the stale mark', async () => {
+    const d = deferred();
+    const run = vi.fn().mockResolvedValueOnce(result(1)).mockReturnValueOnce(d.promise);
+    const store = createResultsStore(run);
+    await store.getState().request(inputsA);
+    const p1 = store.getState().request(inputsB);
+    store.getState().markStale();
+    const p2 = store.getState().request(structuredClone(inputsB));
+    expect(run).toHaveBeenCalledTimes(2);
+    d.resolve(result(2));
+    await Promise.all([p1, p2]);
+    expect(store.getState().stale).toBe(false);
+    expect(store.getState().result).toEqual(result(2));
+  });
+
   it('exports a default hook', () => {
     expect(useResultsStore.getState().status).toBe('idle');
   });
