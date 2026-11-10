@@ -201,6 +201,32 @@ describe('Basic mode', () => {
     expect(screen.queryByText('Outer size')).not.toBeInTheDocument();
   });
 
+  it('hides the card and marks the summary out of date when a calculation fails', async () => {
+    let fail = false;
+    const run = (i: Inputs) =>
+      fail ? Promise.reject(new Error('Calculation failed.')) : Promise.resolve(optimize(i));
+    const { user } = await renderBasic(run);
+    expect(card()).toBeInTheDocument();
+
+    fail = true;
+    await retype(user, field('Pallet limitation', 'Length'), '46');
+    expect(screen.getByText('Calculation failed.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'What to build' })).not.toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Production summary' });
+    expect(within(summary).getByText('Out of date')).toBeInTheDocument();
+    expect(summary.querySelector('dl')).toHaveClass('opacity-50');
+    // The error explains itself; the "fix the highlighted fields" notice would mislead.
+    expect(screen.queryByText(STALE)).not.toBeInTheDocument();
+
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    await flush();
+    expect(screen.queryByText('Calculation failed.')).not.toBeInTheDocument();
+    expect(card()).toBeInTheDocument();
+    expect(within(summary).queryByText('Out of date')).not.toBeInTheDocument();
+  });
+
   it('asks for the sizes when there has never been a result', async () => {
     await renderBasicWithDraft([['pallet.length', 'abc']]);
     expect(

@@ -41,6 +41,10 @@ export function WhatToBuildCard() {
     heading.current?.focus();
   };
 
+  // The status messages above already say why there is nothing to build, or that the
+  // calculation failed; a card for the previous inputs would contradict them.
+  if (error || empty) return null;
+
   let body: ReactNode;
   if (selected) {
     const { ranked, analytics } = selected;
@@ -104,11 +108,10 @@ export function WhatToBuildCard() {
         </Part>
       </>
     );
-  } else if (!empty && !error && !running) {
+  } else if (!running) {
     body = <p className="text-sm text-gray-600 dark:text-gray-300">{NO_LAYOUT}</p>;
   } else {
-    // The status messages above already say why there is nothing to build, or that a
-    // calculation is under way.
+    // "Calculating…" above says a first calculation is under way.
     return null;
   }
 

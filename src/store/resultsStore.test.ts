@@ -113,6 +113,27 @@ describe('resultsStore', () => {
     expect(s.result).toEqual(result(1));
   });
 
+  it('marks the kept result out of date when a run fails, and a later success clears it', async () => {
+    const run = vi
+      .fn()
+      .mockResolvedValueOnce(result(1))
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(result(3));
+    const store = createResultsStore(run);
+    await store.getState().request(inputsA);
+    await store.getState().request(inputsB);
+    expect(store.getState()).toMatchObject({ status: 'error', stale: true, result: result(1) });
+    store.getState().retry();
+    await vi.waitFor(() => expect(store.getState().status).toBe('ready'));
+    expect(store.getState()).toMatchObject({ stale: false, result: result(3), inputs: inputsB });
+  });
+
+  it('does not mark anything out of date when the first run fails', async () => {
+    const store = createResultsStore(vi.fn().mockRejectedValueOnce(new Error('boom')));
+    await store.getState().request(inputsA);
+    expect(store.getState()).toMatchObject({ status: 'error', stale: false, result: null });
+  });
+
   it('retry re-runs the last requested inputs', async () => {
     const run = vi.fn().mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(result(3));
     const store = createResultsStore(run);

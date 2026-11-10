@@ -75,7 +75,12 @@ export function createResultsStore(
             set({ status: get().result ? 'ready' : 'idle', error: null });
             return;
           }
-          set({ status: 'error', error: err instanceof Error ? err.message : String(err) });
+          // A previous result stays on screen; it no longer matches the inputs, so mark it.
+          set({
+            status: 'error',
+            error: err instanceof Error ? err.message : String(err),
+            stale: get().result !== null,
+          });
         }
       })();
       inFlight = { inputs, promise };

@@ -25,7 +25,8 @@ export function useStatusContent(): {
   const lines: StatusLine[] = [];
   if (status === 'running')
     lines.push({ key: 'running', text: 'Calculating…', tone: 'text-gray-600 dark:text-gray-300' });
-  if (stale)
+  // After a failed run the error (with Retry) explains why the result is out of date.
+  if (stale && status !== 'error')
     lines.push({
       key: 'stale',
       text: 'Showing the last valid result. Fix the highlighted fields to update.',
