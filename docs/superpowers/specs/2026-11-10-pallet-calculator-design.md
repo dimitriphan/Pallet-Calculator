@@ -186,6 +186,14 @@ positions that can matter), and results are memoized by rectangle size. The
 result is the maximum carton count achievable by any guillotine arrangement,
 expressed as a list of blocks: origin, rows, columns, flat rotation.
 
+The full search is bounded by its work, not only its size: when the number of
+cut positions times the number of sub-rectangles would exceed a fixed limit
+(very small cartons, or a very long or very thin pallet), a single-cut search
+over the same cut positions is used instead, and when even the cut positions
+would be too many to list, only the two plain grids. Ordinary pallets with
+cartons of 3 inches or more always get the full search. Between layer searches
+of one carton the time budget (5.5) is checked once a layout exists.
+
 To give the top 5 real variety, the plain single-grid layers (each flat
 rotation) are also kept as alternative layers when they differ from the best.
 
@@ -209,7 +217,9 @@ independently.
 
 Packing and ranking run in a web worker. The main thread sends validated
 inputs and receives the ranked layouts. A new request supersedes an in-flight
-one; stale results are discarded. Input changes are debounced by about 300 ms.
+one: the worker running it is terminated and a fresh worker takes the new
+request, so a slow calculation never delays the next; stale results are
+discarded and a cancelled run is never reported as an error. Input changes are debounced by about 300 ms.
 
 Cartons are evaluated in order of their best possible total, and evaluation
 stops after a 4 second budget. If the budget is reached, the result is marked

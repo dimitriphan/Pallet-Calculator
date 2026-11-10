@@ -23,7 +23,7 @@ inputs store -> validation (Zod) -> worker -> ranking -> results store -> screen
 
 1. `src/store/inputsStore.ts` holds what the user typed as text and parses it with the Zod schema. Errors show beside the field.
 2. `src/ui/useAutoOptimize.ts` waits 300 ms after the last edit, then asks the results store for a calculation.
-3. `src/worker/optimizerClient.ts` sends the validated inputs to `optimizer.worker.ts`, a web worker, so the page never freezes. A newer request replaces an older one, and late answers are discarded.
+3. `src/worker/optimizerClient.ts` sends the validated inputs to `optimizer.worker.ts`, a web worker, so the page never freezes. A newer request cancels the older one: the worker still running it is stopped and a fresh worker takes the new request, so one slow calculation never delays the next. Late answers are discarded, and a cancelled run is never shown as an error.
 4. The worker runs `optimize.ts` (packing, then ranking) and returns the ranked layouts.
 5. `src/store/resultsStore.ts` keeps the result and the selected row. The comparison table, summary bar, details tabs and 3D scene all read from it.
 

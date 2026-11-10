@@ -2,7 +2,7 @@
 
 Pallet Calculator answers one question: **how many product boxes fit on one pallet, in what carton, and arranged how?**
 
-You enter the size of your product box, the biggest carton you are allowed to use, and the pallet limit. The tool tries every carton size that could work. It shows the five best loads side by side, with a 3D picture of each. The numbers are exact and the same inputs always give the same answer.
+You enter the size of your product box, the biggest carton you are allowed to use, and the pallet limit. The tool tries every carton size that could work. It shows the five best loads side by side, with a 3D picture of each. The numbers are exact, and results are repeatable: the same inputs give the same answer, except when the search is limited to keep it fast (the tool says so when that happens).
 
 ## How to use it
 

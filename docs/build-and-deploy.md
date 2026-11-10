@@ -2,7 +2,7 @@
 
 ## What you need
 
-- **Node 22** (the runtime that runs the build tools). Check with `node --version`.
+- **Node 22** (the runtime that runs the build tools). Check with `node --version`. The project says so in `package.json` (`"engines": { "node": ">=22" }`) and in `.nvmrc`; Vercel reads the `engines` field to pick its Node version, and `nvm use` reads `.nvmrc`.
 - The project folder from GitHub: `dimitriphan/pallet-calculator`.
 
 Install the dependencies exactly as locked:

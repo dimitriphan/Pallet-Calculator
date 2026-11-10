@@ -46,12 +46,13 @@ A strict product setting also limits how the carton may be turned on the pallet.
 - **One carton size per layout.** Mixed carton sizes in one load are not supported.
 - **No weight, stability or crush checks.** Tipped cartons and tall columns are allowed without any warning. You must judge whether the load is safe.
 - **Inches only.**
+- **Layer order.** Layers are ordered with the fullest layer at the bottom, so a narrower layer can sit under a slightly wider one; check overhang between layers when building mixed stacks.
 
 ## Search limits
 
 - **4 second limit.** The tool stops searching after 4 seconds. This applies only once at least one layout has been found, so you never get a false "nothing fits". If the limit is reached, or the number of carton sizes tried was capped (very small boxes), you see "Search was limited to keep it fast; results may not be the best possible." Treat the result as good but possibly not the best.
 - **8000 candidate cartons.** For very small products there can be a huge number of possible cartons. Only the 8000 largest-capacity candidates are tried. The result is marked as stopped early.
-- **Very small cartons.** When a carton is smaller than roughly 2 inches on a full-size pallet, the exact layer search would be too slow. The tool then uses a simpler search with a single cut per rectangle. The answer is still a valid, buildable layer, but it may not be the best possible.
+- **Very small cartons or very long pallets.** When the exact layer search would be too slow (for example cartons under roughly 3 inches on a large pallet, or a pallet many times longer than it is wide), the tool uses a simpler search with a single cut per rectangle, and for extremely small cartons only a plain grid. The answer is still a valid, buildable layer, but it may not be the best possible. Ordinary pallets (48 x 40, 50 x 42, 52 x 44) with cartons of 3 inches or more always get the exact search.
 
 ## Saved data
 
@@ -62,7 +63,7 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 ## Exports
 
-- The PNG has three pictures (your 3D view, a top view and a side view) and a caption strip with the numbers. The top and side pictures have no text labels on the load itself.
+- The PNG has three pictures (your 3D view, a top view and a side view) and a caption strip with the numbers. The top and side pictures have no dimension or measurement labels, only the panel titles.
 
 ## Planned for Round 2 (not built yet)
 
