@@ -118,7 +118,7 @@ recoloured.
 - **Panels:** Harbor panels use a bracket frame: a 1 px foam rule along the
   top and one side with a 6 px corner tick. Inputs, menus, and dialogs are
   fully outlined in 1 px foam so their boundaries are unmistakable. Light
-  uses the same geometry in its existing border grey.
+  uses the same geometry in its existing gray-200 border grey.
 - **Headings:** Exo 2 Light, displayed in capitals with about 0.12em letter
   spacing. Capitals are a display treatment only; the underlying text and
   accessible names are unchanged.
@@ -138,11 +138,14 @@ recoloured.
 2. **Hollow ring: focus ticks only.** Keyboard focus is shown by four 6 × 6
    px open corner fragments 2 px outside the control, in teal-text (Harbor)
    or the existing focus blue (Light), in addition to the control's own
-   outline. No glow.
+   outline. No glow. On tabs, menu items and table rows the ticks are drawn
+   2 px inside, because their scrolling parents would clip outside ticks;
+   selects and plain inputs carry them on a wrapper.
 3. **Root line: major section boundaries only.** A 1 px rule at 22% opacity
    spanning the content width with a single 7 px fork near one end, between
    major input groups, analytics groups, and the sections of the "What to
-   build" card. Never between rows, around controls, or behind text.
+   build" card. The counts are whatever the layout gives: inputs 2 in Basic and
+   4 in Full, analytics 3, the card 2. Never between rows, around controls, or behind text.
 
 A single faint wave line may sit in a page footer if one is ever added; no
 footer is added in this round. No other decoration.
@@ -152,16 +155,20 @@ footer is added in this round. No other decoration.
 ### 7.1 Artwork
 
 The mascot is the owner's character as drawn in the "existing key" on the
-mascot design sheet: a 17 × 22 pixel figure with a hollow ring head open
-through and two eye marks, a triangular bandana at the neck, two arms and two
+mascot design sheet: a 17 × 27 pixel figure (the sheet's footer says
+17 × 22, but its drawing is 17 × 27, and the drawing is what is traced) with a
+hollow ring head open through and two eye marks, a triangular bandana at the
+neck (4, 4 and 2 pixels wide on its three rows), two arms and two
 legs ending bluntly on one ground line, a stem with two leaf tips at unequal
 heights, and one shoot outside the left shoulder. (The mod's in-game sprite
 is a different, more compact drawing and is not used.)
 
-- **Idle** is that key drawing traced pixel for pixel onto a 32 × 32 grid.
+- **Idle** is that key drawing traced pixel for pixel onto a 32 × 32 grid, at
+  the drawing's own proportions.
 - **Working** (three frames), **concerned**, the **header mark**, and the
   **tab icon** are derived from it by changing only the leaves, the shoulder
-  shoot, and the head's tilt, following the poses in the design guide.
+  shoot, and the head's tilt, following the poses in the design guide. Raised
+  leaves grow by one pixel upward so they stay joined to the stem.
 - The **print illustration** is a clean flat version of the idle pose with
   leaves perked.
 - Colours are limited to the sheet's five: `#945743`, `#79432F`, `#35403A`,
@@ -175,12 +182,16 @@ is a different, more compact drawing and is not used.)
 
 | Where | Pose | Size |
 |---|---|---|
-| Header, left of the product name | Header mark | 24 px tall |
-| "What to build" card, empty state | Idle | 64 px, beside the hint |
-| Beside "Calculating…" | Working, 3 frames in the order 1-2-3-2 at 180 ms | 32 px |
-| Beside an error or "nothing fits" message | Concerned | 32 px |
+| Header, left of the product name | Header mark | 2×, transparent margins cropped (about 26 px tall) |
+| "What to build" card, empty state | Idle | 96 px (3×), beside the hint |
+| Beside "Calculating…" | Working, 3 frames in the order 1-2-3-2 at 180 ms | 64 px (2×) |
+| Beside an error or "nothing fits" message | Concerned | 64 px (2×) |
 | Browser tab | Tab icon | 16 × 16 drawing |
-| Build sheet, page 1, top right | Print illustration | about 0.55 in tall |
+| Build sheet, page 1, top right | Print illustration, cropped to the figure | 0.55 in tall |
+
+The art does not fill its 32 × 32 cell, so these sizes are larger than the
+cell scale alone would give; they keep the figure legible at whole-number
+scales.
 
 Rules: the mascot is decorative and hidden from screen readers; it has no
 name, caption, or speech; with reduced motion the working pose shows one
@@ -193,7 +204,9 @@ summary bar, a populated "What to build" card, dialogs, or PNG exports.
   foam bottom rule.
 - **View switch and Theme selector:** raised background, foam labels, 1 px
   foam outline; the selected view option uses teal-fill with foam text.
-- **Summary tiles:** panel background, mist labels, SemiBold foam values;
+- **Summary tiles:** panel background, mist labels, SemiBold foam values; an
+  out-of-date summary shows its values in mist with the "Out of date" badge
+  and is not faded by opacity;
   "Total boxes per pallet" is foam like the others, not coloured.
 - **Inputs:** raised fill, foam values, mist label, placeholder, and suffix,
   1 px foam outline. An invalid field gets a coral edge and its own message
@@ -221,7 +234,8 @@ summary bar, a populated "What to build" card, dialogs, or PNG exports.
   with no blur.
 - **3D view:** toolbar is a panel strip with a foam rule; checked boxes use
   teal-fill with a foam check. The view background is viewport; the floor
-  grid is mist at low opacity. Labels and measurement chips use deep with
+  grid uses pre-blended colours, `#395265` for cells and `#526A7A` for
+  sections, because the grid component has no opacity control. Labels and measurement chips use deep with
   foam text. No mascot or motif inside the view.
 
 Light keeps its current component colours and takes only the shape, type,
@@ -262,6 +276,8 @@ motif, and mascot changes.
 | One coral element per view; neutral field messages plus a summary block | Every invalid field shows a coral-text message with a coral edge | Owner decision; clearer when several fields are wrong |
 | Hollow-ring loading spinner | Not built | The tool has no spinner; calculation uses the sprout |
 | Optional footer wave | Not built | There is no footer |
+| Mascot sizes 32 / 64 / 24 px | 64 px working and concerned, 96 px empty-state idle, header mark at 2× cropped (about 26 px) | The art does not fill its cell |
+| Floor grid in mist at low opacity | Pre-blended `#395265` (cells) and `#526A7A` (sections) | The grid component has no opacity control |
 
 ## 12. Testing
 
@@ -271,7 +287,7 @@ motif, and mascot changes.
   stored values; the pre-paint script agrees with the store for each.
 - **Mascot assets:** every sprite is on its pixel grid, uses only the
   allowed colours, has fully opaque or fully transparent pixels, and the
-  idle sprite occupies 17 × 22 pixels with the features of the key drawing.
+  idle sprite occupies 17 × 27 pixels with the features of the key drawing.
 - **Placements:** each pose appears in its state and nowhere else; hidden
   from the accessibility tree; reduced motion shows a static frame.
 - **No leftovers:** a check over the source finds no `rounded-`, `shadow-`,

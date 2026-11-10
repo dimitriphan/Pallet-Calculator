@@ -32,6 +32,17 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   const viewSwitch = page.getByRole('radiogroup', { name: 'View' });
   const html = page.locator('html');
 
+  // A fresh visit opens in Harbor, with one decorative (hidden) image in the header
+  // and a favicon the site really serves.
+  const theme = page.getByLabel('Theme', { exact: true });
+  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
+  await expect(theme).toHaveValue('harbor');
+  await expect(theme.locator('option:checked')).toHaveText('Harbor');
+  await expect(page.getByRole('banner').locator('img')).toHaveCount(1);
+  await expect(page.getByRole('banner').locator('img')).toHaveAttribute('aria-hidden', 'true');
+  const favicon = await page.request.get('/favicon.png');
+  expect(favicon.status()).toBe(200);
+
   const summary = page.getByRole('region', { name: 'Production summary' });
   const tile = (name: string) =>
     summary.locator('div', { has: page.getByText(name, { exact: true }) });
@@ -70,15 +81,13 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   // The total boxes tile is drawn as its own text string: jsPDF writes "(260) Tj".
   expect(pdfText).toContain('(260) Tj');
 
-  // Harbor theme: applied now, and still applied (and still Basic) after a reload.
-  const theme = page.getByLabel('Theme', { exact: true });
-  await theme.selectOption('harbor');
-  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
-  await page.reload();
-  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
-  await expect(viewSwitch.getByRole('radio', { name: 'Basic' })).toBeChecked();
+  // Light: applied now, and still applied (and still Basic) after a reload.
   await theme.selectOption('light');
   await expect(html).not.toHaveClass(/(^|\s)harbor(\s|$)/);
+  await page.reload();
+  await expect(html).not.toHaveClass(/(^|\s)harbor(\s|$)/);
+  await expect(theme).toHaveValue('light');
+  await expect(viewSwitch.getByRole('radio', { name: 'Basic' })).toBeChecked();
 
   // Full view: the comparison table appears and the original steps follow.
   await viewSwitch.getByRole('radio', { name: 'Full' }).click();
@@ -142,6 +151,32 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   // Validation message.
   await group(page, 'Pallet limitation').getByLabel('Length', { exact: true }).fill('abc');
   await expect(group(page, 'Pallet limitation').getByText('Enter a number')).toBeVisible();
+
+  expect(problems).toEqual([]);
+});
+
+test('a saved Dark preference opens in Harbor', async ({ page }) => {
+  const problems: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') problems.push(`console: ${m.text()}`);
+  });
+  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+
+  // Written before the app loads, as an older version of the tool would have saved it.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('pc.prefs.v1')) {
+      localStorage.setItem('pc.prefs.v1', '{"viewMode":"basic","theme":"dark"}');
+    }
+  });
+  await page.goto('/');
+
+  const html = page.locator('html');
+  await expect(html).toHaveClass(/(^|\s)harbor(\s|$)/);
+  await expect(html).not.toHaveClass(/(^|\s)dark(\s|$)/);
+  await expect(page.getByLabel('Theme', { exact: true })).toHaveValue('harbor');
+  await expect(page.getByLabel('Theme', { exact: true }).locator('option:checked')).toHaveText(
+    'Harbor',
+  );
 
   expect(problems).toEqual([]);
 });
