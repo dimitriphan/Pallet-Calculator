@@ -1,5 +1,9 @@
 import type { Inputs, Layout, OptimizeResult } from '../domain/types';
-import { achievableCounts, generateCartonCandidatesWithInfo } from './packing/cartons';
+import {
+  anyCartonFits,
+  generateCartonCandidatesWithInfo,
+  nearestAchievableCounts,
+} from './packing/cartons';
 import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
 import { buildLayouts, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
@@ -80,15 +84,8 @@ function noCandidates(
   empty: (reason: OptimizeResult['emptyReason']) => OptimizeResult,
 ): OptimizeResult {
   const n = i.boxesPerCarton;
-  if (n === null) return empty('NO_CARTON_FITS');
-  const counts = achievableCounts(i);
-  if (counts.length === 0) return empty('NO_CARTON_FITS');
-  const below = counts.filter((c) => c < n);
-  const above = counts.filter((c) => c > n);
-  return {
-    ...empty('NO_CARTON_WITH_COUNT'),
-    nearestCounts: { below: below.at(-1) ?? null, above: above[0] ?? null },
-  };
+  if (n === null || !anyCartonFits(i)) return empty('NO_CARTON_FITS');
+  return { ...empty('NO_CARTON_WITH_COUNT'), nearestCounts: nearestAchievableCounts(i, n) };
 }
 
 /** Inserts `v` into the descending list, keeping at most KEEP_BEST entries. */

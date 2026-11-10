@@ -41,17 +41,44 @@ export function achievableCounts(i: Inputs): number[] {
 }
 
 /**
- * Candidates sorted by boxes per carton (descending) then key, and whether the list was cut
- * short: by the enumeration limit, or by keeping only the MAX_CARTON_CANDIDATES biggest.
- * With `boxesPerCarton` set to N, only cartons of exactly N boxes, enumerated from the
- * factorizations of N, so neither limit applies and the list is never cut short.
+ * The nearest boxes per carton below and above `n` that some carton can hold, or null on a
+ * side with none. Exact and uncapped: the fit rule is monotone in each count, so for every
+ * (l, w) the cartons that fit are those with 1 <= h <= hmax, and the best h on each side of
+ * `n` follows directly. hmax only shrinks as w (or l) grows, so it is found by stepping down.
  */
-export function generateCartonCandidatesWithInfo(i: Inputs): {
-  candidates: CartonCandidate[];
-  truncated: boolean;
-} {
+export function nearestAchievableCounts(
+  i: Inputs,
+  n: number,
+): { below: number | null; above: number | null } {
+  const { limit, fits } = fitRule(i);
+  let below: number | null = null;
+  let above: number | null = null;
+  let hStart = limit.H;
+  for (let l = 1; l <= limit.L; l++) {
+    let hmax = hStart;
+    for (let w = 1; w <= limit.W; w++) {
+      while (hmax >= 1 && !fits(l, w, hmax)) hmax--;
+      if (w === 1) hStart = hmax;
+      if (hmax < 1) break; // no wider carton fits either
+      const lw = l * w;
+      const hBelow = Math.min(hmax, Math.floor((n - 1) / lw));
+      if (hBelow >= 1 && (below === null || lw * hBelow > below)) below = lw * hBelow;
+      const hAbove = Math.floor(n / lw) + 1;
+      if (hAbove <= hmax && (above === null || lw * hAbove < above)) above = lw * hAbove;
+    }
+    if (hStart < 1) break; // no longer carton fits either
+  }
+  return { below, above };
+}
+
+/** Whether any carton fits at all: a single product with leeway and walls. */
+export function anyCartonFits(i: Inputs): boolean {
+  return fitRule(i).fits(1, 1, 1);
+}
+
+/** Per-axis count bounds and the sorted-fit rule for the inputs' product and maximum carton. */
+function fitRule(i: Inputs) {
   const size = productSize(i);
-  const productVolume = volumeOf(size);
   const { leeway, wallThickness } = i;
   const maxSorted = descending([i.maxCarton.length, i.maxCarton.width, i.maxCarton.height]);
   const bound = maxSorted[0];
@@ -67,6 +94,22 @@ export function generateCartonCandidatesWithInfo(i: Inputs): {
     descending([outerOf(l, size.L), outerOf(w, size.W), outerOf(h, size.H)]).every((v, idx) =>
       fitsWithin(v, maxSorted[idx] as number),
     );
+  return { size, limit, fits };
+}
+
+/**
+ * Candidates sorted by boxes per carton (descending) then key, and whether the list was cut
+ * short: by the enumeration limit, or by keeping only the MAX_CARTON_CANDIDATES biggest.
+ * With `boxesPerCarton` set to N, only cartons of exactly N boxes, enumerated from the
+ * factorizations of N, so neither limit applies and the list is never cut short.
+ */
+export function generateCartonCandidatesWithInfo(i: Inputs): {
+  candidates: CartonCandidate[];
+  truncated: boolean;
+} {
+  const { size, limit, fits } = fitRule(i);
+  const productVolume = volumeOf(size);
+  const { leeway, wallThickness } = i;
 
   const seen = new Set<string>();
   const result: CartonCandidate[] = [];

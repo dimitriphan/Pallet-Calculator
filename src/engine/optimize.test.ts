@@ -204,6 +204,23 @@ describe('optimize', () => {
       });
     });
 
+    it('reports exact nearest counts quickly for a tiny product', () => {
+      const t0 = performance.now();
+      const r = optimize({
+        ...DEFAULT_INPUTS,
+        product: { length: 0.2, width: 0.2, height: 0.2 },
+        boxesPerCarton: 1009,
+      });
+      expect(performance.now() - t0).toBeLessThan(300);
+      expect(r).toEqual({
+        layouts: [],
+        candidatesEvaluated: 0,
+        emptyReason: 'NO_CARTON_WITH_COUNT',
+        truncated: false,
+        nearestCounts: { below: 1008, above: 1010 },
+      });
+    });
+
     it('reports NO_CARTON_FITS when no carton fits at all', () => {
       const r = optimize({
         ...DEFAULT_INPUTS,

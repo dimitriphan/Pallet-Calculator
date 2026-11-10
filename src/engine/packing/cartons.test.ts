@@ -7,6 +7,7 @@ import {
   generateCartonCandidates,
   generateCartonCandidatesWithInfo,
   MAX_CARTON_CANDIDATES,
+  nearestAchievableCounts,
 } from './cartons';
 import { fitsWithin } from './tolerance';
 
@@ -229,5 +230,46 @@ describe('exact boxes per carton', () => {
       boxesPerCarton: 720720,
     });
     expect(performance.now() - t).toBeLessThan(500);
+  });
+});
+
+describe('nearestAchievableCounts', () => {
+  it('gives the nearest counts on each side for the defaults', () => {
+    expect(nearestAchievableCounts(DEFAULT_INPUTS, 7)).toEqual({ below: 6, above: 8 });
+    expect(nearestAchievableCounts(DEFAULT_INPUTS, 50)).toEqual({ below: 10, above: null });
+    expect(nearestAchievableCounts(DEFAULT_INPUTS, 1)).toEqual({ below: null, above: 2 });
+    expect(
+      nearestAchievableCounts(
+        { ...DEFAULT_INPUTS, product: { length: 30, width: 8, height: 4 } },
+        2,
+      ),
+    ).toEqual({ below: null, above: null });
+  });
+
+  it('is exact for a tiny product whose candidate list is capped', () => {
+    const tiny = { ...DEFAULT_INPUTS, product: { length: 0.2, width: 0.2, height: 0.2 } };
+    expect(nearestAchievableCounts(tiny, 1009)).toEqual({ below: 1008, above: 1010 });
+  });
+
+  it('matches the nearest values from the uncapped candidate list, for every N', () => {
+    const i = {
+      ...DEFAULT_INPUTS,
+      rotationMode: 'upright' as const,
+      product: { length: 2, width: 3, height: 5 },
+      leeway: 0,
+      wallThickness: 0,
+      maxCarton: { length: 20, width: 18, height: 16 },
+    };
+    const all = generateCartonCandidatesWithInfo(i);
+    expect(all.truncated).toBe(false);
+    const counts = all.candidates.map((c) => c.boxesPerCarton);
+    for (let n = 1; n <= 60; n++) {
+      const below = counts.filter((c) => c < n);
+      const above = counts.filter((c) => c > n);
+      expect(nearestAchievableCounts(i, n)).toEqual({
+        below: below.length ? Math.max(...below) : null,
+        above: above.length ? Math.min(...above) : null,
+      });
+    }
   });
 });
