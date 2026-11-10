@@ -30,6 +30,20 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
 
   await page.goto('/');
 
+  const summary = page.getByRole('region', { name: 'Production summary' });
+  const tile = (name: string) =>
+    summary.locator('div', { has: page.getByText(name, { exact: true }) });
+  const rows = page.getByRole('table', { name: 'Layout comparison' }).locator('tbody tr');
+
+  // Default inputs: the summary follows the selected row.
+  await expect(tile('Total boxes per pallet').locator('dd')).toHaveText('260');
+  await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(2);
+  const secondProducts = (await rows.nth(1).locator('td').nth(2).innerText()).trim();
+  expect(secondProducts).toMatch(/^\d+$/);
+  await rows.nth(1).click();
+  await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(tile('Total boxes per pallet').locator('dd')).toHaveText(secondProducts);
+
   await fillDims(page, 'Product box', ['Length', 'Width', 'Height'], ['10', '10', '10']);
   await fillDims(
     page,
@@ -41,15 +55,11 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
   await page.getByLabel('Box leeway', { exact: true }).fill('0');
   await page.getByLabel('Carton wall thickness', { exact: true }).fill('0');
 
-  const summary = page.getByRole('region', { name: 'Production summary' });
-  const tile = (name: string) =>
-    summary.locator('div', { has: page.getByText(name, { exact: true }) });
   await expect(tile('Total boxes per pallet').locator('dd')).toHaveText('32');
   await expect(tile('Cartons per pallet').locator('dd')).toHaveText('8');
   await expect(tile('Boxes per carton').locator('dd')).toHaveText('4');
 
-  const rows = page.getByRole('table', { name: 'Layout comparison' }).locator('tbody tr');
-  expect(await rows.count()).toBeGreaterThanOrEqual(2);
+  await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(2);
   await rows.nth(1).click();
   await expect(rows.nth(1)).toHaveAttribute('aria-selected', 'true');
   await expect(rows.nth(0)).toHaveAttribute('aria-selected', 'false');
@@ -73,7 +83,8 @@ test('case I: enter inputs, read results, export, reload', async ({ page }) => {
 
   // CSV
   const csv = await chooseExport(page, 'CSV');
-  expect((await readFile(await csv.path(), 'utf8')).startsWith('Metric,Value')).toBe(true);
+  const csvText = await readFile(await csv.path(), 'utf8');
+  expect(csvText.startsWith('\uFEFFMetric,Value')).toBe(true); // UTF-8 BOM for Excel
 
   // Saved inputs survive a reload.
   await page.reload();
