@@ -6,7 +6,7 @@ import { usableFootprint, usableHeight } from './packing/geometry';
 import { gridLayer } from './packing/layerSearch';
 import { footprintAxes } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
-import { optimize, TIME_BUDGET_MS } from './optimize';
+import { HARD_LIMIT_MS, optimize, TIME_BUDGET_MS } from './optimize';
 import { cartonPlacements } from './packing/positions';
 import { boxesOutside, overlappingPairs } from './packing/testSupport';
 
@@ -155,6 +155,59 @@ describe('optimize', () => {
     expect(r.layouts.length).toBeGreaterThan(0);
     expect(r.emptyReason).toBeNull();
   }, 15000);
+
+  describe('absurdly small products', () => {
+    const cube = (n: number) => ({ length: n, width: n, height: n });
+    const sevens = { ...DEFAULT_INPUTS, product: cube(0.01), boxesPerCarton: 7 };
+    const bare = { ...sevens, leeway: 0, wallThickness: 0 };
+    const prime = { ...DEFAULT_INPUTS, product: cube(0.005), boxesPerCarton: 999983 };
+
+    it('returns layouts of 7 for a 0.01 in product within 10 s', () => {
+      const t0 = performance.now();
+      const r = optimize(sevens);
+      expect(performance.now() - t0).toBeLessThan(10000);
+      expect(r.layouts.length).toBeGreaterThan(0);
+      expect(r.layouts.every((l) => l.layout.carton.boxesPerCarton === 7)).toBe(true);
+    }, 20000);
+
+    it('returns layouts of 7 for a 0.01 in product with no leeway or walls within 10 s', () => {
+      // Thousands of possible layers per vertical axis: the mixed-stack search is the cost.
+      const t0 = performance.now();
+      const r = optimize(bare);
+      expect(performance.now() - t0).toBeLessThan(10000);
+      expect(r.layouts.length).toBeGreaterThan(0);
+      expect(r.emptyReason).toBeNull();
+    }, 20000);
+
+    it('names the nearest counts for a prime count of 0.005 in boxes within 10 s', () => {
+      const t0 = performance.now();
+      const r = optimize(prime);
+      expect(performance.now() - t0).toBeLessThan(10000);
+      expect(r.emptyReason).toBe('NO_CARTON_WITH_COUNT');
+      expect(r.nearestCounts).toEqual({ below: 999978, above: 999984 });
+      expect(r.truncated).toBe(false);
+    }, 20000);
+
+    it('stops the nearest-count search at the hard limit and marks the result truncated', () => {
+      let t = 0;
+      const r = optimize(prime, { now: () => (t += HARD_LIMIT_MS) });
+      expect(r).toMatchObject({
+        layouts: [],
+        emptyReason: 'NO_CARTON_WITH_COUNT',
+        truncated: true,
+      });
+      expect('nearestCounts' in r).toBe(false);
+    });
+
+    it('stops before the first layout once past the hard limit, keeping what it found', () => {
+      let t = 0;
+      const r = optimize(bare, { now: () => (t += HARD_LIMIT_MS) });
+      expect(r.truncated).toBe(true);
+      expect(r.candidatesEvaluated).toBe(1);
+      expect(r.layouts.length).toBeGreaterThan(0);
+      expect(r.emptyReason).toBeNull();
+    });
+  });
 
   describe('desired boxes per carton', () => {
     it('gives the Round 1 result when blank', () => {

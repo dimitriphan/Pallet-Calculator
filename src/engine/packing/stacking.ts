@@ -191,12 +191,23 @@ function betterMix(p: MixedChoice, q: MixedChoice): boolean {
 /**
  * Exhaustive search over non-negative layer counts per layer type (at most three, one per
  * vertical axis) whose total height fits the usable height, maximizing total cartons.
+ * The last type always takes as many layers as still fit: any fewer gives fewer cartons, so
+ * such a choice can never be the best. Returns null if `shouldStop` returns true (checked
+ * every thousand or so choices).
  */
-function bestMix(types: LayerPattern[], usable: number): MixedChoice | null {
+function bestMix(
+  types: LayerPattern[],
+  usable: number,
+  shouldStop?: () => boolean,
+): MixedChoice | null {
   let best: MixedChoice | null = null;
+  let stopped = false;
+  let visits = 0;
   const counts = types.map(() => 0);
+  const last = types.length - 1;
   const visit = (k: number, height: number): void => {
     if (k === types.length) {
+      if ((++visits & 0x3ff) === 0 && shouldStop?.()) stopped = true;
       if (!fitsWithin(height, usable)) return;
       const cartons = types.reduce((s, t, idx) => s + t.cartonCount * (counts[idx] as number), 0);
       if (cartons === 0) return;
@@ -211,14 +222,20 @@ function bestMix(types: LayerPattern[], usable: number): MixedChoice | null {
     }
     const t = types[k] as LayerPattern;
     const max = fitsCount(usable - height, t.height);
-    for (let n = 0; n <= max; n++) {
+    // The last type: only the most layers whose total height really fits.
+    let from = 0;
+    if (k === last) {
+      from = max;
+      while (from > 0 && !fitsWithin(height + from * t.height, usable)) from--;
+    }
+    for (let n = Math.max(0, from); n <= max && !stopped; n++) {
       counts[k] = n;
       visit(k + 1, height + n * t.height);
     }
     counts[k] = 0;
   };
   visit(0, 0);
-  return best;
+  return stopped ? null : best;
 }
 
 /**
@@ -254,7 +271,7 @@ export function buildLayouts(
   }
   // 3. the mixed stack, only when it really mixes vertical axes
   if (!i.keepCartonsUpright && types.length > 1) {
-    const mix = bestMix(types, h);
+    const mix = bestMix(types, h, shouldStop);
     if (mix && mix.axes > 1) {
       candidates.push(
         makeLayout(

@@ -45,18 +45,24 @@ export function achievableCounts(i: Inputs): number[] {
  * side with none. Exact and uncapped: the fit rule is monotone in each count, so for every
  * (l, w) the cartons that fit are those with 1 <= h <= hmax, and the best h on each side of
  * `n` follows directly. hmax only shrinks as w (or l) grows, so it is found by stepping down.
+ * Once l × w exceeds `n`, wider cartons hold more boxes and are no nearer, so w stops there.
+ * Returns null, instead of a possibly wrong answer, if `shouldStop` returns true; it is
+ * checked every few thousand steps.
  */
 export function nearestAchievableCounts(
   i: Inputs,
   n: number,
-): { below: number | null; above: number | null } {
+  shouldStop?: () => boolean,
+): { below: number | null; above: number | null } | null {
   const { limit, fits } = fitRule(i);
   let below: number | null = null;
   let above: number | null = null;
   let hStart = limit.H;
+  let steps = 0;
   for (let l = 1; l <= limit.L; l++) {
     let hmax = hStart;
     for (let w = 1; w <= limit.W; w++) {
+      if ((++steps & 0xffff) === 0 && shouldStop?.()) return null;
       while (hmax >= 1 && !fits(l, w, hmax)) hmax--;
       if (w === 1) hStart = hmax;
       if (hmax < 1) break; // no wider carton fits either
@@ -65,8 +71,9 @@ export function nearestAchievableCounts(
       if (hBelow >= 1 && (below === null || lw * hBelow > below)) below = lw * hBelow;
       const hAbove = Math.floor(n / lw) + 1;
       if (hAbove <= hmax && (above === null || lw * hAbove < above)) above = lw * hAbove;
+      if (lw > n) break; // every wider carton holds more than this one, which is above n
     }
-    if (hStart < 1) break; // no longer carton fits either
+    if (hStart < 1 || l > n) break; // no longer carton fits, or every one holds more than this
   }
   return { below, above };
 }

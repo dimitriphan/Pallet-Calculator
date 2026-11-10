@@ -11,6 +11,12 @@ import { rankLayouts } from './ranking/rank';
 
 export const TIME_BUDGET_MS = 4000;
 
+/**
+ * Past this, the search stops even before it has a layout to show (only absurd inputs, such
+ * as a product of a hundredth of an inch, get here); the result is marked truncated.
+ */
+export const HARD_LIMIT_MS = 6000;
+
 /** A candidate is skipped when its upper bound cannot reach the product count of this many layouts. */
 const KEEP_BEST = 30;
 
@@ -27,13 +33,17 @@ export function optimize(
   const start = now();
 
   const { candidates, truncated: capped } = generateCartonCandidatesWithInfo(i);
+  let timedOut = false;
   const empty = (emptyReason: OptimizeResult['emptyReason']): OptimizeResult => ({
     layouts: [],
     candidatesEvaluated: 0,
     emptyReason,
-    truncated: capped,
+    truncated: capped || timedOut,
   });
-  if (candidates.length === 0) return noCandidates(i, empty);
+  if (candidates.length === 0) {
+    const pastHardLimit = () => (timedOut ||= now() - start >= HARD_LIMIT_MS);
+    return noCandidates(i, empty, pastHardLimit);
+  }
   if (!(usableHeight(i) > 0)) return empty('CARTON_EXCEEDS_PALLET');
 
   const available = availableVolume(i);
@@ -45,16 +55,19 @@ export function optimize(
   const layouts: Layout[] = [];
   const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
   let evaluated = 0;
-  let timedOut = false;
-  // Stop at the budget, but only once there is something to show.
+  // Stop at the budget once there is something to show, or at the hard limit regardless.
+  // The first carton's first layer search always runs.
   const overBudget = () => {
-    if (!timedOut && layouts.length > 0 && now() - start >= budgetMs) timedOut = true;
+    if (!timedOut) {
+      const elapsed = now() - start;
+      if (elapsed >= budgetMs && (layouts.length > 0 || elapsed >= HARD_LIMIT_MS)) timedOut = true;
+    }
     return timedOut;
   };
   for (const { c, bound } of ordered) {
     // Bounds are descending, so once one falls short every later one does too.
     if (best.length >= KEEP_BEST && bound < (best[KEEP_BEST - 1] as number)) break;
-    if (overBudget()) break;
+    if (evaluated > 0 && overBudget()) break;
     evaluated++;
     // The same check runs between this carton's layer searches.
     for (const l of buildLayouts(c, i, cache, overBudget)) {
@@ -82,10 +95,14 @@ export function optimize(
 function noCandidates(
   i: Inputs,
   empty: (reason: OptimizeResult['emptyReason']) => OptimizeResult,
+  shouldStop: () => boolean,
 ): OptimizeResult {
   const n = i.boxesPerCarton;
   if (n === null || !anyCartonFits(i)) return empty('NO_CARTON_FITS');
-  return { ...empty('NO_CARTON_WITH_COUNT'), nearestCounts: nearestAchievableCounts(i, n) };
+  const nearestCounts = nearestAchievableCounts(i, n, shouldStop);
+  // Stopped: say no carton of N fits, but name no counts that might not be the nearest.
+  if (nearestCounts === null) return empty('NO_CARTON_WITH_COUNT');
+  return { ...empty('NO_CARTON_WITH_COUNT'), nearestCounts };
 }
 
 /** Inserts `v` into the descending list, keeping at most KEEP_BEST entries. */
