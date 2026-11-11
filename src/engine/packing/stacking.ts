@@ -14,7 +14,6 @@ import { gridLayer, searchLayer, type LayerSearchResult } from './layerSearch';
 import { layerCountBound, pinwheelLayer, type PinwheelAllowance } from './pinwheel';
 import { allowedVerticalAxes } from './rotation';
 import { fitsCount, fitsWithin } from './tolerance';
-import { weightLimited } from './weightLimit';
 
 /**
  * Best layer patterns keyed by footprint `${a}|${b}`. The layer search depends only on the
@@ -135,6 +134,18 @@ function searchBestLayer(
 function usableVerticalAxes(c: CartonCandidate, i: Inputs): ProductAxis[] {
   const h = usableHeight(i);
   return allowedVerticalAxes(i).filter((v) => fitsWithin(c.outer[v], h));
+}
+
+/**
+ * Whether one carton can stand on the pallet at all: some allowed vertical axis within the
+ * usable height and its footprint, either way round, within the usable footprint.
+ */
+export function cartonFitsPallet(c: CartonCandidate, i: Inputs): boolean {
+  const { x, y } = usableFootprint(i);
+  return usableVerticalAxes(c, i).some((v) => {
+    const [a, b] = footprintSizes(c, v);
+    return (fitsWithin(a, x) && fitsWithin(b, y)) || (fitsWithin(b, x) && fitsWithin(a, y));
+  });
 }
 
 /**
@@ -378,12 +389,11 @@ function layoutsFromTypes(
  * before every layer search after the first: once it returns true the remaining vertical
  * axes are skipped, so the result covers only the axes searched so far.
  *
- * Under a weight limit, when a pinwheel is the best layer on some axis, the layouts built
- * from the straight-cut layers follow those built from the best layers, so every layout
- * offered before pinwheels existed is still offered: the limit removes whole layers, and a
- * layer with more cartons can be too heavy where the straight-cut layer is not. Without a
- * limit they always hold fewer products than their pinwheel twins, so they are not built.
- * `allowance` is passed on to bestLayer.
+ * When a pinwheel is the best layer on some axis, the layouts built from the straight-cut
+ * layers follow those built from the best layers, so every layout offered before pinwheels
+ * existed is still offered: staff may prefer a simpler build that is a box or two short, and
+ * under a weight limit a layer with more cartons can be too heavy where the straight-cut
+ * layer is not. `allowance` is passed on to bestLayer.
  */
 export function buildLayouts(
   c: CartonCandidate,
@@ -403,7 +413,7 @@ export function buildLayouts(
   }
 
   const candidates = layoutsFromTypes(c, i, types, shouldStop);
-  if (weightLimited(i) && straight.some((t, k) => t !== types[k])) {
+  if (straight.some((t, k) => t !== types[k])) {
     candidates.push(...layoutsFromTypes(c, i, straight, shouldStop));
   }
 

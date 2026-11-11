@@ -4,7 +4,8 @@ import type { Inputs, Layout, RankedLayout } from '../../domain/types';
 import { cartonKey, generateCartonCandidates } from '../packing/cartons';
 import { buildLayouts, footprintAxes, layoutSignature } from '../packing/stacking';
 import { assessStability } from '../analytics/stability';
-import { externalSignature, rankLayouts } from './rank';
+import { PINWHEEL_INPUTS } from '../packing/testSupport';
+import { externalSignature, orientedSignature, rankLayouts } from './rank';
 import { compareRanked } from './score';
 
 /** Case I: 10-inch cube, no leeway or walls, max carton 20 x 20 x 10, pallet 40 x 40 x 25. */
@@ -113,6 +114,68 @@ describe('externalSignature', () => {
     expect(keys).toEqual(new Set(['8x2x1', '4x4x1', '4x2x2']));
     const sigs = layouts.filter((l) => outsideKey(l) === '8x4x4/16').map(externalSignature);
     expect(new Set(sigs).size).toBeLessThan(sigs.length);
+  });
+
+  it('is the same for a layout and its twin with every layer turned 90°', () => {
+    // 20 x 10 cartons lying flat in a 40 x 40 square: 2 x 4 turned blocks and 4 x 2 plain ones.
+    const ones = allLayouts(CUBES).filter((l) => l.carton.boxesPerCarton === 2);
+    const plain = ones.find((l) => l.layers.every((x) => x.blocks.every((b) => !b.rotated)));
+    expect(plain).toBeDefined();
+    if (!plain) return;
+    const turnAll = (l: Layout, which: (k: number) => boolean): Layout => ({
+      ...l,
+      id: 'turned',
+      layers: l.layers.map((layer, k) =>
+        which(k)
+          ? {
+              ...layer,
+              blocks: layer.blocks.map((b) => ({
+                ...b,
+                cols: b.rows,
+                rows: b.cols,
+                rotated: !b.rotated,
+              })),
+            }
+          : layer,
+      ),
+    });
+    const twin = turnAll(plain, () => true);
+    expect(orientedSignature(twin)).not.toBe(orientedSignature(plain));
+    expect(orientedSignature(twin)).toBe(orientedSignature(plain, true));
+    expect(externalSignature(twin)).toBe(externalSignature(plain));
+    expect(rankLayouts([plain, twin], CUBES)).toHaveLength(1);
+    // Only some layers turned is a different stack: not merged.
+    if (plain.layers.length > 1) {
+      const half = turnAll(plain, (k) => k === 0);
+      expect(externalSignature(half)).not.toBe(externalSignature(plain));
+      expect(rankLayouts([plain, half], CUBES)).toHaveLength(2);
+    }
+  });
+
+  it('merges only exact 90° twins in every fixture', () => {
+    for (const i of [DEFAULT_INPUTS, CUBES, SINGLE_CARTON, SAME_OUTSIDE, PINWHEEL_INPUTS]) {
+      const raw = allLayouts(i);
+      // One layout per look as laid, then the pairs of those that are each other turned 90°.
+      const byLook = new Map(raw.map((l) => [orientedSignature(l), l]));
+      let pairs = 0;
+      for (const [sig, l] of byLook) {
+        const turned = orientedSignature(l, true);
+        if (turned !== sig && byLook.has(turned)) pairs += 1;
+      }
+      pairs /= 2;
+      const ranked = rankLayouts(raw, i, 100_000);
+      expect(ranked).toHaveLength(byLook.size - pairs);
+      // Twins hold the same products, so the totals lose exactly one entry per pair.
+      const totals = (ls: Layout[]) => ls.map((l) => l.totalProducts).sort((p, q) => p - q);
+      const firstOfEach = new Map<string, Layout>();
+      for (const l of byLook.values()) {
+        const key = externalSignature(l);
+        const kept = firstOfEach.get(key);
+        if (kept) expect(kept.totalProducts).toBe(l.totalProducts);
+        else firstOfEach.set(key, l);
+      }
+      expect(totals(ranked.map((r) => r.layout))).toEqual(totals([...firstOfEach.values()]));
+    }
   });
 });
 

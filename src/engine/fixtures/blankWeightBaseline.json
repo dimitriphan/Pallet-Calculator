@@ -1229,89 +1229,7 @@
           "total": 100
         },
         "rank": 2,
-        "explanation": "Layout #2 and Layout #3 are equivalent in quantity, score, and carton count; they differ only in carton size or arrangement."
-      },
-      {
-        "layout": {
-          "id": "1x1x2|L:8:4x2u/L:8:4x2u",
-          "carton": {
-            "counts": {
-              "L": 1,
-              "W": 1,
-              "H": 2
-            },
-            "inner": {
-              "L": 10,
-              "W": 10,
-              "H": 20
-            },
-            "outer": {
-              "L": 10,
-              "W": 10,
-              "H": 20
-            },
-            "boxesPerCarton": 2,
-            "utilization": 1,
-            "emptyVolume": 0
-          },
-          "layers": [
-            {
-              "vertical": "L",
-              "height": 10,
-              "cartonCount": 8,
-              "blocks": [
-                {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 4,
-                  "rows": 2,
-                  "rotated": false
-                }
-              ],
-              "extent": {
-                "x": 40,
-                "y": 40
-              },
-              "z": 0
-            },
-            {
-              "vertical": "L",
-              "height": 10,
-              "cartonCount": 8,
-              "blocks": [
-                {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 4,
-                  "rows": 2,
-                  "rotated": false
-                }
-              ],
-              "extent": {
-                "x": 40,
-                "y": 40
-              },
-              "z": 10
-            }
-          ],
-          "totalCartons": 16,
-          "totalProducts": 32,
-          "stability": {
-            "rating": "good",
-            "warnings": []
-          }
-        },
-        "score": {
-          "quantity": 100,
-          "utilization": 100,
-          "space": 100,
-          "quantityContribution": 60,
-          "utilizationContribution": 25,
-          "spaceContribution": 15,
-          "total": 100
-        },
-        "rank": 3,
-        "explanation": "Layout #3 ranked above Layout #4 because it uses fewer cartons for the same result."
+        "explanation": "Layout #2 ranked above Layout #3 because it uses fewer cartons for the same result."
       },
       {
         "layout": {
@@ -1392,8 +1310,8 @@
           "spaceContribution": 15,
           "total": 100
         },
-        "rank": 4,
-        "explanation": "Layout #4 ranked above Layout #5 because it has a better stability rating (Good vs Fair) at the same quantity."
+        "rank": 3,
+        "explanation": "Layout #3 ranked above Layout #4 because it has a better stability rating (Good vs Fair) at the same quantity."
       },
       {
         "layout": {
@@ -1440,6 +1358,76 @@
             }
           ],
           "totalCartons": 8,
+          "totalProducts": 32,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "cartonHeight",
+                "level": "caution",
+                "value": 2,
+                "layer": 1
+              }
+            ]
+          }
+        },
+        "score": {
+          "quantity": 100,
+          "utilization": 100,
+          "space": 100,
+          "quantityContribution": 60,
+          "utilizationContribution": 25,
+          "spaceContribution": 15,
+          "total": 100
+        },
+        "rank": 4,
+        "explanation": "Layout #4 ranked above Layout #5 because it uses fewer cartons for the same result."
+      },
+      {
+        "layout": {
+          "id": "1x1x2|H:16:4x4u",
+          "carton": {
+            "counts": {
+              "L": 1,
+              "W": 1,
+              "H": 2
+            },
+            "inner": {
+              "L": 10,
+              "W": 10,
+              "H": 20
+            },
+            "outer": {
+              "L": 10,
+              "W": 10,
+              "H": 20
+            },
+            "boxesPerCarton": 2,
+            "utilization": 1,
+            "emptyVolume": 0
+          },
+          "layers": [
+            {
+              "vertical": "H",
+              "height": 20,
+              "cartonCount": 16,
+              "blocks": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "cols": 4,
+                  "rows": 4,
+                  "rotated": false
+                }
+              ],
+              "extent": {
+                "x": 40,
+                "y": 40
+              },
+              "z": 0
+            }
+          ],
+          "totalCartons": 16,
           "totalProducts": 32,
           "stability": {
             "rating": "fair",

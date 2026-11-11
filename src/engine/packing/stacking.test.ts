@@ -562,7 +562,7 @@ describe('pinwheel layers', () => {
     expect(cache.size).toBe(1);
   });
 
-  it('offers the straight-cut stacks beside the pinwheel ones only under a weight limit', () => {
+  it('offers the straight-cut stacks beside the pinwheel ones, with or without a weight limit', () => {
     const c = candidateByKey(PINWHEEL_INPUTS, '1x1x1');
     const straightOnH = (layouts: Layout[]) =>
       layouts.some((l) =>
@@ -578,10 +578,12 @@ describe('pinwheel layers', () => {
     expect(straightOnH(limited)).toBe(true);
     expect(Math.max(...limited.map((l) => l.totalCartons))).toBe(30);
     expectValidLayers(weighed, limited);
-    // Without a limit the straight-cut stack always holds fewer products: not built.
+    // Without a limit the straight-cut stack holds fewer products, but staff may prefer the
+    // simpler build, so it is offered too.
     const free = buildLayouts(c, PINWHEEL_INPUTS, new Map());
-    expect(straightOnH(free)).toBe(false);
+    expect(straightOnH(free)).toBe(true);
     expect(Math.max(...free.map((l) => l.totalCartons))).toBe(30);
+    expectValidLayers(PINWHEEL_INPUTS, free);
   });
 
   it('keeps every pinwheel carton inside the usable footprint with overhang', () => {

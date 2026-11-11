@@ -311,7 +311,9 @@ class PinwheelSearch {
           this.place(1, B2, c2, r2);
           const [w2, h2] = [p[6] as number, p[7] as number];
           const bottom = Math.max(0, rectX - w1 - w2) * Math.min(h1, h2);
-          // B2's width is the same for every r2, so the bottom strip only grows with it.
+          // As r2 grows, B2 gets taller (min(h1, h2) cannot shrink) and c2 cannot grow (see
+          // above), so B2 is never wider and the gap beside B1 never narrower: the bottom
+          // strip never shrinks, and once it rules out beating floor() every taller B2 does too.
           if (!this.canBeat(left + bottom)) break;
           for (let r3 = 1; r3 <= maxR3; r3++) {
             if (!this.tick()) return;

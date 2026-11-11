@@ -339,6 +339,9 @@ describe('optimize', () => {
       // Task 5 with every product count per rank unchanged: layouts now carry a stability
       // rating, alternate identical layers are turned to interlock, and among equal counts
       // better-rated layouts rank first (cubes: four Good layouts now precede the Fair one).
+      // Cubes re-recorded once more in the Round 4 fix wave, products per rank unchanged:
+      // rank 3 (L:8:4x2u) was rank 2 (L:8:2x4r) turned 90°, so it is listed once and
+      // H:16:4x4u of the 1x1x2 carton (also 32 boxes) becomes rank 5.
       const recorded = baseline as unknown as Record<string, OptimizeResult>;
       expect(DEFAULT_INPUTS.weights).toEqual({
         productBox: null,
@@ -486,6 +489,40 @@ describe('optimize', () => {
       expect(best.totalProducts).toBe(bestTrimmedProducts(some));
     });
 
+    it('lists a layout and its 90° turned twin once', () => {
+      // Under 1102 lb the same 3-layer stack laid 2 x 3 and 3 x 2 (load 42 x 39 and 39 x 42)
+      // were ranks 1 and 2 with identical figures.
+      const i = weighed(DEFAULT_INPUTS, { productBox: 5.5, maxPallet: 1102, emptyCarton: 0.7 });
+      const r = optimize(i);
+      expect(r.layouts.length).toBeGreaterThan(1);
+      const look = r.layouts.map(({ layout }) => {
+        const a = computeAnalytics(layout, i);
+        const [p, q] = [a.pallet.loadLength, a.pallet.loadWidth].sort((x, y) => x - y);
+        const o = layout.carton.outer;
+        return JSON.stringify([
+          [o.L, o.W, o.H].sort((x, y) => x - y),
+          layout.carton.boxesPerCarton,
+          layout.totalProducts,
+          layout.layers.length,
+          a.weight?.total,
+          p,
+          q,
+        ]);
+      });
+      expect(new Set(look).size).toBe(look.length);
+    });
+
+    it('says the carton exceeds the pallet, not over weight, when no carton could fit anyway', () => {
+      // 4 x 4 in pallet: no carton of the default product fits it, heavy or not.
+      const r = optimize(
+        weighed(
+          { ...DEFAULT_INPUTS, pallet: { length: 4, width: 4, height: 72 } },
+          { productBox: 70, maxPallet: 100 },
+        ),
+      );
+      expect(r).toMatchObject({ layouts: [], emptyReason: 'CARTON_EXCEEDS_PALLET' });
+    });
+
     it('keeps the other empty reasons ahead of OVER_WEIGHT', () => {
       const r = optimize(
         weighed(
@@ -581,6 +618,19 @@ describe('optimize', () => {
         ['H', 10, 'pinwheel'],
       ]);
       expect(r.layouts[1]!.layout.totalProducts).toBe(27);
+      expectValidResult(PINWHEEL_INPUTS, r);
+    });
+
+    it('offers the straight-cut stack of the same carton and axis beside the pinwheel winner', () => {
+      // No weight limit: the 9-carton straight-cut layers on H are a simpler build, 3 boxes short.
+      const r = optimize(PINWHEEL_INPUTS);
+      expect(r.layouts.map((x) => x.layout.totalProducts)).toEqual([30, 27, 27, 24, 24]);
+      const straight = r.layouts.find(
+        ({ layout }) =>
+          !hasPinwheel(layout) &&
+          layout.layers.every((l) => l.vertical === 'H' && l.cartonCount === 9),
+      );
+      expect(straight?.layout.carton.boxesPerCarton).toBe(1);
       expectValidResult(PINWHEEL_INPUTS, r);
     });
 

@@ -19,27 +19,42 @@ function outsideCartonKey(l: Layout): string {
 }
 
 /**
- * How the layout looks from outside, ignoring how products sit inside the cartons and
- * where blocks sit within a layer. Each block is the physical rectangle it covers
- * (width along x, depth along y) with its columns and rows, so a square footprint gives
- * the same block whether or not it is flagged as rotated.
+ * How the layout looks from outside, as laid (or, with `transposed`, turned 90° so x and y
+ * swap), ignoring how products sit inside the cartons and where blocks sit within a layer.
+ * Each block is the physical rectangle it covers (width along x, depth along y) with its
+ * columns and rows, so a square footprint gives the same block whether or not it is flagged
+ * as rotated.
  */
-export function externalSignature(l: Layout): string {
+export function orientedSignature(l: Layout, transposed = false): string {
   const layers = l.layers.map((layer) => {
     const [fa, fb] = footprintAxes(layer.vertical);
     const a = l.carton.outer[fa];
     const b = l.carton.outer[fb];
     const blocks = layer.blocks
       .map((blk) => {
-        const dx = blk.rotated ? b : a;
-        const dy = blk.rotated ? a : b;
-        return `${size6(blk.cols * dx)}x${size6(blk.rows * dy)}:${blk.cols}x${blk.rows}`;
+        const dx = size6(blk.cols * (blk.rotated ? b : a));
+        const dy = size6(blk.rows * (blk.rotated ? a : b));
+        return transposed
+          ? `${dy}x${dx}:${blk.rows}x${blk.cols}`
+          : `${dx}x${dy}:${blk.cols}x${blk.rows}`;
       })
       .sort()
       .join(',');
     return `${size6(layer.height)}:${layer.cartonCount}:${blocks}`;
   });
   return `${outsideCartonKey(l)}|${layers.join('/')}`;
+}
+
+/**
+ * How the layout looks from outside, the same for a layout and its twin with every layer
+ * turned 90° (same carton, same heights, x and y swapped): the comparison lists such a pair
+ * once, keeping the one that sorts first. Both orientations fit the usable footprint equally
+ * whenever both were generated, so nothing better is lost.
+ */
+export function externalSignature(l: Layout): string {
+  const asLaid = orientedSignature(l);
+  const turned = orientedSignature(l, true);
+  return asLaid < turned ? asLaid : turned;
 }
 
 interface Scored {
@@ -49,7 +64,7 @@ interface Scored {
 
 /**
  * Spec 6.3 and 7.2: prepares and rates the layouts, scores and orders them, drops layouts that
- * look the same from outside, keeps at most two per physical carton (topping up from the
+ * look the same from outside (a 90° turned twin included), keeps at most two per physical carton (topping up from the
  * extras if fewer than `limit` remain), then ranks and explains the selection.
  *
  * `prepare` runs on a layout before it is rated (the optimizer turns layers to interlock

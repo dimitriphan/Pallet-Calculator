@@ -6,7 +6,7 @@ import {
 } from './packing/cartons';
 import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
 import { PINWHEEL_WORK_PER_OPTIMIZE, type PinwheelAllowance } from './packing/pinwheel';
-import { buildLayouts, type LayerCache } from './packing/stacking';
+import { buildLayouts, cartonFitsPallet, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { rankLayouts } from './ranking/rank';
 import { trimToWeight } from './analytics/weight';
@@ -70,7 +70,8 @@ export function optimize(
   // one, nothing is trimmed and buildLayouts already gives distinct layouts.
   const limited = weightLimited(i);
   const indexById = new Map<string, number>();
-  // Layouts built and cartons skipped that the weight limit then ruled out entirely.
+  // Layouts built, and cartons skipped as too heavy that would otherwise fit the pallet: the
+  // weight limit ruled them out. A carton that could never fit counts toward neither.
   let built = 0;
   let tooHeavy = 0;
   const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
@@ -91,7 +92,7 @@ export function optimize(
     evaluated++;
     // The pallet and one full carton already over the maximum: no layer of it can fit.
     if (maxCartonsByWeight(c, i) === 0) {
-      tooHeavy++;
+      if (cartonFitsPallet(c, i)) tooHeavy++;
       continue;
     }
     // The same check runs between this carton's layer searches.
