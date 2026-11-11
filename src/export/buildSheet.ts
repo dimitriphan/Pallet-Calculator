@@ -14,10 +14,11 @@ import {
   describeLayerList,
   PINWHEEL_NOTE,
   stackPatterns,
-  turnedLayersText,
+  turnedPatternsText,
 } from '../engine/analytics/stack';
 import { describeWarning } from '../engine/analytics/stability';
 import { cartonPlacements } from '../engine/packing/positions';
+import { footprintAxes } from '../engine/packing/stacking';
 import type { Unit } from '../engine/units/units';
 import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
 import { settingsSummary } from '../ui/settingsSummary';
@@ -130,8 +131,8 @@ export function buildSheetFilename(now: Date): string {
 const RATING_WORD = { good: 'Good', fair: 'Fair', poor: 'Poor' } as const;
 
 /**
- * The stability rating, one row per warning, and which layers to turn half a turn. Nothing for a
- * layout stored before layouts were rated.
+ * The stability rating, one row per warning, and which layers are drawn turned half a turn (as
+ * which pattern). Nothing for a layout stored before layouts were rated.
  */
 function stabilityRows(layout: Layout): SheetRow[] {
   const rows: SheetRow[] = [];
@@ -140,7 +141,7 @@ function stabilityRows(layout: Layout): SheetRow[] {
     for (const w of layout.stability.warnings)
       rows.push({ label: 'Stability warning', value: describeWarning(w) });
   }
-  const turned = turnedLayersText(layout);
+  const turned = turnedPatternsText(layout);
   if (turned) rows.push({ label: 'Turned layers', value: turned });
   return rows;
 }
@@ -163,7 +164,7 @@ function weightRows(
       label: 'Limited by weight',
       value: `${fmtCount(w.layersRemoved)} ${w.layersRemoved === 1 ? 'layer' : 'layers'} removed`,
     });
-  if (w.roomForCartons >= 1)
+  if (w.layersRemoved >= 1 && w.roomForCartons >= 1)
     rows.push({ label: 'Room by weight', value: roomText(w.roomForCartons) });
   return rows;
 }
@@ -201,8 +202,10 @@ export function buildSheetContent(a: {
   };
 
   const stack = stackPatterns(layout);
+  // Keyed by 1-based layer number; letterAt takes a 0-based layer index.
   const letterOfLayer = new Map<number, string>();
   for (const p of stack) for (const n of p.layerNumbers) letterOfLayer.set(n, p.letter);
+  const letterAt = (index: number) => letterOfLayer.get(index + 1);
 
   const patterns: SheetPattern[] = stack.map((p) => {
     const layer = layout.layers[p.layerIndex];
@@ -232,15 +235,20 @@ export function buildSheetContent(a: {
         label: `${b.rows} × ${b.cols}`,
       });
     }
-    // A turned layer sits on the layer it is a turn of: name that layer's pattern.
+    // A turned layer sits on the layer it is a turn of: name the pattern of the layer below.
     const notes: string[] = p.kind === 'pinwheel' ? [PINWHEEL_NOTE] : [];
-    const twin = layer.turned ? letterOfLayer.get(p.layerIndex) : undefined;
+    const twin = layer.turned ? letterAt(p.layerIndex - 1) : undefined;
     if (twin) notes.push(`Pattern ${twin} turned half a turn (180°).`);
-    const first = cartons[0];
+    // Described from the first block not turned 90° (else the first block), so a layer and
+    // its half-turned twin, whose blocks come in the opposite order, read the same.
+    const shown = layer.blocks.find((b) => !b.rotated) ?? layer.blocks[0];
     const mixed = layer.blocks.some((b) => b.rotated) && layer.blocks.some((b) => !b.rotated);
-    const footprintText = first
-      ? `${sizeText(first.dx, first.dy)}${mixed ? ' (some turned 90°)' : ''}`
-      : '';
+    let footprintText = '';
+    if (shown && cartons.length > 0) {
+      const [fa, fb] = footprintAxes(layer.vertical);
+      const [a, b] = [layout.carton.outer[fa], layout.carton.outer[fb]];
+      footprintText = `${shown.rotated ? sizeText(b, a) : sizeText(a, b)}${mixed ? ' (some turned 90°)' : ''}`;
+    }
     return {
       letter: p.letter,
       heading: `Pattern ${p.letter}: ${describeLayerList(p.layerNumbers)}`,
@@ -263,7 +271,7 @@ export function buildSheetContent(a: {
     top += layer.height;
     return {
       layer: i + 1,
-      pattern: letterOfLayer.get(i + 1) ?? '',
+      pattern: letterAt(i) ?? '',
       cartons: layer.cartonCount,
       height: length(layer.height),
       topHeight: length(top),

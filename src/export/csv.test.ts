@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
+import { hasPinwheelLayer } from '../engine/analytics/stack';
+import { PINWHEEL_INPUTS } from '../engine/packing/testSupport';
 import { buildCsv, csvField } from './csv';
 import { buildExportPayload } from './exportData';
 
@@ -255,7 +257,29 @@ describe('buildCsv with weights', () => {
     expect(cm).toContain('Maximum pallet weight (kg),');
     expect(cm).toContain('Pallet weight (kg),18.1');
     expect(cm).toContain('Layers removed for weight,0');
-    expect(cm).toContain('Room for more cartons by weight,0');
+    // Nothing was removed for weight, so no room is offered.
+    expect(cm.some((l) => l.startsWith('Room for more cartons by weight'))).toBe(false);
     expect(cm.some((l) => /^Centre of mass height above floor \(cm\),\d+\.\d$/.test(l))).toBe(true);
+  });
+});
+
+describe('buildCsv with a pinwheel layout', () => {
+  it('adds a Pattern column that says Pinwheel where the table shows the badge', () => {
+    const r = optimize(PINWHEEL_INPUTS);
+    const out = buildCsv(buildExportPayload(PINWHEEL_INPUTS, r, 0, NOW)).split('\r\n');
+    const blank = out.indexOf('');
+    expect(out[blank + 1]).toBe(
+      '#,Carton (in),Products,Cartons,Layers,Pattern,Stability,Utilization,Remaining volume (in³),Score',
+    );
+    const patterns = r.layouts.map((_, k) => out[blank + 2 + k]?.split(',')[5]);
+    expect(patterns).toEqual(
+      r.layouts.map(({ layout }) => (hasPinwheelLayer(layout) ? 'Pinwheel' : '')),
+    );
+    expect(patterns[0]).toBe('Pinwheel');
+    expect(patterns).toContain('');
+  });
+
+  it('adds no Pattern column when no layout has a pinwheel', () => {
+    expect(lines.some((l) => l.includes('Pattern'))).toBe(false);
   });
 });

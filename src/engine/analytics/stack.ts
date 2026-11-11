@@ -19,9 +19,13 @@ export interface StackPattern {
   kind: LayerPatternKind;
 }
 
-/** How to build a pinwheel layer, said on the card and the build sheet. */
+/** How to build a pinwheel layer, said on the build sheet, whose layer drawings are top views. */
 export const PINWHEEL_NOTE =
   'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.';
+
+/** The same on screen, where there is no top view: the 3D view shows the layer from above. */
+export const PINWHEEL_SCREEN_NOTE =
+  'Pinwheel layer: build the four blocks around the centre gap, as shown from above in the 3D view.';
 
 /** A layer's arrangement; layers stored before pinwheels existed have no kind and are grids. */
 export function layerKind(layer: Layer): LayerPatternKind {
@@ -38,10 +42,45 @@ export function turnedLayerNumbers(l: Layout): number[] {
   return l.layers.flatMap((layer, i) => (layer.turned ? [i + 1] : []));
 }
 
-/** "Turn these layers half a turn (180°): 2, 4, 6", or null when no layer is turned. */
+/**
+ * The instruction on screen, where layers are not drawn one by one: "Turn layers 2, 4, 6 half
+ * a turn (180°) so they interlock.", or null when no layer is turned.
+ */
 export function turnedLayersText(l: Layout): string | null {
   const numbers = turnedLayerNumbers(l);
-  return numbers.length > 0 ? `Turn these layers half a turn (180°): ${numbers.join(', ')}` : null;
+  if (numbers.length === 0) return null;
+  return numbers.length === 1
+    ? `Turn layer ${numbers[0]} half a turn (180°) so it interlocks.`
+    : `Turn layers ${numbers.join(', ')} half a turn (180°) so they interlock.`;
+}
+
+/**
+ * The build sheet's wording, where each turned layer is already drawn turned as its own
+ * pattern: one sentence per pair of the pattern below and the pattern drawn, e.g. "Layers 3,
+ * 5, 7 are pattern B turned half a turn (shown as pattern C)." Null when no layer is turned.
+ */
+export function turnedPatternsText(l: Layout): string | null {
+  const patterns = stackPatterns(l);
+  const letterOf = new Map<number, string>(); // by 1-based layer number
+  for (const p of patterns) for (const n of p.layerNumbers) letterOf.set(n, p.letter);
+  const groups = new Map<string, { below: string | undefined; shown: string; layers: number[] }>();
+  for (const n of turnedLayerNumbers(l)) {
+    const below = letterOf.get(n - 1);
+    const shown = letterOf.get(n) as string;
+    const key = `${below ?? ''}|${shown}`;
+    const group = groups.get(key);
+    if (group) group.layers.push(n);
+    else groups.set(key, { below, shown, layers: [n] });
+  }
+  if (groups.size === 0) return null;
+  return [...groups.values()]
+    .map(({ below, shown, layers }) => {
+      const subject =
+        layers.length === 1 ? `Layer ${layers[0]} is` : `Layers ${layers.join(', ')} are`;
+      const what = below ? `pattern ${below} turned half a turn` : 'turned half a turn';
+      return `${subject} ${what} (shown as pattern ${shown}).`;
+    })
+    .join(' ');
 }
 
 const AXIS_WORD: Record<ProductAxis, string> = { L: 'length', W: 'width', H: 'height' };

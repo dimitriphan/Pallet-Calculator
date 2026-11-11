@@ -192,12 +192,17 @@ describe('weight results', () => {
     expect(c).toHaveTextContent('Room for 1 more carton by weight');
   });
 
-  it('says how many more cartons the maximum allows, only when there is room', async () => {
+  it('says how many more cartons the maximum allows only when it trimmed the load', async () => {
     const { stores } = await render('basic');
-    // Unlimited winner: 612 lb; 680 lb leaves room for 6 cartons of 11 lb.
+    // Unlimited winner: 612 lb; 680 lb would allow 6 more cartons of 11 lb, but the height is
+    // the limit, so nothing is said about room.
     await setWeights(stores, { productBox: '2', emptyCarton: '1', maxPallet: '680' });
-    expect(card()).toHaveTextContent('Room for 6 more cartons by weight');
+    expect(card()).not.toHaveTextContent('Room for');
     expect(card()).not.toHaveTextContent('Limited by weight');
+    // 290 lb removes two layers (274 lb): room for 1 more 13 lb carton.
+    await setWeights(stores, { maxPallet: '290' });
+    expect(card()).toHaveTextContent('Limited by weight: 2 layers removed');
+    expect(card()).toHaveTextContent('Room for 1 more carton by weight');
     await setWeights(stores, { maxPallet: '612' });
     expect(card()).not.toHaveTextContent('Room for');
     await setWeights(stores, { maxPallet: '' });

@@ -1,5 +1,6 @@
 import type { Dims, Inputs, OptimizeResult, RankedLayout, StabilityRating } from '../domain/types';
 import { cartonDisplayDims, computeAnalytics, type Analytics } from '../engine/analytics/analytics';
+import { hasPinwheelLayer } from '../engine/analytics/stack';
 
 /** What every export says when the result shown is older than the current inputs. */
 export const STALE_NOTE = 'Out of date: inputs changed after this calculation';
@@ -26,6 +27,8 @@ export interface ExportPayload {
     weight?: number;
     /** Absent for a layout stored before layouts were rated. */
     stability?: StabilityRating;
+    /** Present (true) only for a layout with a pinwheel layer, as the table's badge. */
+    pinwheel?: true;
   }[];
 }
 
@@ -59,6 +62,7 @@ export function buildExportPayload(
         score: r.score.total,
         ...(a.weight ? { weight: a.weight.total } : {}),
         ...(r.layout.stability ? { stability: r.layout.stability.rating } : {}),
+        ...(hasPinwheelLayer(r.layout) ? { pinwheel: true as const } : {}),
       };
     }),
   };

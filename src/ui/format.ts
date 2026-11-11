@@ -5,7 +5,7 @@
  */
 import { PALLET_HEIGHT } from '../domain/constants';
 import { PALLET_HEIGHT_MSG } from '../domain/schemas';
-import type { Dims } from '../domain/types';
+import type { Dims, StabilityRating } from '../domain/types';
 import {
   areaLabel,
   formatArea,
@@ -107,6 +107,30 @@ export function weightText(lb: number, unit: Unit): string {
 /** "Limited by weight: 2 layers removed". */
 export function weightTrimText(layersRemoved: number): string {
   return `Limited by weight: ${fmtCount(layersRemoved)} ${layersRemoved === 1 ? 'layer' : 'layers'} removed`;
+}
+
+const RATING: Record<StabilityRating, string> = { good: 'Good', fair: 'Fair', poor: 'Poor' };
+
+/** "Stability: Good". */
+export function stabilityText(rating: StabilityRating): string {
+  return `Stability: ${RATING[rating]}`;
+}
+
+/**
+ * "498.1 kg · Limited by weight: 1 layer removed · Stability: Good", leaving out what is
+ * absent (the trim when no layer was removed); null when there is neither weight nor rating.
+ */
+export function weightStabilityText(
+  weight: { total: number; layersRemoved: number } | null,
+  rating: StabilityRating | null,
+  unit: Unit,
+): string | null {
+  const parts = [
+    ...(weight ? [weightText(weight.total, unit)] : []),
+    ...(weight && weight.layersRemoved >= 1 ? [weightTrimText(weight.layersRemoved)] : []),
+    ...(rating ? [stabilityText(rating)] : []),
+  ];
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 /** "Room for 6 more cartons by weight". */

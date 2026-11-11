@@ -144,6 +144,10 @@ describe('renderBuildSheetPdf', () => {
     ])
       expect(text).toContain(s);
     expect(text).not.toContain('Out of date');
+    // Page 1 names the turned layers as drawn, it does not tell builders to turn them again.
+    expect(text).toContain('(Layers 3, 5, 7 are pattern B turned) Tj');
+    expect(text).toContain('(half a turn \\(shown as pattern C\\).) Tj');
+    expect(text).not.toContain('Turn these layers');
     expect(pageObjects(text)).toBe(3);
   });
 

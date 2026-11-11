@@ -3,7 +3,7 @@ import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analyt
 import {
   describeRun,
   hasPinwheelLayer,
-  PINWHEEL_NOTE,
+  PINWHEEL_SCREEN_NOTE,
   stackRuns,
   turnedLayersText,
 } from '../engine/analytics/stack';
@@ -113,7 +113,7 @@ export function WhatToBuildCard() {
             ))}
           </ol>
           {hasPinwheelLayer(layout) && (
-            <p className="text-sm text-gray-700 dark:text-harbor-mist">{PINWHEEL_NOTE}</p>
+            <p className="text-sm text-gray-700 dark:text-harbor-mist">{PINWHEEL_SCREEN_NOTE}</p>
           )}
           {turned && <p className="text-sm text-gray-700 dark:text-harbor-mist">{turned}</p>}
         </Part>
@@ -144,7 +144,7 @@ export function WhatToBuildCard() {
                   {weightTrimText(w.layersRemoved)}
                 </p>
               )}
-              {w.roomForCartons >= 1 && (
+              {w.layersRemoved >= 1 && w.roomForCartons >= 1 && (
                 <p className="text-sm tabular-nums text-gray-700 dark:text-harbor-mist">
                   {roomText(w.roomForCartons)}
                 </p>

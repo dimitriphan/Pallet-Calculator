@@ -88,7 +88,7 @@ describe('Basic mode', () => {
 
   it('explains how to build a pinwheel layer, and says nothing of it otherwise', async () => {
     const NOTE =
-      'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.';
+      'Pinwheel layer: build the four blocks around the centre gap, as shown from above in the 3D view.';
     const { stores } = await renderBasic();
     expect(within(card()).queryByText(NOTE)).not.toBeInTheDocument();
     act(() => {
@@ -124,7 +124,9 @@ describe('Basic mode', () => {
     expect(
       c.getByText('Stack is tall for its base (1.6 times its shorter side).'),
     ).toBeInTheDocument();
-    expect(c.getByText('Turn these layers half a turn (180°): 3, 5, 7')).toBeInTheDocument();
+    expect(
+      c.getByText('Turn layers 3, 5, 7 half a turn (180°) so they interlock.'),
+    ).toBeInTheDocument();
   });
 
   it('shows a Good rating without warnings, and a Poor one with its serious warning', async () => {
@@ -134,7 +136,9 @@ describe('Basic mode', () => {
     let c = within(card());
     expect(c.getByText('Stability: Good')).toBeInTheDocument();
     expect(c.queryByText(/Stack is tall/)).not.toBeInTheDocument();
-    expect(c.getByText('Turn these layers half a turn (180°): 3, 5')).toBeInTheDocument();
+    expect(
+      c.getByText('Turn layers 3, 5 half a turn (180°) so they interlock.'),
+    ).toBeInTheDocument();
     act(() => stores.inputs.getState().setField('pallet.height', '90'));
     await flush();
     c = within(card());

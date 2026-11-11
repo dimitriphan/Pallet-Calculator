@@ -144,10 +144,13 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
       [W('Weight per layer'), w.perLayer.map(wt).join(' ')],
       [L('Centre of mass height above floor'), len(w.centreOfMassHeight)],
       ['Layers removed for weight', w.layersRemoved],
-      ['Room for more cartons by weight', w.roomForCartons],
     );
+    // Only for a load trimmed by weight: otherwise the height is the limit.
+    if (w.layersRemoved >= 1) rows.push(['Room for more cartons by weight', w.roomForCartons]);
   }
   const weighed = p.comparison.some((c) => c.weight !== undefined);
+  // "Pinwheel" where the table shows the badge; the column only when some layout has one.
+  const patterned = p.comparison.some((c) => c.pinwheel);
 
   const header = [
     '#',
@@ -155,6 +158,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     'Products',
     'Cartons',
     'Layers',
+    ...(patterned ? ['Pattern'] : []),
     'Stability',
     'Utilization',
     ...(weighed ? [W('Weight')] : []),
@@ -167,6 +171,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     c.products,
     c.cartons,
     c.layers,
+    ...(patterned ? [c.pinwheel ? 'Pinwheel' : ''] : []),
     c.stability ? RATING[c.stability] : '',
     fmtPct(c.utilizationPct),
     ...(weighed ? [c.weight === undefined ? '' : wt(c.weight)] : []),

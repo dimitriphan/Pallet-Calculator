@@ -12,6 +12,7 @@ import {
   stackRuns,
   turnedLayerNumbers,
   turnedLayersText,
+  turnedPatternsText,
   type StackRun,
 } from './stack';
 
@@ -124,13 +125,30 @@ describe('stackPatterns', () => {
 describe('turned layers', () => {
   it('names the turned layers of the default winner', () => {
     expect(turnedLayerNumbers(winner())).toEqual([3, 5, 7]);
-    expect(turnedLayersText(winner())).toBe('Turn these layers half a turn (180°): 3, 5, 7');
+    expect(turnedLayersText(winner())).toBe(
+      'Turn layers 3, 5, 7 half a turn (180°) so they interlock.',
+    );
+  });
+
+  it('says one turned layer in the singular', () => {
+    const three = { ...winner(), layers: winner().layers.slice(0, 3) };
+    expect(turnedLayersText(three)).toBe('Turn layer 3 half a turn (180°) so it interlocks.');
+    expect(turnedPatternsText(three)).toBe(
+      'Layer 3 is pattern B turned half a turn (shown as pattern C).',
+    );
+  });
+
+  it('names, for the build sheet, the pattern each turned layer is drawn as', () => {
+    expect(turnedPatternsText(winner())).toBe(
+      'Layers 3, 5, 7 are pattern B turned half a turn (shown as pattern C).',
+    );
   });
 
   it('says nothing when no layer is turned', () => {
     const plain = restack(winner(), [0, 1, 1, 1]);
     expect(turnedLayerNumbers(plain)).toEqual([]);
     expect(turnedLayersText(plain)).toBeNull();
+    expect(turnedPatternsText(plain)).toBeNull();
   });
 
   it('keeps a turned layer in the run of the layer it is a turn of', () => {

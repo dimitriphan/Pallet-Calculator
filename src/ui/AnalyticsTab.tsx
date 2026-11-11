@@ -154,7 +154,10 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
                 ? ([
                     ['Maximum pallet weight', weightText(a.weight.max, unit)],
                     ['Layers removed for weight', fmtCount(a.weight.layersRemoved)],
-                    ['Room for more cartons by weight', fmtCount(a.weight.roomForCartons)],
+                    // Only for a load trimmed by weight: otherwise the height is the limit.
+                    ...(a.weight.layersRemoved >= 1
+                      ? [['Room for more cartons by weight', fmtCount(a.weight.roomForCartons)]]
+                      : []),
                   ] as [string, string][])
                 : []),
               ['Weight per carton', weightText(a.weight.perCarton, unit)],

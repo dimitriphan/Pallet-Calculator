@@ -99,7 +99,10 @@ export interface Analytics {
   /** Null when the product box weight is blank (weight ignored). Pounds and inches. */
   weight:
     | (LayoutWeight & {
-        /** More full cartons the maximum would allow; 0 without a maximum. */
+        /**
+         * More full cartons the maximum would allow, said only for a load trimmed by weight:
+         * 0 without a maximum or when no layer was removed (the height is the limit then).
+         */
         roomForCartons: number;
         /** Whole layers removed from the top to keep under the maximum. */
         layersRemoved: number;
@@ -226,10 +229,11 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
 function weightAnalytics(l: Layout, i: Inputs): Analytics['weight'] {
   const w = layoutWeight(l, i);
   if (w === null) return null;
+  const layersRemoved = l.weightTrim?.layersRemoved ?? 0;
   return {
     ...w,
-    roomForCartons: roomForCartons(l, i),
-    layersRemoved: l.weightTrim?.layersRemoved ?? 0,
+    roomForCartons: layersRemoved >= 1 ? roomForCartons(l, i) : 0,
+    layersRemoved,
     max: i.weights.maxPallet,
   };
 }

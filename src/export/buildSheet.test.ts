@@ -87,7 +87,10 @@ describe('buildSheetContent, default winner', () => {
         label: 'Stability warning',
         value: 'Stack is tall for its base (1.6 times its shorter side).',
       },
-      { label: 'Turned layers', value: 'Turn these layers half a turn (180°): 3, 5, 7' },
+      {
+        label: 'Turned layers',
+        value: 'Layers 3, 5, 7 are pattern B turned half a turn (shown as pattern C).',
+      },
     ]);
   });
 
@@ -126,6 +129,11 @@ describe('buildSheetContent, default winner', () => {
       'Pattern B turned half a turn (180°).',
     ]);
     expect(s.stacking.map((r) => r.pattern)).toEqual(['A', 'B', 'C', 'B', 'C', 'B', 'C']);
+    // A half turn does not swap a carton's footprint: C is described as its twin B.
+    const footprint = (p: (typeof s.patterns)[number] | undefined) =>
+      p?.facts.find((f) => f.label === 'Carton footprint as placed')?.value;
+    expect(footprint(s.patterns[1])).toBe('13.00 × 21.00 in (some turned 90°)');
+    expect(footprint(s.patterns[2])).toBe(footprint(s.patterns[1]));
     expect(s.patterns[0]?.facts.map((f) => f.label)).toEqual([
       'Cartons in layer',
       'Carton footprint as placed',
@@ -298,7 +306,10 @@ describe('buildSheetContent in another unit', () => {
       },
       { label: 'Stability', value: 'Fair' },
       { label: 'Stability warning', value: expect.stringMatching(/^Stack is tall for its base/) },
-      { label: 'Turned layers', value: expect.stringMatching(/^Turn these layers half a turn/) },
+      {
+        label: 'Turned layers',
+        value: 'Layers 2, 4 are pattern A turned half a turn (shown as pattern B).',
+      },
     ]);
     expect(s.patterns[0]?.facts[1]?.value).toMatch(/^\d+\.\d × \d+\.\d cm/);
     expect(s.patterns[0]?.facts[2]?.value).toMatch(/^\d+\.\d cm$/);
@@ -436,7 +447,7 @@ describe('buildSheetContent with a pinwheel layer', () => {
     ]);
     expect(s.palletAndLoad.at(-1)).toEqual({
       label: 'Turned layers',
-      value: 'Turn these layers half a turn (180°): 2, 4',
+      value: 'Layers 2, 4 are pattern A turned half a turn (shown as pattern B).',
     });
   });
 });

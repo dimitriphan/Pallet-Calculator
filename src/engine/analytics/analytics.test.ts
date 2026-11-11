@@ -243,6 +243,16 @@ describe('computeAnalytics, weight', () => {
     expect(a.totals.products).toBe(225);
   });
 
+  it('reports no room on a load the maximum did not trim', () => {
+    // 680 lb allows 6 more 11 lb cartons than the 612 lb winner, but the height is the limit.
+    const i: Inputs = {
+      ...DEFAULT_INPUTS,
+      weights: { productBox: 2, emptyCarton: 1, pallet: 40, maxPallet: 680 },
+    };
+    const a = computeAnalytics(trimToWeight(free, i)!, i);
+    expect(a.weight).toMatchObject({ total: 612, layersRemoved: 0, roomForCartons: 0, max: 680 });
+  });
+
   it('reports no layers removed and no room without a maximum', () => {
     const i: Inputs = { ...DEFAULT_INPUTS, weights: { ...DEFAULT_INPUTS.weights, productBox: 2 } };
     const a = computeAnalytics(free, i);
