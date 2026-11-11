@@ -145,6 +145,12 @@ describe('weight results', () => {
     const first = within(table()).getAllByRole('row')[1]!;
     expect(first).toHaveTextContent('274.0');
     expect(first).toHaveTextContent('Limited by weight: 2 layers removed');
+    // The note sits under the products, so the Weight column stays narrow.
+    const cells = within(first).getAllByRole('cell');
+    expect(cells[headers.indexOf('Weight (lb)')]).toHaveTextContent(/^274\.0$/);
+    expect(cells[headers.indexOf('Products')]).toHaveTextContent(
+      /^108\s*Limited by weight: 2 layers removed$/,
+    );
     const result = stores.results.getState().result!;
     for (const r of result.layouts) expect(r.layout.totalProducts).toBeLessThanOrEqual(108);
   });

@@ -26,8 +26,12 @@ import { useResults } from './StoreContext';
 const PINWHEEL_BADGE =
   'bg-gray-100 text-gray-800 dark:border dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-foam';
 
-/** Limited-by-weight note under a layout's weight. */
-const WEIGHT_BADGE = 'bg-amber-100 text-amber-900 dark:bg-harbor-sand dark:text-harbor-deep';
+/**
+ * Limited-by-weight note under a layout's products, wrapped onto two lines so neither its
+ * column nor the Weight column grows wide enough to push the table past its panel.
+ */
+const WEIGHT_BADGE =
+  'w-[6.5rem] bg-amber-100 text-amber-900 dark:bg-harbor-sand dark:text-harbor-deep';
 
 const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; className: string }> = {
   met: {
@@ -70,8 +74,8 @@ export function LayoutComparisonTable() {
     }
   };
 
-  const th = 'whitespace-nowrap px-2 py-1.5 font-medium';
-  const td = 'whitespace-nowrap px-2 py-1.5 tabular-nums';
+  const th = 'whitespace-nowrap px-1 py-1.5 font-medium';
+  const td = 'whitespace-nowrap px-1 py-1.5 tabular-nums';
   return (
     <section aria-labelledby="comparison-heading" className="shrink-0 space-y-2">
       <div className="flex items-baseline justify-between">
@@ -152,6 +156,13 @@ export function LayoutComparisonTable() {
                             {badge.label}
                           </span>
                         )}
+                        {analytics.weight && analytics.weight.layersRemoved > 0 && (
+                          <span
+                            className={`whitespace-normal px-1.5 text-right text-[11px] leading-4 ${WEIGHT_BADGE}`}
+                          >
+                            {weightTrimText(analytics.weight.layersRemoved)}
+                          </span>
+                        )}
                       </span>
                     </td>
                     <td className={`${td} text-right`}>{ranked.layout.totalCartons}</td>
@@ -177,18 +188,7 @@ export function LayoutComparisonTable() {
                     </td>
                     {weighed && (
                       <td className={`${td} text-right`}>
-                        <span className="flex flex-col items-end gap-0.5">
-                          <span>
-                            {analytics.weight ? formatWeight(analytics.weight.total, unit) : ''}
-                          </span>
-                          {analytics.weight && analytics.weight.layersRemoved > 0 && (
-                            <span
-                              className={`whitespace-nowrap px-1.5 text-[11px] leading-4 ${WEIGHT_BADGE}`}
-                            >
-                              {weightTrimText(analytics.weight.layersRemoved)}
-                            </span>
-                          )}
-                        </span>
+                        {analytics.weight ? formatWeight(analytics.weight.total, unit) : ''}
                       </td>
                     )}
                     <td className={`${td} text-right`}>
