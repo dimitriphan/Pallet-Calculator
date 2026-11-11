@@ -65,7 +65,10 @@ export interface StackingPart {
 }
 
 export interface PagePlan {
-  /** Pattern letters on each layer-plan page; index 0 is page 2 (page 1 is the overview). */
+  /**
+   * Pattern letters on each layer-plan page; index 0 is the page after the overview (page 2,
+   * or page 3 when the overview's pictures moved to a page of their own).
+   */
   patternsPerPage: string[][];
   /** The page the "Stacking order" table starts on. */
   stackingOnPage: number;
@@ -75,18 +78,20 @@ export interface PagePlan {
 }
 
 /**
- * Pagination, pure. Two pattern blocks per page, never split. The stacking table follows
- * the last block when it fits in the space left, otherwise it starts a new page. A table
- * longer than a whole page continues over further pages, under a "(continued)" title.
+ * Pagination, pure. The layer plan starts after the `overviewPages` overview pages (1, or 2
+ * when page 1 has no room for the pictures). Two pattern blocks per page, never split. The
+ * stacking table follows the last block when it fits in the space left, otherwise it starts a
+ * new page. A table longer than a whole page continues over further pages, under a
+ * "(continued)" title.
  */
-export function planPages(sheet: BuildSheet): PagePlan {
+export function planPages(sheet: BuildSheet, overviewPages = 1): PagePlan {
   const letters = sheet.patterns.map((p) => p.letter);
   const patternsPerPage: string[][] = [];
   for (let i = 0; i < letters.length; i += BLOCKS_PER_PAGE)
     patternsPerPage.push(letters.slice(i, i + BLOCKS_PER_PAGE));
 
   const rows = sheet.stacking.length;
-  let page = 1 + patternsPerPage.length;
+  let page = overviewPages + patternsPerPage.length;
   const lastBlocks = patternsPerPage.at(-1)?.length ?? 0;
   const top = PAGE.bodyTop + lastBlocks * BLOCK_H;
   const stackingParts: StackingPart[] = [];
@@ -274,17 +279,27 @@ function drawRowsTable(
   return top;
 }
 
-function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number) {
+/** Height of a picture caption above its frame. */
+const CAPTION_H = 0.27;
+/** The picture frames' full height, and the least they shrink to before moving on a page. */
+export const PICTURE_H = 3.0;
+export const MIN_PICTURE_H = 1.8;
+/** Gap between the tables and the pictures below them. */
+const PICTURES_GAP = 0.35;
+/** Height of the box drawn instead of the pictures when the 3D view is unavailable. */
+const NO_PICTURES_H = 0.7;
+
+/** The two pictures (or the "unavailable" box) with captions, frames `frameH` tall, from `y`. */
+function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number, frameH: number) {
   if (!pictures) {
     doc.setDrawColor(...FRAME);
     doc.setLineWidth(0.01);
-    doc.rect(LEFT, y, CONTENT_W, 0.7, 'S');
+    doc.rect(LEFT, y, CONTENT_W, NO_PICTURES_H, 'S');
     font(doc, 10, 'normal', GREY_TEXT);
     doc.text('3D pictures unavailable', PAGE.width / 2, y + 0.39, { align: 'center' });
     return;
   }
   const frameW = 3.6;
-  const frameH = 3.0;
   const gap = CONTENT_W - 2 * frameW;
   const frames: [string, string][] = [
     ['3D view', pictures.current],
@@ -294,7 +309,7 @@ function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number) {
     const x = LEFT + i * (frameW + gap);
     font(doc, 12, 'bold');
     doc.text(caption, x, y + 0.17);
-    const top = y + 0.27;
+    const top = y + CAPTION_H;
     const { width, height } = doc.getImageProperties(src);
     const scale = Math.min(frameW / width, frameH / height);
     const w = width * scale;
@@ -306,12 +321,17 @@ function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number) {
   });
 }
 
+/**
+ * Page 1, and the page its pictures move to when they do not fit; returns the number of
+ * overview pages (1 or 2). The pictures stay below the tables, shrunk to the room left above
+ * the footer down to MIN_PICTURE_H; with less room they go to the top of a page of their own.
+ */
 function drawOverview(
   doc: jsPDF,
   sheet: BuildSheet,
   pictures: SheetPictures | null,
   mascot?: SheetMascot,
-) {
+): number {
   let y = drawHeader(doc, sheet, mascot);
   if (sheet.stale) y = drawStaleBox(doc, y);
   y = drawSummary(doc, sheet.summary, y);
@@ -320,7 +340,17 @@ function drawOverview(
     drawRowsTable(doc, 'Carton', sheet.carton, LEFT, y, colW),
     drawRowsTable(doc, 'Pallet and load', sheet.palletAndLoad, RIGHT - colW, y, colW),
   );
-  drawPictures(doc, pictures, bottom + 0.35);
+  const top = bottom + PICTURES_GAP;
+  const room = PAGE.bodyBottom - top - (pictures ? CAPTION_H : 0);
+  const needed = pictures ? MIN_PICTURE_H : NO_PICTURES_H;
+  if (room >= needed - EPS) {
+    drawPictures(doc, pictures, top, Math.min(PICTURE_H, room));
+    return 1;
+  }
+  doc.addPage('letter', 'portrait');
+  drawRunningHeader(doc, sheet);
+  drawPictures(doc, pictures, PAGE.bodyTop, PICTURE_H);
+  return 2;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -580,14 +610,13 @@ export async function renderBuildSheetPdf(
   pictures: SheetPictures | null,
   mascot?: SheetMascot,
 ): Promise<Blob> {
-  const plan = planPages(sheet);
   const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait', compress: false });
   doc.setProperties({
     title: sheet.jobName ? `${sheet.title} - ${sheet.jobName}` : sheet.title,
     creator: 'Pallet Calculator',
   });
 
-  drawOverview(doc, sheet, pictures, mascot);
+  const plan = planPages(sheet, drawOverview(doc, sheet, pictures, mascot));
 
   const byLetter = new Map(sheet.patterns.map((p) => [p.letter, p]));
   const newPage = () => {
