@@ -1,23 +1,33 @@
+import type { ReactNode } from 'react';
 import {
   describeBoxCounts,
   describeLayerOrientations,
   type Analytics,
   type LayerOrientation,
 } from '../engine/analytics/analytics';
-import { formatDims, formatNumber } from '../engine/units/units';
+import { describeWarning } from '../engine/analytics/stability';
 import { DetailRows } from './DetailRows';
+import { StabilityBadge } from './StabilityBadge';
+import {
+  areaText,
+  dimsText,
+  fmtCount,
+  fmtPct,
+  lengthText,
+  pairText,
+  ratioText,
+  shareText,
+  volumeText,
+  weightText,
+  type Unit,
+} from './format';
+import { useUnit } from './useUnit';
 
 const TARGET_LABEL = {
   met: 'Target met',
   exceeded: 'Target exceeded',
   notAchievable: 'Target not achievable',
 } as const;
-
-const inches = (v: number) => `${formatNumber(v)} in`;
-const dims = (d: Parameters<typeof formatDims>[0]) => `${formatDims(d)} in`;
-const area = (v: number) => `${formatNumber(v)} in²`;
-const volume = (v: number) => `${formatNumber(v)} in³`;
-const pct = (v: number) => `${formatNumber(v)}%`;
 
 /** One layer type per line; the text still reads "Length up: 1 layer; Width up: 6 layers". */
 function OrientationLines({ list }: { list: LayerOrientation[] }) {
@@ -29,8 +39,31 @@ function OrientationLines({ list }: { list: LayerOrientation[] }) {
   ));
 }
 
+/** Consecutive layers of the same weight, bottom first, one per line. */
+function LayerWeightLines({ perLayer, unit }: { perLayer: number[]; unit: Unit }) {
+  const runs: { from: number; to: number; weight: number }[] = [];
+  perLayer.forEach((weight, k) => {
+    const last = runs.at(-1);
+    if (last && last.weight === weight) last.to = k + 1;
+    else runs.push({ from: k + 1, to: k + 1, weight });
+  });
+  return runs.map((r) => (
+    <span key={r.from} className="block whitespace-nowrap">
+      {r.from === r.to
+        ? `Layer ${r.from}: ${weightText(r.weight, unit)}`
+        : `Layers ${r.from}–${r.to}: ${weightText(r.weight, unit)} each`}
+    </span>
+  ));
+}
+
 /** Every analytics figure of the selected layout. */
 export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
+  const unit = useUnit();
+  const length = (v: number) => lengthText(v, unit);
+  const dims = (d: Parameters<typeof dimsText>[0]) => dimsText(d, unit);
+  const area = (v: number) => areaText(v, unit);
+  const volume = (v: number) => volumeText(v, unit);
+  const pct = (v: number) => fmtPct(v);
   const p = a.pallet;
   const t = a.target;
   const target: [string, string][] =
@@ -78,11 +111,8 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
         title="Pallet"
         rows={[
           ['Pallet limitation', dims(p.dims)],
-          ['Usable stacking height', inches(p.usableHeight)],
-          [
-            'Usable footprint',
-            `${formatNumber(p.usableFootprint.x)} × ${formatNumber(p.usableFootprint.y)} in`,
-          ],
+          ['Usable stacking height', length(p.usableHeight)],
+          ['Usable footprint', pairText(p.usableFootprint.x, p.usableFootprint.y, unit)],
           ['Layers', String(p.layers)],
           [
             'Cartons per layer',
@@ -90,11 +120,11 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
               ? String(p.cartonsPerLayerMin)
               : `${p.cartonsPerLayerMin}–${p.cartonsPerLayerMax}`,
           ],
-          ['Load length', inches(p.loadLength)],
-          ['Load width', inches(p.loadWidth)],
-          ['Total load height (with pallet)', inches(p.totalLoadHeight)],
+          ['Load length', length(p.loadLength)],
+          ['Load width', length(p.loadWidth)],
+          ['Total load height (with pallet)', length(p.totalLoadHeight)],
           ['Volume utilization', pct(p.volumeUtilizationPct)],
-          ['Remaining height', inches(p.remainingHeight)],
+          ['Remaining height', length(p.remainingHeight)],
           ['Remaining footprint (fullest layer)', area(p.remainingFootprintArea)],
         ]}
       />
@@ -108,9 +138,94 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Volume available', volume(a.totals.volumeAvailable)],
           ['Utilization', pct(a.totals.utilizationPct)],
           ['Remaining volume', volume(a.totals.remainingVolume)],
+          ['Headroom above the load', volume(a.totals.headroomVolume)],
+          ['Gaps beside cartons', volume(a.totals.layerGapVolume)],
           ...target,
         ]}
       />
+      {a.weight && (
+        <>
+          <div className="root-divider" aria-hidden="true" />
+          <DetailRows
+            title="Weight"
+            rows={[
+              ['Total weight', weightText(a.weight.total, unit)],
+              ...(a.weight.max !== null
+                ? ([
+                    ['Maximum pallet weight', weightText(a.weight.max, unit)],
+                    ['Layers removed for weight', fmtCount(a.weight.layersRemoved)],
+                    // Only for a load trimmed by weight: otherwise the height is the limit.
+                    ...(a.weight.layersRemoved >= 1
+                      ? [['Room for more cartons by weight', fmtCount(a.weight.roomForCartons)]]
+                      : []),
+                  ] as [string, string][])
+                : []),
+              ['Weight per carton', weightText(a.weight.perCarton, unit)],
+              ['Weight per layer', <LayerWeightLines perLayer={a.weight.perLayer} unit={unit} />],
+              ['Centre of mass height above floor', length(a.weight.centreOfMassHeight)],
+            ]}
+          />
+        </>
+      )}
+      {a.stability && <StabilityRows stability={a.stability} />}
     </div>
+  );
+}
+
+/** The rating, its warnings in words, then what each check measured. */
+function StabilityRows({ stability: s }: { stability: NonNullable<Analytics['stability']> }) {
+  const m = s.measures;
+  const turned = s.turnedLayers;
+  return (
+    <>
+      <div className="root-divider" aria-hidden="true" />
+      <DetailRows
+        title="Stability"
+        rows={[
+          ['Rating', <StabilityBadge stability={s} />],
+          ...(s.warnings.length > 0
+            ? ([
+                [
+                  'Warnings',
+                  s.warnings.map((w) => (
+                    <span key={w.check} className="block text-left">
+                      {describeWarning(w)}
+                    </span>
+                  )),
+                ],
+              ] as [string, ReactNode][])
+            : []),
+          ['Stack height ÷ shorter side of base', ratioText(m.stackHeightRatio)],
+          [
+            'Carton height ÷ shorter base side, worst layer',
+            m.cartonHeight ? (
+              <span className="whitespace-nowrap">{`${ratioText(m.cartonHeight.ratio)} (layer ${fmtCount(m.cartonHeight.layer)})`}</span>
+            ) : (
+              '—'
+            ),
+          ],
+          [
+            'Least support from the layer below',
+            m.support ? (
+              <span className="whitespace-nowrap">{`${shareText(m.support.share)} (layer ${fmtCount(m.support.layer)})`}</span>
+            ) : (
+              '—'
+            ),
+          ],
+          [
+            'Most identical layers in straight columns',
+            <span className="whitespace-nowrap">
+              {m.columns && m.columns.layers > 1
+                ? `${fmtCount(m.columns.layers)} (from layer ${fmtCount(m.columns.from)})`
+                : fmtCount(m.columns?.layers ?? 0)}
+            </span>,
+          ],
+          [
+            'Layers turned half a turn (180°)',
+            turned.length > 0 ? turned.map(fmtCount).join(', ') : 'None',
+          ],
+        ]}
+      />
+    </>
   );
 }

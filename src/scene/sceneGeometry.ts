@@ -1,8 +1,9 @@
 import { PALLET_HEIGHT } from '../domain/constants';
 import type { Inputs, Layout } from '../domain/types';
 import { productsInCarton, type PlacedCarton } from '../engine/packing/positions';
-import { formatNumber } from '../engine/units/units';
+import type { Unit } from '../engine/units/units';
 import type { Selection } from '../store/sceneStore';
+import { lengthText } from '../ui/format';
 import { palletBounds, toSceneBounds, type SceneBounds, type Vec3 } from './transforms';
 
 /** One solid part of the pallet in the scene frame. */
@@ -43,6 +44,8 @@ export interface DimensionLineOptions {
   offset?: number;
   tick?: number;
   clearOf?: SceneBounds;
+  /** Unit of the label text; the geometry is always inches. */
+  unit?: Unit;
 }
 
 export interface DimensionLines {
@@ -59,7 +62,7 @@ export interface DimensionLines {
  */
 export function dimensionLines(
   b: SceneBounds,
-  { offset = DIM_OFFSET, tick = DIM_TICK, clearOf = b }: DimensionLineOptions = {},
+  { offset = DIM_OFFSET, tick = DIM_TICK, clearOf = b, unit = 'in' }: DimensionLineOptions = {},
 ): DimensionLines {
   const [x0, y0, z0] = b.min;
   const [x1, y1, z1] = b.max;
@@ -80,7 +83,7 @@ export function dimensionLines(
     [right - tick, y0, front], [right + tick, y0, front],
     [right - tick, y1, front], [right + tick, y1, front],
   ];
-  const label = (v: number) => `${formatNumber(v)} in`;
+  const label = (v: number) => lengthText(v, unit);
   return {
     segments,
     labels: [

@@ -1,8 +1,8 @@
 import { useId, useState } from 'react';
-import { DEFAULT_INPUTS } from '../domain/constants';
-import { draftFromInputs, parseDraft } from '../domain/schemas';
-import type { InputsDraft, Preset } from '../domain/types';
+import type { Preset } from '../domain/types';
+import type { InputsState } from '../store/inputsStore';
 import { inputsMatchPreset } from '../store/presetsStore';
+import { defaultDraft, originText, parseInUnit, writtenOrigin } from '../store/unitFields';
 import { BUTTON, ModalDialog } from './ModalDialog';
 import { NamePrompt } from './NamePrompt';
 import { PresetDialog } from './PresetDialog';
@@ -11,12 +11,53 @@ import { useInputs, usePrefs, usePresets, useStores } from './StoreContext';
 
 const NO_PRESET = '';
 
+/** A valid stand-in for the product box weight, which a preset never covers. */
+const PLACEHOLDER_BOX_WEIGHT = writtenOrigin(1);
+
 /**
- * Whether the draft's preset-covered fields (everything but the product) parse and equal the
- * preset's. The product is swapped for the default so a product being edited does not matter.
+ * The draft parsed with a valid stand-in for the box weight, which a preset never stores: a
+ * blank box weight under a maximum pallet weight then does not block saving or matching.
+ * With `anyProduct`, the product is swapped for valid stand-ins too.
  */
-function coveredFieldsMatch(draft: InputsDraft, preset: Preset): boolean {
-  const parsed = parseDraft({ ...draft, product: draftFromInputs(DEFAULT_INPUTS).product });
+function parseForPreset(
+  { draft, origins, unit }: Pick<InputsState, 'draft' | 'origins' | 'unit'>,
+  anyProduct: boolean,
+) {
+  const placeholder = defaultDraft(unit);
+  return parseInUnit(
+    {
+      ...draft,
+      ...(anyProduct ? { product: placeholder.draft.product } : {}),
+      weights: {
+        ...draft.weights,
+        productBox: originText('weight', PLACEHOLDER_BOX_WEIGHT, unit),
+      },
+    },
+    {
+      ...origins,
+      ...(anyProduct
+        ? {
+            'product.length': placeholder.origins['product.length'],
+            'product.width': placeholder.origins['product.width'],
+            'product.height': placeholder.origins['product.height'],
+          }
+        : {}),
+      'weights.productBox': PLACEHOLDER_BOX_WEIGHT,
+    },
+    unit,
+  );
+}
+
+/**
+ * Whether the draft's preset-covered fields (everything but the product and its box weight)
+ * parse and equal the preset's. The product and box weight are swapped for valid stand-ins so
+ * a product being edited, or a blank box weight under a preset's maximum, does not matter.
+ */
+function coveredFieldsMatch(
+  state: Pick<InputsState, 'draft' | 'origins' | 'unit'>,
+  preset: Preset,
+): boolean {
+  const parsed = parseForPreset(state, true);
   return parsed.ok && inputsMatchPreset(parsed.inputs, preset);
 }
 
@@ -29,14 +70,17 @@ export function PresetMenu() {
   const presets = usePresets((s) => s.presets);
   const activeId = usePresets((s) => s.activePresetId);
   const draft = useInputs((s) => s.draft);
-  const parsed = useInputs((s) => s.parsed);
+  const origins = useInputs((s) => s.origins);
+  const unit = useInputs((s) => s.unit);
+  // What a save stores: the inputs, with a stand-in for the box weight no preset keeps.
+  const forSave = parseForPreset({ draft, origins, unit }, false);
   const full = usePrefs((s) => s.viewMode) === 'full';
   const [managing, setManaging] = useState(false);
   const [naming, setNaming] = useState(false);
   const selectId = useId();
 
   const active = presets.find((p) => p.id === activeId);
-  const modified = !!active && !coveredFieldsMatch(draft, active);
+  const modified = !!active && !coveredFieldsMatch({ draft, origins, unit }, active);
 
   const choose = (id: string) => {
     const preset = presets.find((p) => p.id === id);
@@ -50,20 +94,23 @@ export function PresetMenu() {
   };
 
   const saveToPreset = () => {
-    if (!active || !parsed.ok) return;
-    presetsStore.getState().update(active.id, presetFieldsOf(parsed.inputs));
+    if (!active || !forSave.ok) return;
+    presetsStore.getState().update(active.id, presetFieldsOf(forSave.inputs));
   };
 
   const saveAsNew = (name: string) => {
-    if (!parsed.ok) return;
-    const created = presetsStore.getState().create(name, parsed.inputs);
+    if (!forSave.ok) return;
+    const created = presetsStore.getState().create(name, forSave.inputs);
     presetsStore.getState().setActive(created.id);
     setNaming(false);
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor={selectId} className="text-sm text-gray-700 dark:text-harbor-mist">
+    <div className="flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
+      <label
+        htmlFor={selectId}
+        className="sr-only text-sm text-gray-700 xl:not-sr-only dark:text-harbor-mist"
+      >
         Preset
       </label>
       <span className="focus-ticks-within flex">
@@ -71,7 +118,7 @@ export function PresetMenu() {
           id={selectId}
           value={active ? active.id : NO_PRESET}
           onChange={(e) => choose(e.target.value)}
-          className="max-w-36 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none xl:max-w-56 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
+          className="max-w-24 border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none xl:max-w-32 2xl:max-w-56 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam"
         >
           <option value={NO_PRESET}>No preset</option>
           {presets.map((p) => (
@@ -87,14 +134,14 @@ export function PresetMenu() {
         </span>
       )}
       {full && modified && (
-        <button type="button" disabled={!parsed.ok} onClick={saveToPreset} className={BUTTON}>
+        <button type="button" disabled={!forSave.ok} onClick={saveToPreset} className={BUTTON}>
           Save to preset
         </button>
       )}
       {full && (modified || !active) && (
         <button
           type="button"
-          disabled={!parsed.ok}
+          disabled={!forSave.ok}
           onClick={() => setNaming(true)}
           className={BUTTON}
         >

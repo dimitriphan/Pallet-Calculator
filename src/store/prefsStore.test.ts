@@ -18,6 +18,7 @@ describe('prefsStore', () => {
     expect(JSON.parse(storage.getItem(STORAGE_KEYS.prefs) ?? '')).toEqual({
       viewMode: 'full',
       theme: 'harbor',
+      unit: 'in',
     });
     const b = createPrefsStore(storage).getState();
     expect(b.viewMode).toBe('full');
@@ -62,6 +63,46 @@ describe('prefsStore', () => {
     storage.setItem(STORAGE_KEYS.prefs, '{"viewMode":"basic","theme":"harbor"}');
     const s = createPrefsStore(storage, { viewMode: 'full', theme: 'light' }).getState();
     expect([s.viewMode, s.theme]).toEqual(['full', 'light']);
+  });
+});
+
+describe('unit preference', () => {
+  const load = (raw: string | null) => {
+    const storage = new FakeStorage();
+    if (raw !== null) storage.setItem(STORAGE_KEYS.prefs, raw);
+    return createPrefsStore(storage).getState().unit;
+  };
+
+  it('defaults to inches', () => {
+    expect(createPrefsStore(new FakeStorage()).getState().unit).toBe('in');
+  });
+
+  it('persists setUnit across store instances', () => {
+    const storage = new FakeStorage();
+    createPrefsStore(storage).getState().setUnit('mm');
+    expect(JSON.parse(storage.getItem(STORAGE_KEYS.prefs) ?? '').unit).toBe('mm');
+    expect(createPrefsStore(storage).getState().unit).toBe('mm');
+  });
+
+  it.each([
+    ['prefs stored before units existed', 'in', '{"viewMode":"basic","theme":"harbor"}'],
+    ['an unknown unit', 'in', '{"viewMode":"basic","theme":"harbor","unit":"furlong"}'],
+    ['a non-string unit', 'in', '{"unit":3}'],
+    ['centimetres', 'cm', '{"unit":"cm"}'],
+    ['corrupt JSON', 'in', '{bad'],
+  ])('loads %s as %s', (_name, expected, raw) => {
+    expect(load(raw)).toBe(expected);
+  });
+
+  it('keeps the other preferences when the unit changes', () => {
+    const storage = new FakeStorage();
+    storage.setItem(STORAGE_KEYS.prefs, '{"viewMode":"full","theme":"light"}');
+    createPrefsStore(storage).getState().setUnit('cm');
+    expect(JSON.parse(storage.getItem(STORAGE_KEYS.prefs) ?? '')).toEqual({
+      viewMode: 'full',
+      theme: 'light',
+      unit: 'cm',
+    });
   });
 });
 

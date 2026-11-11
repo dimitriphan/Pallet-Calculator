@@ -31,6 +31,44 @@ describe('DetailsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('splits the remaining volume into headroom and gaps beside cartons, in the unit', async () => {
+    const { user } = await renderApp();
+    const results = () =>
+      screen.getByRole('heading', { name: 'Final results' }).closest('section')!;
+    const value = (label: string) =>
+      within(results()).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+    // The default winner reaches the 67 in limit: 140,700 - 52 x 2,457 = 12,936 in³ is all
+    // beside the cartons.
+    expect(value('Remaining volume')).toBe('12936.00 in³');
+    expect(value('Headroom above the load')).toBe('0.00 in³');
+    expect(value('Gaps beside cartons')).toBe('12936.00 in³');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Units' }), 'cm');
+    await flush();
+    expect(value('Headroom above the load')).toBe('0.0 cm³');
+    expect(value('Gaps beside cartons')).toBe(`${formatNumber(12936 * 2.54 ** 3, 1)} cm³`);
+  });
+
+  it('lists the stability rating, its warnings and every check with its value', async () => {
+    await renderApp();
+    const section = screen.getByRole('heading', { name: 'Stability' }).closest('section')!;
+    const s = within(section);
+    const value = (label: string) =>
+      s.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+    expect(value('Rating')).toBe('Stability: Fair');
+    expect(
+      s.getByText('Stack is tall for its base (1.6 times its shorter side).'),
+    ).toBeInTheDocument();
+    // 67 in of stack over the 42 in side of the bottom layer.
+    expect(value('Stack height ÷ shorter side of base')).toBe('1.60');
+    // Layer 1 stands 13 in tall on a 9 in side.
+    expect(value('Carton height ÷ shorter base side, worst layer')).toBe('1.44 (layer 1)');
+    // Layer 2 (two 13 x 42 columns and a 21 x 39 block: 47 x 42, 1911 in²) centred on layer 1
+    // (45 x 42): 1 in overhangs on each side, 42 + 39 in² unsupported: 1830 / 1911 = 95.8%.
+    expect(value('Least support from the layer below')).toBe('95% (layer 2)');
+    expect(value('Most identical layers in straight columns')).toBe('1');
+    expect(value('Layers turned half a turn (180°)')).toBe('3, 5, 7');
+  });
+
   it('shows how the boxes sit inside the carton', async () => {
     await renderApp();
     const carton = screen.getByRole('heading', { name: 'Carton' }).closest('section')!;

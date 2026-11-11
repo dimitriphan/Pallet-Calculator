@@ -7,7 +7,8 @@
  * increasing DOWN the page, as in the app's Top view.
  */
 import { jsPDF } from 'jspdf';
-import { formatNumber } from '../engine/units/units';
+import type { Unit } from '../engine/units/units';
+import { lengthText } from '../ui/format';
 import type { BuildSheet, DrawingKey, SheetPattern, SheetRow } from './buildSheet';
 import { STALE_NOTE } from './exportData';
 
@@ -64,7 +65,10 @@ export interface StackingPart {
 }
 
 export interface PagePlan {
-  /** Pattern letters on each layer-plan page; index 0 is page 2 (page 1 is the overview). */
+  /**
+   * Pattern letters on each layer-plan page; index 0 is the page after the overview (page 2,
+   * or page 3 when the overview's pictures moved to a page of their own).
+   */
   patternsPerPage: string[][];
   /** The page the "Stacking order" table starts on. */
   stackingOnPage: number;
@@ -74,18 +78,20 @@ export interface PagePlan {
 }
 
 /**
- * Pagination, pure. Two pattern blocks per page, never split. The stacking table follows
- * the last block when it fits in the space left, otherwise it starts a new page. A table
- * longer than a whole page continues over further pages, under a "(continued)" title.
+ * Pagination, pure. The layer plan starts after the `overviewPages` overview pages (1, or 2
+ * when page 1 has no room for the pictures). Two pattern blocks per page, never split. The
+ * stacking table follows the last block when it fits in the space left, otherwise it starts a
+ * new page. A table longer than a whole page continues over further pages, under a
+ * "(continued)" title.
  */
-export function planPages(sheet: BuildSheet): PagePlan {
+export function planPages(sheet: BuildSheet, overviewPages = 1): PagePlan {
   const letters = sheet.patterns.map((p) => p.letter);
   const patternsPerPage: string[][] = [];
   for (let i = 0; i < letters.length; i += BLOCKS_PER_PAGE)
     patternsPerPage.push(letters.slice(i, i + BLOCKS_PER_PAGE));
 
   const rows = sheet.stacking.length;
-  let page = 1 + patternsPerPage.length;
+  let page = overviewPages + patternsPerPage.length;
   const lastBlocks = patternsPerPage.at(-1)?.length ?? 0;
   const top = PAGE.bodyTop + lastBlocks * BLOCK_H;
   const stackingParts: StackingPart[] = [];
@@ -273,17 +279,27 @@ function drawRowsTable(
   return top;
 }
 
-function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number) {
+/** Height of a picture caption above its frame. */
+const CAPTION_H = 0.27;
+/** The picture frames' full height, and the least they shrink to before moving on a page. */
+export const PICTURE_H = 3.0;
+export const MIN_PICTURE_H = 1.8;
+/** Gap between the tables and the pictures below them. */
+const PICTURES_GAP = 0.35;
+/** Height of the box drawn instead of the pictures when the 3D view is unavailable. */
+const NO_PICTURES_H = 0.7;
+
+/** The two pictures (or the "unavailable" box) with captions, frames `frameH` tall, from `y`. */
+function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number, frameH: number) {
   if (!pictures) {
     doc.setDrawColor(...FRAME);
     doc.setLineWidth(0.01);
-    doc.rect(LEFT, y, CONTENT_W, 0.7, 'S');
+    doc.rect(LEFT, y, CONTENT_W, NO_PICTURES_H, 'S');
     font(doc, 10, 'normal', GREY_TEXT);
     doc.text('3D pictures unavailable', PAGE.width / 2, y + 0.39, { align: 'center' });
     return;
   }
   const frameW = 3.6;
-  const frameH = 3.0;
   const gap = CONTENT_W - 2 * frameW;
   const frames: [string, string][] = [
     ['3D view', pictures.current],
@@ -293,7 +309,7 @@ function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number) {
     const x = LEFT + i * (frameW + gap);
     font(doc, 12, 'bold');
     doc.text(caption, x, y + 0.17);
-    const top = y + 0.27;
+    const top = y + CAPTION_H;
     const { width, height } = doc.getImageProperties(src);
     const scale = Math.min(frameW / width, frameH / height);
     const w = width * scale;
@@ -305,12 +321,17 @@ function drawPictures(doc: jsPDF, pictures: SheetPictures | null, y: number) {
   });
 }
 
+/**
+ * Page 1, and the page its pictures move to when they do not fit; returns the number of
+ * overview pages (1 or 2). The pictures stay below the tables, shrunk to the room left above
+ * the footer down to MIN_PICTURE_H; with less room they go to the top of a page of their own.
+ */
 function drawOverview(
   doc: jsPDF,
   sheet: BuildSheet,
   pictures: SheetPictures | null,
   mascot?: SheetMascot,
-) {
+): number {
   let y = drawHeader(doc, sheet, mascot);
   if (sheet.stale) y = drawStaleBox(doc, y);
   y = drawSummary(doc, sheet.summary, y);
@@ -319,7 +340,17 @@ function drawOverview(
     drawRowsTable(doc, 'Carton', sheet.carton, LEFT, y, colW),
     drawRowsTable(doc, 'Pallet and load', sheet.palletAndLoad, RIGHT - colW, y, colW),
   );
-  drawPictures(doc, pictures, bottom + 0.35);
+  const top = bottom + PICTURES_GAP;
+  const room = PAGE.bodyBottom - top - (pictures ? CAPTION_H : 0);
+  const needed = pictures ? MIN_PICTURE_H : NO_PICTURES_H;
+  if (room >= needed - EPS) {
+    drawPictures(doc, pictures, top, Math.min(PICTURE_H, room));
+    return 1;
+  }
+  doc.addPage('letter', 'portrait');
+  drawRunningHeader(doc, sheet);
+  drawPictures(doc, pictures, PAGE.bodyTop, PICTURE_H);
+  return 2;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -377,6 +408,7 @@ function drawLayerDrawing(
   key: DrawingKey | null,
   x: number,
   y: number,
+  unit: Unit,
 ) {
   const labelW = 0.3;
   const below = 0.48;
@@ -430,8 +462,8 @@ function drawLayerDrawing(
   doc.line(dimX - tick, py + ph, dimX + tick, py + ph);
 
   font(doc, 9);
-  doc.text(`${formatNumber(pallet.dx)} in`, px + pw / 2, dimY + 0.16, { align: 'center' });
-  const widthText = `${formatNumber(pallet.dy)} in`;
+  doc.text(lengthText(pallet.dx, unit), px + pw / 2, dimY + 0.16, { align: 'center' });
+  const widthText = lengthText(pallet.dy, unit);
   doc.text(widthText, dimX - 0.07, py + ph / 2 + doc.getTextWidth(widthText) / 2, { angle: 90 });
   font(doc, 8, 'normal', GREY_TEXT);
   doc.text('Top view, pallet length across', ox + w / 2, oy + h + 0.4, { align: 'center' });
@@ -441,7 +473,8 @@ function drawLayerDrawing(
   }
 }
 
-function drawFacts(doc: jsPDF, facts: SheetRow[], x: number, y: number, w: number) {
+/** Label/value rows down a column; returns the bottom of the last row. */
+function drawFacts(doc: jsPDF, facts: SheetRow[], x: number, y: number, w: number): number {
   let top = y;
   facts.forEach((fact, i) => {
     if (i > 0) rule(doc, x, top, x + w, 0.006);
@@ -452,16 +485,30 @@ function drawFacts(doc: jsPDF, facts: SheetRow[], x: number, y: number, w: numbe
     lines.forEach((l, k) => doc.text(l, x, top + 0.36 + k * lineH(10.5)));
     top += 0.36 + (lines.length - 1) * lineH(10.5) + 0.11;
   });
+  return top;
 }
 
-function drawPatternBlock(doc: jsPDF, pattern: SheetPattern, key: DrawingKey | null, y: number) {
+function drawPatternBlock(
+  doc: jsPDF,
+  pattern: SheetPattern,
+  key: DrawingKey | null,
+  y: number,
+  unit: Unit,
+) {
   font(doc, 13, 'bold');
   doc.text(pattern.heading, LEFT, y + 0.2);
   rule(doc, LEFT, y + 0.3, RIGHT, 0.012, BLACK);
   const top = y + 0.42;
-  drawLayerDrawing(doc, pattern.drawing, key, LEFT, top);
+  drawLayerDrawing(doc, pattern.drawing, key, LEFT, top, unit);
   const factsX = LEFT + DRAW_W + 0.35;
-  drawFacts(doc, pattern.facts, factsX, top - 0.04, RIGHT - factsX);
+  const bottom = drawFacts(doc, pattern.facts, factsX, top - 0.04, RIGHT - factsX);
+  if (pattern.note) {
+    rule(doc, factsX, bottom, RIGHT, 0.006);
+    font(doc, 10.5, 'bold');
+    wrap(doc, pattern.note, RIGHT - factsX).forEach((l, k) =>
+      doc.text(l, factsX, bottom + 0.22 + k * lineH(10.5)),
+    );
+  }
 }
 
 const STACK_COLUMNS: { title: string; width: number }[] = [
@@ -472,7 +519,19 @@ const STACK_COLUMNS: { title: string; width: number }[] = [
   { title: 'Top of layer (incl. pallet)', width: 2.4 },
 ];
 
+/** The same table with each layer's weight, when the sheet has weights. */
+const WEIGHED_STACK_COLUMNS: { title: string; width: number }[] = [
+  { title: 'Layer', width: 0.9 },
+  { title: 'Pattern', width: 0.9 },
+  { title: 'Cartons', width: 1.0 },
+  { title: 'Layer height', width: 1.4 },
+  { title: 'Top of layer (incl. pallet)', width: 2.0 },
+  { title: 'Layer weight', width: 1.3 },
+];
+
 function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
+  const weighed = sheet.stacking.some((r) => r.weight !== undefined);
+  const columns = weighed ? WEIGHED_STACK_COLUMNS : STACK_COLUMNS;
   font(doc, 13, 'bold');
   doc.text(
     part.first === 0 ? 'Stacking order' : 'Stacking order (continued)',
@@ -485,7 +544,7 @@ function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
   const cell = (values: string[], top: number) => {
     let x = LEFT;
     values.forEach((v, i) => {
-      const col = STACK_COLUMNS[i];
+      const col = columns[i];
       if (!col) return;
       doc.text(v, x + col.width / 2, top + 0.155, { align: 'center' });
       x += col.width;
@@ -497,7 +556,7 @@ function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
   doc.rect(LEFT, top, CONTENT_W, STACK_ROW_H, 'F');
   font(doc, 9, 'bold');
   cell(
-    STACK_COLUMNS.map((c) => c.title),
+    columns.map((c) => c.title),
     top,
   );
   top += STACK_ROW_H;
@@ -508,7 +567,8 @@ function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
       doc.setFillColor(...ZEBRA);
       doc.rect(LEFT, top, CONTENT_W, STACK_ROW_H, 'F');
     }
-    cell([String(row.layer), row.pattern, String(row.cartons), row.height, row.topHeight], top);
+    const values = [String(row.layer), row.pattern, String(row.cartons), row.height, row.topHeight];
+    cell(weighed ? [...values, row.weight ?? ''] : values, top);
     top += STACK_ROW_H;
   });
   rule(doc, LEFT, top, RIGHT, 0.012, BLACK);
@@ -550,14 +610,13 @@ export async function renderBuildSheetPdf(
   pictures: SheetPictures | null,
   mascot?: SheetMascot,
 ): Promise<Blob> {
-  const plan = planPages(sheet);
   const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait', compress: false });
   doc.setProperties({
     title: sheet.jobName ? `${sheet.title} - ${sheet.jobName}` : sheet.title,
     creator: 'Pallet Calculator',
   });
 
-  drawOverview(doc, sheet, pictures, mascot);
+  const plan = planPages(sheet, drawOverview(doc, sheet, pictures, mascot));
 
   const byLetter = new Map(sheet.patterns.map((p) => [p.letter, p]));
   const newPage = () => {
@@ -568,7 +627,8 @@ export async function renderBuildSheetPdf(
     newPage();
     letters.forEach((letter, i) => {
       const pattern = byLetter.get(letter);
-      if (pattern) drawPatternBlock(doc, pattern, sheet.drawingKey, PAGE.bodyTop + i * BLOCK_H);
+      if (pattern)
+        drawPatternBlock(doc, pattern, sheet.drawingKey, PAGE.bodyTop + i * BLOCK_H, sheet.unit);
     });
   }
   for (const part of plan.stackingParts) {

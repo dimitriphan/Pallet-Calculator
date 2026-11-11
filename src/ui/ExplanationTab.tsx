@@ -1,6 +1,6 @@
 import { SCORE_WEIGHTS } from '../domain/constants';
 import type { RankedLayout } from '../domain/types';
-import { formatNumber } from '../engine/units/units';
+import { fmtDecimal } from './format';
 
 /** How the selected layout's score is built, and why it ranks where it does. */
 export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
@@ -42,9 +42,9 @@ export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
               >
                 {name}
               </th>
-              <td className={cell}>{formatNumber(value)}</td>
-              <td className={cell}>{formatNumber(weight)}</td>
-              <td className={cell}>{formatNumber(contribution)}</td>
+              <td className={cell}>{fmtDecimal(value)}</td>
+              <td className={cell}>{fmtDecimal(weight)}</td>
+              <td className={cell}>{fmtDecimal(contribution)}</td>
             </tr>
           ))}
         </tbody>
@@ -58,7 +58,7 @@ export function ExplanationTab({ ranked }: { ranked: RankedLayout }) {
               Final score
             </th>
             <td className={`${cell} font-semibold text-blue-700 dark:text-harbor-foam`}>
-              {formatNumber(s.total)}
+              {fmtDecimal(s.total)}
             </td>
           </tr>
         </tfoot>

@@ -37,10 +37,16 @@ function covered(p: Preset | Inputs) {
     p.rotationMode,
     p.customOrientations,
     p.keepCartonsUpright,
+    p.weights.maxPallet,
+    p.weights.emptyCarton,
+    p.weights.pallet,
   ];
 }
 
-/** Applies a preset to the current inputs; the product is never part of a preset. */
+/**
+ * Applies a preset to the current inputs; the product, and so the product box weight, is
+ * never part of a preset.
+ */
 export function presetToInputs(p: Preset, current: Inputs): Inputs {
   return {
     product: current.product,
@@ -54,6 +60,7 @@ export function presetToInputs(p: Preset, current: Inputs): Inputs {
     rotationMode: p.rotationMode,
     customOrientations: [...p.customOrientations],
     keepCartonsUpright: p.keepCartonsUpright,
+    weights: { ...p.weights, productBox: current.weights.productBox },
   };
 }
 
@@ -153,6 +160,11 @@ function presetFromInputs(i: Inputs): Omit<Preset, 'id' | 'name'> {
     rotationMode: i.rotationMode,
     customOrientations: [...i.customOrientations],
     keepCartonsUpright: i.keepCartonsUpright,
+    weights: {
+      maxPallet: i.weights.maxPallet,
+      emptyCarton: i.weights.emptyCarton,
+      pallet: i.weights.pallet,
+    },
     advanced: {},
   };
 }

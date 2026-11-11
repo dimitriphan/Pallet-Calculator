@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react';
+import { unitLabel, validationMessage } from './format';
+import { useUnit } from './useUnit';
 
 interface NumberFieldProps {
   id: string;
   label: string;
   value: string;
   onChange(value: string): void;
+  /** The parser's message; any limit in it is shown in the display unit. */
   error?: string;
+  /** Shown after the field; defaults to the display length unit. */
   suffix?: string;
   placeholder?: string;
   /** Help shown under the field and linked to it as a description. */
@@ -14,18 +18,24 @@ interface NumberFieldProps {
   describedBy?: string;
 }
 
-/** A decimal text input with a unit suffix, an inline error, and optional help text. */
+/**
+ * A decimal text input with a unit suffix (the display unit unless given), an inline error, and
+ * optional help text.
+ */
 export function NumberField({
   id,
   label,
   value,
   onChange,
-  error,
-  suffix = 'in',
+  error: rawError,
+  suffix: suffixProp,
   placeholder,
   hint,
   describedBy: extraDescription,
 }: NumberFieldProps) {
+  const unit = useUnit();
+  const suffix = suffixProp ?? unitLabel(unit);
+  const error = rawError === undefined ? undefined : validationMessage(rawError, unit);
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
   const describedBy = [error ? errorId : null, hint ? hintId : null, extraDescription ?? null]

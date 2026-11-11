@@ -4,15 +4,23 @@
  * the screen uses, taken from the inputs the result was computed from.
  */
 import { PALLET_HEIGHT } from '../domain/constants';
-import type { Inputs, OptimizeResult, ProductAxis } from '../domain/types';
+import type { Inputs, Layout, OptimizeResult, ProductAxis } from '../domain/types';
 import {
   cartonDisplayDims,
   computeAnalytics,
   describeBoxCounts,
 } from '../engine/analytics/analytics';
-import { describeLayerList, stackPatterns } from '../engine/analytics/stack';
+import {
+  describeLayerList,
+  PINWHEEL_NOTE,
+  stackPatterns,
+  turnedPatternsText,
+} from '../engine/analytics/stack';
+import { describeWarning } from '../engine/analytics/stability';
 import { cartonPlacements } from '../engine/packing/positions';
-import { formatDims, formatNumber } from '../engine/units/units';
+import { footprintAxes } from '../engine/packing/stacking';
+import type { Unit } from '../engine/units/units';
+import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
 import { settingsSummary } from '../ui/settingsSummary';
 
 export interface SheetRow {
@@ -33,6 +41,8 @@ export interface SheetPattern {
   letter: string;
   heading: string;
   facts: SheetRow[];
+  /** How to build the layer; only on a pinwheel pattern or a pattern turned half a turn. */
+  note?: string;
   drawing: {
     footprint: { x: number; y: number };
     pallet: SheetRect;
@@ -65,9 +75,13 @@ export interface BuildSheet {
     cartons: number;
     height: string;
     topHeight: string;
+    /** The layer's weight; only when the box weight was set. */
+    weight?: string;
   }[];
   footer: string;
   layoutLabel: string;
+  /** The unit every length in the text is in; drawing coordinates stay in inches. */
+  unit: Unit;
 }
 
 const MAX_JOB_NAME = 80;
@@ -101,8 +115,6 @@ function safeDeep<T>(value: T): T {
   return value;
 }
 
-const inches = (n: number) => `${formatNumber(n)} in`;
-
 function localMinute(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
@@ -116,6 +128,47 @@ export function buildSheetFilename(now: Date): string {
   return `pallet-build-sheet-${date}-${time}.pdf`;
 }
 
+const RATING_WORD = { good: 'Good', fair: 'Fair', poor: 'Poor' } as const;
+
+/**
+ * The stability rating, one row per warning, and which layers are drawn turned half a turn (as
+ * which pattern). Nothing for a layout stored before layouts were rated.
+ */
+function stabilityRows(layout: Layout): SheetRow[] {
+  const rows: SheetRow[] = [];
+  if (layout.stability) {
+    rows.push({ label: 'Stability', value: RATING_WORD[layout.stability.rating] });
+    for (const w of layout.stability.warnings)
+      rows.push({ label: 'Stability warning', value: describeWarning(w) });
+  }
+  const turned = turnedPatternsText(layout);
+  if (turned) rows.push({ label: 'Turned layers', value: turned });
+  return rows;
+}
+
+/** Total and per-carton weight, then the trim and the room left when there is a maximum. */
+function weightRows(
+  w: NonNullable<ReturnType<typeof computeAnalytics>['weight']>,
+  weightOf: (lb: number) => string,
+): SheetRow[] {
+  const rows: SheetRow[] = [
+    {
+      label: 'Total weight',
+      value:
+        w.max === null ? weightOf(w.total) : `${weightOf(w.total)} (maximum ${weightOf(w.max)})`,
+    },
+    { label: 'Weight per carton', value: weightOf(w.perCarton) },
+  ];
+  if (w.layersRemoved > 0)
+    rows.push({
+      label: 'Limited by weight',
+      value: `${fmtCount(w.layersRemoved)} ${w.layersRemoved === 1 ? 'layer' : 'layers'} removed`,
+    });
+  if (w.layersRemoved >= 1 && w.roomForCartons >= 1)
+    rows.push({ label: 'Room by weight', value: roomText(w.roomForCartons) });
+  return rows;
+}
+
 export function buildSheetContent(a: {
   inputs: Inputs;
   result: OptimizeResult;
@@ -123,14 +176,20 @@ export function buildSheetContent(a: {
   jobName: string;
   stale: boolean;
   now: Date;
+  /** Display unit of the text; inches when omitted. */
+  unit?: Unit;
 }): BuildSheet {
   const { inputs, result, selectedIndex } = a;
+  const unit = a.unit ?? 'in';
+  const length = (n: number) => lengthText(n, unit);
+  const sizeText = (x: number, y: number) => pairText(x, y, unit);
   const ranked = result.layouts[selectedIndex];
   if (!ranked) throw new Error(`No layout at index ${selectedIndex}`);
   const layout = ranked.layout;
   const best = result.layouts[0];
   const analytics = computeAnalytics(layout, inputs);
-  const { summary, pallet } = analytics;
+  const { summary, pallet, weight } = analytics;
+  const weightOf = (lb: number) => weightText(lb, unit);
 
   const trimmed = a.jobName.trim().slice(0, MAX_JOB_NAME);
   const placements = cartonPlacements(layout, inputs);
@@ -142,7 +201,13 @@ export function buildSheetContent(a: {
     dy: inputs.pallet.width,
   };
 
-  const patterns: SheetPattern[] = stackPatterns(layout).map((p) => {
+  const stack = stackPatterns(layout);
+  // Keyed by 1-based layer number; letterAt takes a 0-based layer index.
+  const letterOfLayer = new Map<number, string>();
+  for (const p of stack) for (const n of p.layerNumbers) letterOfLayer.set(n, p.letter);
+  const letterAt = (index: number) => letterOfLayer.get(index + 1);
+
+  const patterns: SheetPattern[] = stack.map((p) => {
     const layer = layout.layers[p.layerIndex];
     if (!layer) throw new Error(`No layer at index ${p.layerIndex}`);
     const cartons = placements
@@ -170,18 +235,27 @@ export function buildSheetContent(a: {
         label: `${b.rows} × ${b.cols}`,
       });
     }
-    const first = cartons[0];
+    // A turned layer sits on the layer it is a turn of: name the pattern of the layer below.
+    const notes: string[] = p.kind === 'pinwheel' ? [PINWHEEL_NOTE] : [];
+    const twin = layer.turned ? letterAt(p.layerIndex - 1) : undefined;
+    if (twin) notes.push(`Pattern ${twin} turned half a turn (180°).`);
+    // Described from the first block not turned 90° (else the first block), so a layer and
+    // its half-turned twin, whose blocks come in the opposite order, read the same.
+    const shown = layer.blocks.find((b) => !b.rotated) ?? layer.blocks[0];
     const mixed = layer.blocks.some((b) => b.rotated) && layer.blocks.some((b) => !b.rotated);
-    const footprintText = first
-      ? `${formatNumber(first.dx)} × ${formatNumber(first.dy)} in${mixed ? ' (some turned 90°)' : ''}`
-      : '';
+    let footprintText = '';
+    if (shown && cartons.length > 0) {
+      const [fa, fb] = footprintAxes(layer.vertical);
+      const [a, b] = [layout.carton.outer[fa], layout.carton.outer[fb]];
+      footprintText = `${shown.rotated ? sizeText(b, a) : sizeText(a, b)}${mixed ? ' (some turned 90°)' : ''}`;
+    }
     return {
       letter: p.letter,
       heading: `Pattern ${p.letter}: ${describeLayerList(p.layerNumbers)}`,
       facts: [
         { label: 'Cartons in layer', value: String(p.cartonsPerLayer) },
         { label: 'Carton footprint as placed', value: footprintText },
-        { label: 'Layer height', value: inches(p.height) },
+        { label: 'Layer height', value: length(p.height) },
         { label: 'Side facing up', value: SIDE_UP[p.vertical] },
         {
           label: 'Blocks (rows × columns)',
@@ -189,45 +263,44 @@ export function buildSheetContent(a: {
         },
       ],
       drawing: { footprint: { ...footprint }, pallet: { ...palletRect }, cartons, blocks },
+      ...(notes.length > 0 ? { note: notes.join(' ') } : {}),
     };
   });
-
-  const letterOfLayer = new Map<number, string>();
-  for (const p of stackPatterns(layout))
-    for (const n of p.layerNumbers) letterOfLayer.set(n, p.letter);
   let top = PALLET_HEIGHT;
   const stacking = layout.layers.map((layer, i) => {
     top += layer.height;
     return {
       layer: i + 1,
-      pattern: letterOfLayer.get(i + 1) ?? '',
+      pattern: letterAt(i) ?? '',
       cartons: layer.cartonCount,
-      height: inches(layer.height),
-      topHeight: inches(top),
+      height: length(layer.height),
+      topHeight: length(top),
+      ...(weight ? { weight: weightOf(weight.perLayer[i] as number) } : {}),
     };
   });
 
   const palletAndLoad: SheetRow[] = [
     {
       label: 'Pallet',
-      value: `${formatNumber(inputs.pallet.length)} × ${formatNumber(inputs.pallet.width)} in, ${inches(PALLET_HEIGHT)} tall`,
+      value: `${sizeText(inputs.pallet.length, inputs.pallet.width)}, ${length(PALLET_HEIGHT)} tall`,
     },
     ...(inputs.overhang > 0
       ? [
           {
             label: 'Overhang',
-            value: `${inches(inputs.overhang)} total, ${inches(inputs.overhang / 2)} each side`,
+            value: `${length(inputs.overhang)} total, ${length(inputs.overhang / 2)} each side`,
           },
         ]
       : []),
-    { label: 'Usable stacking height', value: inches(pallet.usableHeight) },
+    { label: 'Usable stacking height', value: length(pallet.usableHeight) },
     {
       label: 'Finished load',
-      value: `${formatNumber(pallet.loadLength)} × ${formatNumber(pallet.loadWidth)} × ${formatNumber(pallet.totalLoadHeight)} in including pallet`,
+      value: `${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} including pallet`,
     },
+    ...(weight ? weightRows(weight, weightOf) : []),
+    ...stabilityRows(layout),
   ];
 
-  const sizeText = (x: number, y: number) => `${formatNumber(x)} × ${formatNumber(y)} in`;
   const palletSize = sizeText(palletRect.dx, palletRect.dy);
   const limitSize = sizeText(footprint.x, footprint.y);
   const drawingKey: DrawingKey | null =
@@ -256,8 +329,8 @@ export function buildSheetContent(a: {
       { label: 'Total boxes per pallet', value: String(summary.totalBoxes) },
     ],
     carton: [
-      { label: 'Outer size', value: `${formatDims(cartonDisplayDims(layout, 'outer'))} in` },
-      { label: 'Inner size', value: `${formatDims(cartonDisplayDims(layout, 'inner'))} in` },
+      { label: 'Outer size', value: dimsText(cartonDisplayDims(layout, 'outer'), unit) },
+      { label: 'Inner size', value: dimsText(cartonDisplayDims(layout, 'inner'), unit) },
       { label: 'Boxes per carton', value: String(layout.carton.boxesPerCarton) },
       {
         label: 'Boxes inside',
@@ -269,11 +342,12 @@ export function buildSheetContent(a: {
     drawingKey,
     stacking,
     footer:
-      settingsSummary(inputs) +
+      settingsSummary(inputs, unit) +
       ` Desired boxes per carton: ${
-        inputs.boxesPerCarton !== null ? formatNumber(inputs.boxesPerCarton, 0) : 'best fit'
+        inputs.boxesPerCarton !== null ? fmtCount(inputs.boxesPerCarton) : 'best fit'
       }.`,
     layoutLabel: `Layout ${selectedIndex + 1} of ${result.layouts.length}`,
+    unit,
   };
   return safeDeep(sheet);
 }

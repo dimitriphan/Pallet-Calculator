@@ -1,5 +1,14 @@
 import { HARBOR } from '../theme/tokens';
 
+/** 3D colours that are the same in both themes and in every export. */
+export interface FixedSceneColors {
+  /** The headroom and gap blocks of the unused-space overlay, drawn at unusedSpaceOpacity. */
+  unusedSpace: string;
+  unusedSpaceOpacity: number;
+}
+
+const FIXED: FixedSceneColors = { unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 };
+
 /** Colours of the 3D view that follow the theme. Loads, envelope and selection never change. */
 export interface SceneTheme {
   background: string;
@@ -10,6 +19,8 @@ export interface SceneTheme {
   chipText: string;
   /** Colour of the measurement dimension lines. */
   measureLine: string;
+  /** The fixed colours, identical in both themes. */
+  fixed: FixedSceneColors;
 }
 
 /** The scene background of the light theme, which every PNG and PDF export uses. */
@@ -25,6 +36,7 @@ const LIGHT: SceneTheme = {
   chipBg: 'rgba(255, 255, 255, 0.9)',
   chipText: '#1f2937',
   measureLine: LIGHT_MEASURE_LINE,
+  fixed: FIXED,
 };
 
 // Harbor: the viewport colour with faint grid lines, foam on deep chips and foam lines. drei's
@@ -37,6 +49,7 @@ const HARBOR_SCENE: SceneTheme = {
   chipBg: HARBOR.deep,
   chipText: HARBOR.foam,
   measureLine: HARBOR.foam,
+  fixed: FIXED,
 };
 
 export function sceneTheme(theme: 'light' | 'harbor'): SceneTheme {

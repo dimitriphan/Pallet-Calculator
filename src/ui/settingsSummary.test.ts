@@ -45,4 +45,27 @@ describe('settingsSummary', () => {
       'custom orientations (none).',
     );
   });
+
+  it('says nothing about weight while the box weight is blank', () => {
+    expect(
+      settingsSummary({
+        ...DEFAULT_INPUTS,
+        weights: { productBox: null, maxPallet: null, emptyCarton: 3, pallet: 50 },
+      }),
+    ).toBe('Using 0.50 in leeway, 0.25 in carton walls, no overhang, fully rotatable.');
+  });
+
+  it('names the pallet and empty carton weights once the box weight is set, in lb or kg', () => {
+    const weighed = {
+      ...DEFAULT_INPUTS,
+      weights: { productBox: 2, maxPallet: 1500, emptyCarton: 1, pallet: 40 },
+    };
+    expect(settingsSummary(weighed)).toBe(
+      'Using 0.50 in leeway, 0.25 in carton walls, no overhang, fully rotatable, 40.0 lb pallet, 1.0 lb per empty carton.',
+    );
+    expect(settingsSummary(weighed, 'cm')).toContain('18.1 kg pallet, 0.5 kg per empty carton.');
+    expect(
+      settingsSummary({ ...weighed, weights: { ...weighed.weights, emptyCarton: 0 } }),
+    ).toContain('fully rotatable, 40.0 lb pallet.');
+  });
 });

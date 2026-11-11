@@ -73,3 +73,64 @@ describe('captionLines', () => {
     );
   });
 });
+
+describe('captionLines in another unit', () => {
+  const p = buildExportPayload(
+    DEFAULT_INPUTS,
+    optimize(DEFAULT_INPUTS),
+    0,
+    new Date('2026-11-10T09:05:03Z'),
+  );
+
+  it('is unchanged in inches', () => {
+    expect(captionLines(p, 'in')).toEqual(captionLines(p));
+    expect(captionLines(p)[1]).toBe('Load: 47.00 × 42.00 × 72.00 in (including pallet)');
+  });
+
+  it('adds only the stability to the default caption, which has no weights', () => {
+    expect(captionLines(p)).toHaveLength(5);
+    expect(captionLines(p)[3]).toBe('Stability: Fair');
+    expect(captionLines(p).at(-1)).toMatch(/^Layout 1 {3}\| {3}Exported /);
+  });
+
+  it('gives the load and carton in the unit', () => {
+    expect(captionLines(p, 'cm')[1]).toBe('Load: 119.4 × 106.7 × 182.9 cm (including pallet)');
+    expect(captionLines(p, 'mm')[2]).toBe('Carton: 533 × 330 × 229 mm (outer)');
+  });
+});
+
+describe('captionLines with weights', () => {
+  const NOW = new Date('2026-11-10T09:05:03Z');
+  const weighed = (maxPallet: number | null) => {
+    const i = {
+      ...DEFAULT_INPUTS,
+      weights: { productBox: 2, emptyCarton: 1, maxPallet, pallet: 40 },
+    };
+    return buildExportPayload(i, optimize(i), 0, NOW);
+  };
+
+  it('says the weight, the trim and the stability on one line, in the unit', () => {
+    // Under 290 lb: 274 lb, two layers removed.
+    const p = weighed(290);
+    const rating = p.analytics.stability!.rating;
+    const word = { good: 'Good', fair: 'Fair', poor: 'Poor' }[rating];
+    expect(captionLines(p)[3]).toBe(
+      `274.0 lb · Limited by weight: 2 layers removed · Stability: ${word}`,
+    );
+    // 274 lb = 124.3 kg.
+    expect(captionLines(p, 'cm')[3]).toBe(
+      `124.3 kg · Limited by weight: 2 layers removed · Stability: ${word}`,
+    );
+  });
+
+  it('leaves out the trim when nothing was removed', () => {
+    expect(captionLines(weighed(null))[3]).toBe('612.0 lb · Stability: Fair');
+  });
+
+  it('adds no line when there is neither weight nor stability', () => {
+    const p = buildExportPayload(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0, NOW);
+    const old = { ...p, analytics: { ...p.analytics, stability: null } };
+    expect(captionLines(old)).toHaveLength(4);
+    expect(captionLines(old).join('\n')).not.toMatch(/Stability|lb/);
+  });
+});

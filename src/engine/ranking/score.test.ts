@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS, SCORE_WEIGHTS } from '../../domain/constants';
-import type { Inputs, Layout } from '../../domain/types';
+import type { Inputs, Layout, StabilityRating } from '../../domain/types';
 import { generateCartonCandidates } from '../packing/cartons';
 import { buildLayouts } from '../packing/stacking';
 import { compareRanked, scoreLayout } from './score';
@@ -95,5 +95,36 @@ describe('compareRanked', () => {
     const sameButId = { layout: { ...more, id: more.id + '~' }, score: base.score };
     expect(compareRanked(base, sameButId)).toBeLessThan(0);
     expect(compareRanked(base, base)).toBe(0);
+  });
+
+  describe('stability rating', () => {
+    const rated = (l: Layout, rating: StabilityRating, total: number) => ({
+      layout: { ...l, stability: { rating, warnings: [] } },
+      score: { ...scoreOf(l), total },
+    });
+
+    it('puts a better rating first at the same products, even with a lower score', () => {
+      const good = rated(more, 'good', 50);
+      const fair = rated(more, 'fair', 90);
+      const poor = rated(more, 'poor', 95);
+      expect(compareRanked(good, fair)).toBeLessThan(0);
+      expect(compareRanked(fair, poor)).toBeLessThan(0);
+      expect(compareRanked(poor, good)).toBeGreaterThan(0);
+      expect([poor, fair, good].sort(compareRanked)).toEqual([good, fair, poor]);
+    });
+
+    it('never puts a better rating above more products', () => {
+      const poorMore = rated(more, 'poor', 10);
+      const goodFewer = rated(fewer, 'good', 99);
+      expect(compareRanked(poorMore, goodFewer)).toBeLessThan(0);
+      expect([goodFewer, poorMore].sort(compareRanked)[0]).toBe(poorMore);
+    });
+
+    it('keeps the score order between equal ratings', () => {
+      const high = rated(more, 'fair', 80);
+      const low = rated(more, 'fair', 70);
+      expect(compareRanked(high, low)).toBeLessThan(0);
+      expect(compareRanked(low, high)).toBeGreaterThan(0);
+    });
   });
 });

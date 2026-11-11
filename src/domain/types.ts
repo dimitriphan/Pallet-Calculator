@@ -1,4 +1,5 @@
 import type { Analytics } from '../engine/analytics/analytics';
+import type { Unit } from '../engine/units/units';
 
 export interface Dims {
   length: number;
@@ -8,6 +9,14 @@ export interface Dims {
 export type ProductAxis = 'L' | 'W' | 'H';
 export type OrientationCode = 'LWH' | 'LHW' | 'WLH' | 'WHL' | 'HLW' | 'HWL';
 export type RotationMode = 'full' | 'upright' | 'noSide' | 'custom';
+
+/** Weights in pounds. Blank box weight means weight is ignored everywhere. */
+export interface WeightInputs {
+  productBox: number | null; // lb; null = weight ignored
+  maxPallet: number | null; // lb, whole load including pallet
+  emptyCarton: number; // lb, default 0
+  pallet: number; // lb, default 40
+}
 
 export interface Inputs {
   pallet: Dims;
@@ -21,6 +30,7 @@ export interface Inputs {
   rotationMode: RotationMode;
   customOrientations: OrientationCode[]; // used only when rotationMode === 'custom'
   keepCartonsUpright: boolean;
+  weights: WeightInputs;
 }
 
 /** Same shape as Inputs but every numeric field is the raw text the user typed. */
@@ -36,6 +46,17 @@ export interface InputsDraft {
   rotationMode: RotationMode;
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;
+  weights: Record<keyof WeightInputs, string>; // '' = blank
+}
+
+/**
+ * Where a length or weight field's text came from: the text, the unit it was in, and its
+ * exact value in inches or pounds (null when the text is not a number).
+ */
+export interface FieldOrigin {
+  text: string;
+  unit: Unit;
+  canonical: number | null;
 }
 
 export interface CartonCandidate {
@@ -55,16 +76,45 @@ export interface Block {
   rotated: boolean;
 }
 
+/** How a layer's blocks are arranged: straight cuts, or four blocks turning round a centre gap. */
+export type LayerPatternKind = 'grid' | 'pinwheel';
+
 export interface LayerPattern {
   vertical: ProductAxis;
   height: number;
   cartonCount: number;
   blocks: Block[];
   extent: { x: number; y: number };
+  /** Absent means 'grid' (straight-cut layers, and every layer stored before Round 4). */
+  kind?: LayerPatternKind;
 }
 
 export interface Layer extends LayerPattern {
   z: number;
+  /**
+   * Turned half a turn (180°) about the centre of the usable footprint, so it interlocks with
+   * the identical layer below. Its blocks are stored already turned. Absent means not turned.
+   */
+  turned?: boolean;
+}
+
+export type StabilityRating = 'good' | 'fair' | 'poor';
+export type StabilityCheck = 'stackHeight' | 'cartonHeight' | 'support' | 'columns';
+
+/**
+ * One stability check over its caution or serious threshold. `value` is the measured ratio,
+ * share (0..1) or number of layers in columns; `layer` (from 1) names the worst layer.
+ */
+export interface StabilityWarning {
+  check: StabilityCheck;
+  level: 'caution' | 'serious';
+  value: number;
+  layer?: number;
+}
+
+export interface Stability {
+  rating: StabilityRating;
+  warnings: StabilityWarning[];
 }
 
 export interface Layout {
@@ -73,6 +123,10 @@ export interface Layout {
   layers: Layer[];
   totalCartons: number;
   totalProducts: number;
+  /** Set when whole layers were removed from the top to keep under the maximum pallet weight. */
+  weightTrim?: { layersRemoved: number };
+  /** Set by the optimizer; absent on layouts stored before Round 4's stability rating. */
+  stability?: Stability;
 }
 
 export interface ScoreBreakdown {
@@ -92,7 +146,13 @@ export interface RankedLayout {
   explanation: string;
 }
 
-export type EmptyReason = 'NO_CARTON_FITS' | 'CARTON_EXCEEDS_PALLET' | 'NO_CARTON_WITH_COUNT';
+export type EmptyReason =
+  | 'NO_CARTON_FITS'
+  | 'CARTON_EXCEEDS_PALLET'
+  | 'NO_CARTON_WITH_COUNT'
+  | 'OVER_WEIGHT'
+  /** Nothing under the maximum weight was found, but the search was capped or stopped. */
+  | 'WEIGHT_SEARCH_LIMITED';
 
 export interface OptimizeResult {
   layouts: RankedLayout[];
@@ -116,8 +176,13 @@ export interface Preset {
   rotationMode: RotationMode;
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;
+  /** The product box weight stays with the product, so a preset never holds it. */
+  weights: Omit<WeightInputs, 'productBox'>;
   advanced: Record<string, unknown>; // reserved for the later Advanced Optimization release
 }
+
+/** What a preset holds and applies: every input but the product and its box weight. */
+export type PresetFields = Omit<Preset, 'id' | 'name' | 'advanced'>;
 
 export interface Scenario {
   id: string;

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import type { Inputs } from '../domain/types';
@@ -84,6 +84,85 @@ describe('Basic mode', () => {
     );
     expect(c.getByText(DEFAULT_LOAD)).toBeInTheDocument();
     expect(c.queryByText(/Showing layout/)).not.toBeInTheDocument();
+  });
+
+  it('explains how to build a pinwheel layer, and says nothing of it otherwise', async () => {
+    const NOTE =
+      'Pinwheel layer: build the four blocks around the centre gap, as shown from above in the 3D view.';
+    const { stores } = await renderBasic();
+    expect(within(card()).queryByText(NOTE)).not.toBeInTheDocument();
+    act(() => {
+      for (const [path, value] of Object.entries({
+        'pallet.length': '48',
+        'pallet.width': '40',
+        'pallet.height': '60',
+        'product.length': '16.5',
+        'product.width': '10.5',
+        'product.height': '18',
+        'maxCarton.length': '16.5',
+        'maxCarton.width': '10.5',
+        'maxCarton.height': '18',
+        leeway: '0',
+        wallThickness: '0',
+      }))
+        stores.inputs.getState().setField(path, value);
+    });
+    await flush();
+    const c = within(card());
+    expect(
+      within(c.getByRole('list'))
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Layers 1–3: 10 cartons each, product height side up']);
+    expect(c.getByText(NOTE)).toBeInTheDocument();
+  });
+
+  it('rates the stability under the finished load, with its warnings and turned layers', async () => {
+    await renderBasic();
+    const c = within(card());
+    expect(c.getByText('Stability: Fair')).toBeInTheDocument();
+    expect(
+      c.getByText('Stack is tall for its base (1.6 times its shorter side).'),
+    ).toBeInTheDocument();
+    expect(
+      c.getByText('Turn layers 3, 5, 7 half a turn (180°) so they interlock.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a Good rating without warnings, and a Poor one with its serious warning', async () => {
+    const { stores } = await renderBasic();
+    act(() => stores.inputs.getState().setField('pallet.height', '55'));
+    await flush();
+    let c = within(card());
+    expect(c.getByText('Stability: Good')).toBeInTheDocument();
+    expect(c.queryByText(/Stack is tall/)).not.toBeInTheDocument();
+    expect(
+      c.getByText('Turn layers 3, 5 half a turn (180°) so they interlock.'),
+    ).toBeInTheDocument();
+    act(() => stores.inputs.getState().setField('pallet.height', '90'));
+    await flush();
+    c = within(card());
+    expect(c.getByText('Stability: Poor')).toBeInTheDocument();
+    expect(
+      c.getByText('Stack is tall for its base (2.02 times its shorter side).'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no rating for a result stored before ratings, and no turn note without turns', async () => {
+    const unrated = (i: Inputs) => {
+      const r = structuredClone(optimize(i));
+      for (const { layout } of r.layouts) {
+        delete layout.stability;
+        for (const layer of layout.layers) delete layer.turned;
+      }
+      return Promise.resolve(r);
+    };
+    await renderBasic(unrated);
+    const c = within(card());
+    expect(c.getByText(DEFAULT_LOAD)).toBeInTheDocument();
+    expect(c.queryByText(/Stability:/)).not.toBeInTheDocument();
+    expect(c.queryByText(/Stack is tall/)).not.toBeInTheDocument();
+    expect(c.queryByText(/half a turn/)).not.toBeInTheDocument();
   });
 
   it('hides the analytical parts of the screen', async () => {

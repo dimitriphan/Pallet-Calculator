@@ -3,7 +3,12 @@ import { useEffect, useRef } from 'react';
 import { Color, OrthographicCamera, Vector2 } from 'three';
 import { useStores } from '../ui/StoreContext';
 import { orthoFit } from './cameraFit';
-import { applyCaptureColors, withHiddenForOrthoCapture } from './captureVisibility';
+import {
+  applyCaptureColors,
+  HIDE_IN_BUILD_SHEET,
+  withHidden,
+  withHiddenForOrthoCapture,
+} from './captureVisibility';
 import { LIGHT_BACKGROUND } from './sceneTheme';
 import type { SceneBounds } from './transforms';
 
@@ -14,6 +19,7 @@ const ORTHO_SIZE = { width: 1800, height: 1200 };
  * Registers `captureViews` on the scene store: PNG data URLs of the user's current view and of
  * orthographic top and side views of the load, rendered at 1800 x 1200 without measurement
  * lines or the selection outline. All three use the light scene colours, whatever the theme.
+ * With `leaveOutUnusedSpace` (the build sheet) the unused-space overlay is left out of all three.
  */
 export function CaptureBridge({ bounds }: { bounds: SceneBounds }) {
   const get = useThree((s) => s.get);
@@ -24,7 +30,7 @@ export function CaptureBridge({ bounds }: { bounds: SceneBounds }) {
   });
 
   useEffect(() => {
-    const capture = () => {
+    const capture = (options: { leaveOutUnusedSpace?: boolean } = {}) => {
       const { gl, scene: world, camera, invalidate } = get();
       const read = () => gl.domElement.toDataURL('image/png');
 
@@ -47,10 +53,7 @@ export function CaptureBridge({ bounds }: { bounds: SceneBounds }) {
         gl.render(world, cam);
         return read();
       };
-      const previousBackground = world.background;
-      world.background = new Color(LIGHT_BACKGROUND);
-      const restoreColors = applyCaptureColors(world);
-      try {
+      const views = () => {
         gl.render(world, camera);
         const current = read();
 
@@ -61,6 +64,14 @@ export function CaptureBridge({ bounds }: { bounds: SceneBounds }) {
         const top = withHiddenForOrthoCapture(world, () => ortho('top'));
         const side = withHiddenForOrthoCapture(world, () => ortho('side'));
         return { current, top, side };
+      };
+      const previousBackground = world.background;
+      world.background = new Color(LIGHT_BACKGROUND);
+      const restoreColors = applyCaptureColors(world);
+      try {
+        return options.leaveOutUnusedSpace
+          ? withHidden(world, HIDE_IN_BUILD_SHEET, views)
+          : views();
       } finally {
         world.background = previousBackground;
         restoreColors();

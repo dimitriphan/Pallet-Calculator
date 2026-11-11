@@ -11,11 +11,13 @@ import { StatusMessages } from './ui/StatusMessages';
 import { StoreProvider, usePrefs, type AppStores } from './ui/StoreContext';
 import { useAutoOptimize } from './ui/useAutoOptimize';
 import { useTheme } from './ui/useTheme';
+import { useUnitSync } from './ui/UnitControl';
 import { WhatToBuildCard } from './ui/WhatToBuildCard';
 
 function Workspace() {
   useAutoOptimize();
   useTheme();
+  useUnitSync();
   // Both views share the shell and the scene slot's place in the tree, so switching
   // never remounts the 3D view or changes its size.
   const full = usePrefs((s) => s.viewMode) === 'full';

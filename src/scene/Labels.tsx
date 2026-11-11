@@ -2,7 +2,8 @@ import { Html } from '@react-three/drei';
 import type { Inputs, Layout } from '../domain/types';
 import { cartonDisplayDims } from '../engine/analytics/analytics';
 import type { PlacedCarton } from '../engine/packing/positions';
-import { formatDims } from '../engine/units/units';
+import type { Unit } from '../engine/units/units';
+import { dimsText } from '../ui/format';
 import type { SceneTheme } from './sceneTheme';
 import { toSceneBounds } from './transforms';
 
@@ -13,10 +14,11 @@ interface Props {
   inputs: Inputs;
   first: PlacedCarton;
   theme: SceneTheme;
+  unit: Unit;
 }
 
 /** Carton and product sizes, shown above the first carton. */
-export function Labels({ layout, inputs, first, theme }: Props) {
+export function Labels({ layout, inputs, first, theme, unit }: Props) {
   const { min, max } = toSceneBounds(first, inputs);
   const chip = { backgroundColor: theme.chipBg, color: theme.chipText };
   const position: [number, number, number] = [(min[0] + max[0]) / 2, max[1], (min[2] + max[2]) / 2];
@@ -24,10 +26,10 @@ export function Labels({ layout, inputs, first, theme }: Props) {
     <Html position={position} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
       <div className="flex -translate-y-4 gap-1">
         <span className={CHIP} style={chip}>
-          Carton {formatDims(cartonDisplayDims(layout, 'outer'))} in
+          Carton {dimsText(cartonDisplayDims(layout, 'outer'), unit)}
         </span>
         <span className={CHIP} style={chip}>
-          Product {formatDims(inputs.product)} in
+          Product {dimsText(inputs.product, unit)}
         </span>
       </div>
     </Html>

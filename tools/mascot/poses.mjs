@@ -4,8 +4,8 @@
 // occupied, feet on row 30. (The sheet's footer says 17 x 22, but its drawing
 // is taller; the drawing is what was traced.) Every other pose is derived from
 // it in code, so the body stays identical across poses. Edit single characters
-// of IDLE freely; the helpers below check that the leaf and shoot pixels they
-// change are still where they expect them.
+// of IDLE freely (rows 7-10 are the helmet); the helpers below check that the
+// leaf and shoot pixels they change are still where they expect them.
 
 export const PALETTE = {
   B: '#945743', // brown main
@@ -13,6 +13,8 @@ export const PALETTE = {
   K: '#35403A', // bandana
   G: '#7BCF80', // leaves and shoot
   E: '#99E550', // eye marks
+  Y: '#E8B93C', // helmet yellow
+  H: '#B98A22', // helmet shade (right side and brim)
   '.': null, // transparent
 };
 
@@ -25,10 +27,10 @@ const IDLE = [
   '............GGG.................', // 4  left leaf (higher tip)
   '.............GG.GG..............', // 5  right leaf
   '..............SSG...............', // 6  stem, two pixels wide
-  '..............SS................', // 7
-  '..............SS................', // 8
-  '.............BSSBBB.............', // 9  head ring
-  '............BBBBBBBB............', // 10
+  '.............YYYYYH.............', // 7  helmet dome, the stem passes into it
+  '...........YYYYYYYHHH...........', // 8
+  '...........YYYYYYYYHH...........', // 9
+  '..........HHHHHHHHHHHH..........', // 10 brim, one pixel wider than the head each side
   '...........BBBBBBBBBB...........', // 11
   '...........BBBB..BBBB...........', // 12  opening, open through
   '...........SBE....EBB...........', // 13  eye marks at the inner edges
@@ -65,8 +67,9 @@ const RIGHT_LEAF = {
   // prettier-ignore
   pixels: [[16, 5], [17, 5], [16, 6]],
   tip: [17, 5],
+  // reaches out past the dome's right edge before the tip hangs
   // prettier-ignore
-  drooped: [[16, 6], [17, 6], [18, 6], [18, 7]],
+  drooped: [[16, 6], [17, 6], [18, 6], [19, 6], [19, 7]],
 };
 const SHOULDER_SHOOT = [10, 17];
 const SHOULDER_ROW = 17;

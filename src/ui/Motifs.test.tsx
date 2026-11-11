@@ -12,15 +12,15 @@ describe('root dividers', () => {
     expect(dividersIn(inputsPanel())).toHaveLength(2);
   });
 
-  it('separates the five input groups in Full', async () => {
+  it('separates the six input groups in Full', async () => {
     await renderApp();
-    // Pallet | product | maximum carton | packing | product rotation.
-    expect(dividersIn(inputsPanel())).toHaveLength(4);
+    // Pallet | product | maximum carton | packing | weight | product rotation.
+    expect(dividersIn(inputsPanel())).toHaveLength(5);
   });
 
-  it('separates the four analytics groups', async () => {
+  it('separates the five analytics groups (Stability added in Round 4)', async () => {
     await renderApp();
-    expect(dividersIn(screen.getByRole('tabpanel'))).toHaveLength(3);
+    expect(dividersIn(screen.getByRole('tabpanel'))).toHaveLength(4);
   });
 
   it('separates the three sections of the "What to build" card', async () => {

@@ -1,8 +1,17 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
-import { describeRun, stackRuns } from '../engine/analytics/stack';
-import { formatDims, formatNumber } from '../engine/units/units';
+import {
+  describeRun,
+  hasPinwheelLayer,
+  PINWHEEL_SCREEN_NOTE,
+  stackRuns,
+  turnedLayersText,
+} from '../engine/analytics/stack';
+import { describeWarning } from '../engine/analytics/stability';
+import { dimsText, roomText, weightText, weightTrimText } from './format';
+import { useUnit } from './useUnit';
 import { Mascot } from './Mascot';
+import { StabilityBadge } from './StabilityBadge';
 import { StaleBadge } from './StaleBadge';
 import { useStatusContent } from './StatusMessages';
 import { useResults } from './StoreContext';
@@ -33,6 +42,7 @@ export function WhatToBuildCard() {
   const running = useResults((s) => s.status === 'running');
   const { error, empty } = useStatusContent();
   const heading = useRef<HTMLHeadingElement>(null);
+  const unit = useUnit();
 
   const showBest = () => {
     select(0);
@@ -49,9 +59,11 @@ export function WhatToBuildCard() {
     const { ranked, analytics } = selected;
     const layout = ranked.layout;
     const p = analytics.pallet;
+    const w = analytics.weight;
+    const turned = turnedLayersText(layout);
     const carton: [string, string][] = [
-      ['Outer size', `${formatDims(cartonDisplayDims(layout, 'outer'))} in`],
-      ['Inner size', `${formatDims(cartonDisplayDims(layout, 'inner'))} in`],
+      ['Outer size', dimsText(cartonDisplayDims(layout, 'outer'), unit)],
+      ['Inner size', dimsText(cartonDisplayDims(layout, 'inner'), unit)],
       ['Boxes per carton', String(layout.carton.boxesPerCarton)],
       [
         'Boxes inside',
@@ -100,12 +112,60 @@ export function WhatToBuildCard() {
               </li>
             ))}
           </ol>
+          {hasPinwheelLayer(layout) && (
+            <p className="text-sm text-gray-700 dark:text-harbor-mist">{PINWHEEL_SCREEN_NOTE}</p>
+          )}
+          {turned && <p className="text-sm text-gray-700 dark:text-harbor-mist">{turned}</p>}
         </Part>
         <div className="root-divider" aria-hidden="true" />
         <Part title="Finished load">
           <p className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
-            {`${formatNumber(p.loadLength)} × ${formatNumber(p.loadWidth)} × ${formatNumber(p.totalLoadHeight)} in (including pallet)`}
+            {`${dimsText({ length: p.loadLength, width: p.loadWidth, height: p.totalLoadHeight }, unit)} (including pallet)`}
           </p>
+          {w && (
+            <>
+              <dl className="bracket divide-y divide-gray-100 dark:divide-harbor-foam/40">
+                {(
+                  [
+                    ['Total weight', weightText(w.total, unit)],
+                    ['Weight per carton', weightText(w.perCarton, unit)],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label} className="px-3 py-1.5">
+                    <dt className="text-xs text-gray-600 dark:text-harbor-mist">{label}</dt>
+                    <dd className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {w.layersRemoved > 0 && (
+                <p className="border border-amber-200 bg-amber-50 px-2 py-1.5 text-sm text-amber-900 dark:border-b-0 dark:border-r-0 dark:border-harbor-sand dark:bg-harbor-panel dark:text-harbor-sand">
+                  {weightTrimText(w.layersRemoved)}
+                </p>
+              )}
+              {w.layersRemoved >= 1 && w.roomForCartons >= 1 && (
+                <p className="text-sm tabular-nums text-gray-700 dark:text-harbor-mist">
+                  {roomText(w.roomForCartons)}
+                </p>
+              )}
+            </>
+          )}
+          {layout.stability && (
+            <div className="space-y-1">
+              <p>
+                <StabilityBadge stability={layout.stability} className="px-2 py-0.5 text-sm" />
+              </p>
+              {layout.stability.warnings.map((warning) => (
+                <p
+                  key={warning.check}
+                  className="text-sm tabular-nums text-gray-700 dark:text-harbor-mist"
+                >
+                  {describeWarning(warning)}
+                </p>
+              ))}
+            </div>
+          )}
         </Part>
       </>
     );

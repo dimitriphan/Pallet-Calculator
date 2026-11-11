@@ -11,6 +11,7 @@ describe('sceneTheme', () => {
       chipBg: 'rgba(255, 255, 255, 0.9)',
       chipText: '#1f2937',
       measureLine: '#111827',
+      fixed: { unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 },
     });
   });
 
@@ -22,13 +23,20 @@ describe('sceneTheme', () => {
       chipBg: '#1E3347',
       chipText: '#E9F1EE',
       measureLine: '#E9F1EE',
+      fixed: { unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 },
     });
   });
 
-  it('differs between the themes in every field', () => {
+  it('differs between the themes in every field but the fixed colours', () => {
     const light = sceneTheme('light');
     const harbor = sceneTheme('harbor');
     const keys = Object.keys(light) as (keyof SceneTheme)[];
-    expect(keys.filter((k) => light[k] === harbor[k])).toEqual([]);
+    expect(keys.filter((k) => light[k] === harbor[k])).toEqual(['fixed']);
+  });
+
+  it('keeps the unused-space red at 25% in both themes', () => {
+    for (const t of ['light', 'harbor'] as const) {
+      expect(sceneTheme(t).fixed).toEqual({ unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 });
+    }
   });
 });

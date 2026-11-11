@@ -1,8 +1,12 @@
 import { PALLET_HEIGHT } from '../../domain/constants';
-import type { Dims, Inputs, Layout, ProductAxis } from '../../domain/types';
+import type { Dims, Inputs, Layout, ProductAxis, Stability } from '../../domain/types';
 import { availableVolume, usableFootprint, usableHeight } from '../packing/geometry';
 import { layoutMetrics } from '../packing/metrics';
 import { footprintAxes } from '../packing/stacking';
+import { turnedLayerNumbers } from './stack';
+import { measureStability, type StabilityMeasures } from './stability';
+import { unusedSpace } from './unusedSpace';
+import { layoutWeight, roomForCartons, type LayoutWeight } from './weight';
 
 export type TargetStatus = 'none' | 'met' | 'exceeded' | 'notAchievable';
 
@@ -73,6 +77,10 @@ export interface Analytics {
     volumeAvailable: number;
     utilizationPct: number;
     remainingVolume: number;
+    /** The part of the remaining volume above the top of the stack. */
+    headroomVolume: number;
+    /** The part of the remaining volume beside the cartons, layer by layer. */
+    layerGapVolume: number;
   };
   target: {
     status: TargetStatus;
@@ -88,6 +96,25 @@ export interface Analytics {
     cartonsPerPallet: number;
     totalBoxes: number;
   };
+  /** Null when the product box weight is blank (weight ignored). Pounds and inches. */
+  weight:
+    | (LayoutWeight & {
+        /**
+         * More full cartons the maximum would allow, said only for a load trimmed by weight:
+         * 0 without a maximum or when no layer was removed (the height is the limit then).
+         */
+        roomForCartons: number;
+        /** Whole layers removed from the top to keep under the maximum. */
+        layersRemoved: number;
+        max: number | null;
+      })
+    | null;
+  /**
+   * The layout's stability rating and warnings, with what every check measured and the
+   * numbers of the layers turned half a turn (from 1). Null for a
+   * layout stored before the rating existed (it has no rating to show).
+   */
+  stability: (Stability & { measures: StabilityMeasures; turnedLayers: number[] }) | null;
 }
 
 /**
@@ -143,6 +170,7 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
   const height = usableHeight(i);
   const available = availableVolume(i);
   const utilizationPct = available > 0 ? (m.cartonVolume / available) * 100 : 0;
+  const unused = unusedSpace(l, i);
 
   return {
     product: {
@@ -180,6 +208,8 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       volumeAvailable: available,
       utilizationPct,
       remainingVolume: available - m.cartonVolume,
+      headroomVolume: unused.headroomVolume,
+      layerGapVolume: unused.gapVolume,
     },
     target: targetAnalytics(l, i),
     summary: {
@@ -189,5 +219,21 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       cartonsPerPallet: l.totalCartons,
       totalBoxes: l.totalProducts,
     },
+    weight: weightAnalytics(l, i),
+    stability: l.stability
+      ? { ...l.stability, measures: measureStability(l), turnedLayers: turnedLayerNumbers(l) }
+      : null,
+  };
+}
+
+function weightAnalytics(l: Layout, i: Inputs): Analytics['weight'] {
+  const w = layoutWeight(l, i);
+  if (w === null) return null;
+  const layersRemoved = l.weightTrim?.layersRemoved ?? 0;
+  return {
+    ...w,
+    roomForCartons: layersRemoved >= 1 ? roomForCartons(l, i) : 0,
+    layersRemoved,
+    max: i.weights.maxPallet,
   };
 }

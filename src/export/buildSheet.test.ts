@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
+import { PINWHEEL_INPUTS } from '../engine/packing/testSupport';
 import { buildSheetContent, buildSheetFilename, pdfSafe, type SheetRect } from './buildSheet';
 
 const NOW = new Date(2026, 10, 10, 9, 5);
@@ -81,15 +82,58 @@ describe('buildSheetContent, default winner', () => {
       { label: 'Pallet', value: '50.00 × 42.00 in, 5.00 in tall' },
       { label: 'Usable stacking height', value: '67.00 in' },
       { label: 'Finished load', value: '47.00 × 42.00 × 72.00 in including pallet' },
+      { label: 'Stability', value: 'Fair' },
+      {
+        label: 'Stability warning',
+        value: 'Stack is tall for its base (1.6 times its shorter side).',
+      },
+      {
+        label: 'Turned layers',
+        value: 'Layers 3, 5, 7 are pattern B turned half a turn (shown as pattern C).',
+      },
+    ]);
+  });
+
+  it('prints no stability rows for a layout stored before ratings', () => {
+    const r = structuredClone(RESULT);
+    for (const { layout } of r.layouts) {
+      delete layout.stability;
+      for (const layer of layout.layers) delete layer.turned;
+    }
+    const old = buildSheetContent({
+      inputs: DEFAULT_INPUTS,
+      result: r,
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    expect(old.palletAndLoad.map((row) => row.label)).toEqual([
+      'Pallet',
+      'Usable stacking height',
+      'Finished load',
     ]);
   });
 
   it('patterns', () => {
+    // Layers 3, 5 and 7 are turned half a turn, so they are drawn as their own pattern.
     expect(s.patterns.map((p) => p.heading)).toEqual([
       'Pattern A: layer 1',
-      'Pattern B: layers 2-7',
+      'Pattern B: layers 2, 4, 6',
+      'Pattern C: layers 3, 5, 7',
     ]);
-    expect(s.patterns.map((p) => p.letter)).toEqual(['A', 'B']);
+    expect(s.patterns.map((p) => p.letter)).toEqual(['A', 'B', 'C']);
+    expect(s.patterns.map((p) => p.note)).toEqual([
+      undefined,
+      undefined,
+      'Pattern B turned half a turn (180°).',
+    ]);
+    expect(s.stacking.map((r) => r.pattern)).toEqual(['A', 'B', 'C', 'B', 'C', 'B', 'C']);
+    // A half turn does not swap a carton's footprint: C is described as its twin B.
+    const footprint = (p: (typeof s.patterns)[number] | undefined) =>
+      p?.facts.find((f) => f.label === 'Carton footprint as placed')?.value;
+    expect(footprint(s.patterns[1])).toBe('13.00 × 21.00 in (some turned 90°)');
+    expect(footprint(s.patterns[2])).toBe(footprint(s.patterns[1]));
     expect(s.patterns[0]?.facts.map((f) => f.label)).toEqual([
       'Cartons in layer',
       'Carton footprint as placed',
@@ -106,6 +150,7 @@ describe('buildSheetContent, default winner', () => {
   it('drawings are inside the footprint and do not overlap', () => {
     expect(s.patterns[0]?.drawing.cartons.length).toBe(10);
     expect(s.patterns[1]?.drawing.cartons.length).toBe(7);
+    expect(s.patterns[2]?.drawing.cartons.length).toBe(7);
     for (const p of s.patterns) {
       const { footprint, cartons, pallet } = p.drawing;
       expect(footprint).toEqual({ x: 50, y: 42 });
@@ -173,6 +218,9 @@ describe('buildSheetContent, variations', () => {
       'Overhang',
       'Usable stacking height',
       'Finished load',
+      'Stability',
+      'Stability warning',
+      'Turned layers',
     ]);
     expect(s.palletAndLoad[1]?.value).toBe('2.00 in total, 1.00 in each side');
   });
@@ -222,5 +270,184 @@ describe('buildSheetContent, variations', () => {
     });
     expect(s.layoutNote).toBe('Layout 2 of 5 selected. Layout 1 fits 260 boxes.');
     expect(s.layoutLabel).toBe('Layout 2 of 5');
+  });
+});
+
+describe('buildSheetContent in another unit', () => {
+  const sheet = (unit: 'in' | 'cm' | 'mm', over: Partial<Inputs> = {}) => {
+    const inputs = { ...DEFAULT_INPUTS, ...over };
+    return buildSheetContent({
+      inputs,
+      result: Object.keys(over).length === 0 ? RESULT : optimize(inputs),
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+      unit,
+    });
+  };
+
+  it('is the same sheet as before in inches', () => {
+    expect(sheet('in')).toEqual({ ...build(), unit: 'in' });
+    expect(build().unit).toBe('in');
+  });
+
+  it('writes every length in centimetres', () => {
+    const s = sheet('cm', { overhang: 2 });
+    expect(s.unit).toBe('cm');
+    expect(sheet('cm').carton[0]?.value).toBe('53.3 × 33.0 × 22.9 cm');
+    expect(s.palletAndLoad).toEqual([
+      { label: 'Pallet', value: '127.0 × 106.7 cm, 12.7 cm tall' },
+      { label: 'Overhang', value: '5.1 cm total, 2.5 cm each side' },
+      { label: 'Usable stacking height', value: '170.2 cm' },
+      {
+        label: 'Finished load',
+        value: expect.stringMatching(/^[\d.]+ × [\d.]+ × [\d.]+ cm including pallet$/),
+      },
+      { label: 'Stability', value: 'Fair' },
+      { label: 'Stability warning', value: expect.stringMatching(/^Stack is tall for its base/) },
+      {
+        label: 'Turned layers',
+        value: 'Layers 2, 4 are pattern A turned half a turn (shown as pattern B).',
+      },
+    ]);
+    expect(s.patterns[0]?.facts[1]?.value).toMatch(/^\d+\.\d × \d+\.\d cm/);
+    expect(s.patterns[0]?.facts[2]?.value).toMatch(/^\d+\.\d cm$/);
+    expect(s.stacking[0]?.topHeight).toMatch(/^\d+\.\d cm$/);
+    expect(s.drawingKey?.palletSize).toBe('127.0 × 106.7 cm');
+    expect(s.footer.startsWith('Using 1.3 cm leeway, 0.6 cm carton walls, 5.1 cm overhang')).toBe(
+      true,
+    );
+    // The drawing stays in inches: only the words change.
+    expect(s.patterns[0]?.drawing.pallet).toEqual({ x: 1, y: 1, dx: 50, dy: 42 });
+  });
+
+  it('writes millimetres without decimals', () => {
+    const s = sheet('mm');
+    expect(s.palletAndLoad[0]?.value).toBe('1270 × 1067 mm, 127 mm tall');
+    expect(strings(s).join(' ')).not.toMatch(/\d in\b/);
+  });
+});
+
+describe('buildSheetContent with weights', () => {
+  const weighed = (maxPallet: number | null) =>
+    build({ weights: { productBox: 2, emptyCarton: 1, maxPallet, pallet: 40 } });
+
+  it('adds nothing about weight while the box weight is blank', () => {
+    expect(strings(build()).join('\n')).not.toMatch(/weight/i);
+    expect(build().stacking.every((r) => !('weight' in r))).toBe(true);
+  });
+
+  it('adds the weights, the trim and the room left to the pallet and load rows', () => {
+    // Under 290 lb: 108 boxes in 13 lb cartons at 274 lb, two layers removed, room for one.
+    const s = weighed(290);
+    const rows = Object.fromEntries(s.palletAndLoad.map((r) => [r.label, r.value]));
+    expect(rows['Total weight']).toBe('274.0 lb (maximum 290.0 lb)');
+    expect(rows['Weight per carton']).toBe('13.0 lb');
+    expect(rows['Limited by weight']).toBe('2 layers removed');
+    expect(rows['Room by weight']).toBe('Room for 1 more carton by weight');
+    expect(s.summary.find((r) => r.label === 'Total boxes per pallet')?.value).toBe('108');
+    expect(s.footer).toContain('40.0 lb pallet, 1.0 lb per empty carton.');
+  });
+
+  it('gives each stacking row its layer weight', () => {
+    const s = weighed(null);
+    expect(s.stacking.map((r) => r.weight)).toEqual([
+      '110.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+    ]);
+    const rows = Object.fromEntries(s.palletAndLoad.map((r) => [r.label, r.value]));
+    expect(rows['Total weight']).toBe('612.0 lb');
+    expect(rows['Limited by weight']).toBeUndefined();
+    expect(rows['Room by weight']).toBeUndefined();
+  });
+
+  it('writes kg with cm', () => {
+    const s = buildSheetContent({
+      inputs: {
+        ...DEFAULT_INPUTS,
+        weights: { productBox: 2, emptyCarton: 1, maxPallet: null, pallet: 40 },
+      },
+      result: RESULT,
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+      unit: 'cm',
+    });
+    // 612 lb = 277.6 kg; 110 lb = 49.9 kg.
+    expect(s.palletAndLoad.find((r) => r.label === 'Total weight')?.value).toBe('277.6 kg');
+    expect(s.stacking[0]?.weight).toBe('49.9 kg');
+  });
+});
+
+describe('buildSheetContent with a pinwheel layer', () => {
+  const NOTE =
+    'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.';
+  const s = buildSheetContent({
+    inputs: PINWHEEL_INPUTS,
+    result: optimize(PINWHEEL_INPUTS),
+    selectedIndex: 0,
+    jobName: '',
+    stale: false,
+    now: NOW,
+  });
+
+  it('says how to build the pinwheel under its pattern', () => {
+    expect(s.patterns).toHaveLength(1);
+    expect(s.patterns[0]?.heading).toBe('Pattern A: layers 1-3');
+    expect(s.patterns[0]?.note).toBe(NOTE);
+    expect(s.patterns[0]?.facts.find((f) => f.label === 'Blocks (rows × columns)')?.value).toBe(
+      '2 × 1, 1 × 3, 2 × 1, 1 × 3',
+    );
+  });
+
+  it('draws the four blocks round the centre gap without overlaps', () => {
+    const { cartons, blocks, footprint } = s.patterns[0]!.drawing;
+    expect(cartons).toHaveLength(10);
+    expect(blocks).toHaveLength(4);
+    for (const c of cartons) {
+      expect(c.x).toBeGreaterThanOrEqual(-1e-9);
+      expect(c.y).toBeGreaterThanOrEqual(-1e-9);
+      expect(c.x + c.dx).toBeLessThanOrEqual(footprint.x + 1e-9);
+      expect(c.y + c.dy).toBeLessThanOrEqual(footprint.y + 1e-9);
+    }
+    for (let i = 0; i < cartons.length; i++)
+      for (let k = i + 1; k < cartons.length; k++)
+        expect(overlaps(cartons[i] as SheetRect, cartons[k] as SheetRect)).toBe(false);
+  });
+
+  it('adds no note to a straight-cut pattern that is not turned', () => {
+    const plain = build().patterns.filter((p) => p.letter !== 'C');
+    for (const p of plain) expect('note' in p).toBe(false);
+  });
+
+  it('names the pattern a turned pinwheel layer is a turn of, after the pinwheel note', () => {
+    // 48 x 40 pallet, 13.5 x 10.5 x 10 cartons: an asymmetric pinwheel, turned on layers 2, 4.
+    const s = build({
+      ...PINWHEEL_INPUTS,
+      pallet: { length: 48, width: 40, height: 55 },
+      product: { length: 13.5, width: 10.5, height: 10 },
+      maxCarton: { length: 13.5, width: 10.5, height: 10 },
+    });
+    expect(s.patterns.map((p) => [p.heading, p.note])).toEqual([
+      [
+        'Pattern A: layers 1, 3, 5',
+        'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.',
+      ],
+      [
+        'Pattern B: layers 2, 4',
+        'Pinwheel layer: build the four blocks around the centre gap as shown in the top view. Pattern A turned half a turn (180°).',
+      ],
+    ]);
+    expect(s.palletAndLoad.at(-1)).toEqual({
+      label: 'Turned layers',
+      value: 'Layers 2, 4 are pattern A turned half a turn (shown as pattern B).',
+    });
   });
 });

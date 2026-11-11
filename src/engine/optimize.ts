@@ -5,9 +5,14 @@ import {
   nearestAchievableCounts,
 } from './packing/cartons';
 import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
-import { buildLayouts, type LayerCache } from './packing/stacking';
+import { PINWHEEL_WORK_PER_OPTIMIZE, type PinwheelAllowance } from './packing/pinwheel';
+import { buildLayouts, cartonFitsPallet, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { rankLayouts } from './ranking/rank';
+import { trimToWeight } from './analytics/weight';
+import { assessStability } from './analytics/stability';
+import { interlockLayers } from './packing/interlock';
+import { maxCartonsByWeight, weightBound, weightLimited, withinMax } from './packing/weightLimit';
 
 export const TIME_BUDGET_MS = 4000;
 
@@ -48,11 +53,27 @@ export function optimize(
 
   const available = availableVolume(i);
   const ordered = candidates
-    .map((c) => ({ c, bound: c.boxesPerCarton * fitsCount(available, volumeOf(c.outer)) }))
+    .map((c) => ({
+      c,
+      bound: Math.min(
+        c.boxesPerCarton * fitsCount(available, volumeOf(c.outer)),
+        weightBound(c, i),
+      ),
+    }))
     .sort((p, q) => q.bound - p.bound);
 
   const cache: LayerCache = new Map();
+  // Shared by every pinwheel search of this call (deterministic: counted, not timed).
+  const pinwheelWork: PinwheelAllowance = { remaining: PINWHEEL_WORK_PER_OPTIMIZE };
   const layouts: Layout[] = [];
+  // With a weight limit, layouts that trim to the same layers are kept once, by id. Without
+  // one, nothing is trimmed and buildLayouts already gives distinct layouts.
+  const limited = weightLimited(i);
+  const indexById = new Map<string, number>();
+  // Layouts built, and cartons skipped as too heavy that would otherwise fit the pallet: the
+  // weight limit ruled them out. A carton that could never fit counts toward neither.
+  let built = 0;
+  let tooHeavy = 0;
   const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
   let evaluated = 0;
   // Stop at the budget once there is something to show, or at the hard limit regardless.
@@ -69,8 +90,22 @@ export function optimize(
     if (best.length >= KEEP_BEST && bound < (best[KEEP_BEST - 1] as number)) break;
     if (evaluated > 0 && overBudget()) break;
     evaluated++;
+    // The pallet and one full carton already over the maximum: no layer of it can fit.
+    if (maxCartonsByWeight(c, i) === 0) {
+      if (cartonFitsPallet(c, i)) tooHeavy++;
+      continue;
+    }
     // The same check runs between this carton's layer searches.
-    for (const l of buildLayouts(c, i, cache, overBudget)) {
+    for (const full of buildLayouts(c, i, cache, overBudget, pinwheelWork)) {
+      built++;
+      // Trimmed to the weight limit before anything counts it: the keep-best list above
+      // (and so every later skip) and the ranking only ever see what can really be loaded.
+      const l = trimToWeight(full, i);
+      if (l === null) continue;
+      if (limited) {
+        if (!isNewOrFewerRemoved(l, layouts, indexById)) continue;
+        indexById.set(l.id, layouts.length);
+      }
       layouts.push(l);
       insertDescending(best, l.totalProducts);
     }
@@ -78,10 +113,18 @@ export function optimize(
   }
 
   if (layouts.length === 0) {
-    return { ...empty('CARTON_EXCEEDS_PALLET'), candidatesEvaluated: evaluated };
+    const reason =
+      built + tooHeavy === 0 ? 'CARTON_EXCEEDS_PALLET' : overWeightReason(i, capped || timedOut);
+    return { ...empty(reason), candidatesEvaluated: evaluated };
   }
   return {
-    layouts: rankLayouts(layouts, i),
+    // Then, for every layout the ranking reaches: alternate identical layers turned where
+    // that is free (same boxes; nothing above changes, since product counts and weights stay
+    // as they are), and the result rated. Better-rated layouts win ties on products.
+    layouts: rankLayouts(layouts, i, undefined, (l) => {
+      const interlocked = interlockLayers(l, i);
+      return { ...interlocked, stability: assessStability(interlocked, i) };
+    }),
     candidatesEvaluated: evaluated,
     emptyReason: null,
     truncated: capped || timedOut,
@@ -103,6 +146,37 @@ function noCandidates(
   // Stopped: say no carton of N fits, but name no counts that might not be the nearest.
   if (nearestCounts === null) return empty('NO_CARTON_WITH_COUNT');
   return { ...empty('NO_CARTON_WITH_COUNT'), nearestCounts };
+}
+
+/**
+ * Why nothing was left once the weight limit removed every layout. OVER_WEIGHT only when that
+ * is certain: the search covered every carton, or even one box in one carton on the pallet is
+ * over the maximum. A capped or stopped search may have missed a lighter carton.
+ */
+function overWeightReason(i: Inputs, searchLimited: boolean): OptimizeResult['emptyReason'] {
+  const { productBox, maxPallet, emptyCarton, pallet } = i.weights;
+  const lightest = pallet + emptyCarton + (productBox ?? 0);
+  const proven = maxPallet !== null && !withinMax(lightest, maxPallet);
+  return !searchLimited || proven ? 'OVER_WEIGHT' : 'WEIGHT_SEARCH_LIMITED';
+}
+
+/**
+ * Whether a layout is new by id. A layout with the same id already kept (the same carton and
+ * layers, reached by trimming) is replaced in place when this one had fewer layers removed,
+ * so it says the least about trimming; either way only one is kept.
+ */
+function isNewOrFewerRemoved(
+  l: Layout,
+  layouts: Layout[],
+  indexById: Map<string, number>,
+): boolean {
+  const at = indexById.get(l.id);
+  if (at === undefined) return true;
+  const kept = layouts[at] as Layout;
+  if ((l.weightTrim?.layersRemoved ?? 0) < (kept.weightTrim?.layersRemoved ?? 0)) {
+    layouts[at] = l;
+  }
+  return false;
 }
 
 /** Inserts `v` into the descending list, keeping at most KEEP_BEST entries. */

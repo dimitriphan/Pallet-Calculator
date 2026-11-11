@@ -1,6 +1,7 @@
 import type { CartonCandidate, Inputs, ProductAxis } from '../../domain/types';
-import { productSize, volumeOf } from './geometry';
+import { availableVolume, productSize, volumeOf } from './geometry';
 import { fitsCount, fitsWithin } from './tolerance';
+import { weightBound, weightLimited } from './weightLimit';
 
 const AXES: ProductAxis[] = ['L', 'W', 'H'];
 
@@ -23,7 +24,10 @@ function physicalKey(
     .join('|');
 }
 
-/** At most this many candidates are kept (those with the most boxes per carton). */
+/**
+ * At most this many candidates are kept: those with the most boxes per carton or, under a
+ * weight limit, those that could put the most boxes on the pallet within it.
+ */
 export const MAX_CARTON_CANDIDATES = 8000;
 
 /** Enumeration stops after this many valid count triples; only very small products reach it. */
@@ -193,8 +197,29 @@ export function generateCartonCandidatesWithInfo(i: Inputs): {
   }
 
   const sorted = sortCandidates(result);
-  if (sorted.length > MAX_CARTON_CANDIDATES) truncated = true;
-  return { candidates: sorted.slice(0, MAX_CARTON_CANDIDATES), truncated };
+  if (sorted.length <= MAX_CARTON_CANDIDATES) return { candidates: sorted, truncated };
+  return { candidates: keepMostPromising(sorted, i), truncated: true };
+}
+
+/**
+ * The MAX_CARTON_CANDIDATES cartons to keep, in candidate order. Without a weight limit, the
+ * ones with the most boxes per carton. With one, the biggest cartons have the heaviest layers
+ * and may not fit a single layer, so keep those with the highest upper bound on boxes within
+ * both the space and the maximum weight (ties in candidate order).
+ */
+function keepMostPromising(sorted: CartonCandidate[], i: Inputs): CartonCandidate[] {
+  if (!weightLimited(i)) return sorted.slice(0, MAX_CARTON_CANDIDATES);
+  const available = availableVolume(i);
+  const bound = (c: CartonCandidate) =>
+    Math.min(c.boxesPerCarton * fitsCount(available, volumeOf(c.outer)), weightBound(c, i));
+  const kept = new Set(
+    sorted
+      .map((c, k) => ({ c, k, b: bound(c) }))
+      .sort((p, q) => q.b - p.b || p.k - q.k)
+      .slice(0, MAX_CARTON_CANDIDATES)
+      .map((x) => x.c),
+  );
+  return sorted.filter((c) => kept.has(c));
 }
 
 /** Boxes per carton descending, then key ascending. */

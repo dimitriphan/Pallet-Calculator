@@ -16,7 +16,7 @@ const WORKING = [working1Url, working2Url, working3Url] as const;
  * leaves. These are that drawing's bounding box in the 32 x 32 sprite (x, y, width, height),
  * taken from `POSES.headerMark` in tools/mascot/poses.mjs; Mascot.test.tsx checks they still match.
  */
-export const HEADER_MARK_BOX = { x: 11, y: 9, width: 10, height: 13 } as const;
+export const HEADER_MARK_BOX = { x: 10, y: 9, width: 12, height: 13 } as const;
 const HEADER_SCALE = 2;
 const CELL = 32;
 

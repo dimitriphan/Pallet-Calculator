@@ -68,9 +68,9 @@ describe('Mascot', () => {
     expect(img).toHaveAttribute('aria-hidden', 'true');
     expect(img).toHaveAttribute('width', '64');
     expect(img).toHaveAttribute('height', '64');
-    expect(img).toHaveStyle({ imageRendering: 'pixelated', left: '-22px', top: '-18px' });
+    expect(img).toHaveStyle({ imageRendering: 'pixelated', left: '-20px', top: '-18px' });
     const box = container.firstElementChild!;
-    expect(box).toHaveStyle({ width: '20px', height: '26px' });
+    expect(box).toHaveStyle({ width: '24px', height: '26px' });
     expect(box).toHaveClass('overflow-hidden');
   });
 

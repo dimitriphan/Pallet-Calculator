@@ -1,4 +1,4 @@
-import type { Block, Layer, Layout, ProductAxis } from '../../domain/types';
+import type { Block, Layer, LayerPatternKind, Layout, ProductAxis } from '../../domain/types';
 
 export interface StackRun {
   from: number;
@@ -16,6 +16,71 @@ export interface StackPattern {
   cartonsPerLayer: number;
   vertical: ProductAxis;
   height: number;
+  kind: LayerPatternKind;
+}
+
+/** How to build a pinwheel layer, said on the build sheet, whose layer drawings are top views. */
+export const PINWHEEL_NOTE =
+  'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.';
+
+/** The same on screen, where there is no top view: the 3D view shows the layer from above. */
+export const PINWHEEL_SCREEN_NOTE =
+  'Pinwheel layer: build the four blocks around the centre gap, as shown from above in the 3D view.';
+
+/** A layer's arrangement; layers stored before pinwheels existed have no kind and are grids. */
+export function layerKind(layer: Layer): LayerPatternKind {
+  return layer.kind ?? 'grid';
+}
+
+/** Whether any layer of the layout is a pinwheel. */
+export function hasPinwheelLayer(l: Layout): boolean {
+  return l.layers.some((layer) => layerKind(layer) === 'pinwheel');
+}
+
+/** Numbers (from 1) of the layers turned half a turn to interlock, bottom first. */
+export function turnedLayerNumbers(l: Layout): number[] {
+  return l.layers.flatMap((layer, i) => (layer.turned ? [i + 1] : []));
+}
+
+/**
+ * The instruction on screen, where layers are not drawn one by one: "Turn layers 2, 4, 6 half
+ * a turn (180°) so they interlock.", or null when no layer is turned.
+ */
+export function turnedLayersText(l: Layout): string | null {
+  const numbers = turnedLayerNumbers(l);
+  if (numbers.length === 0) return null;
+  return numbers.length === 1
+    ? `Turn layer ${numbers[0]} half a turn (180°) so it interlocks.`
+    : `Turn layers ${numbers.join(', ')} half a turn (180°) so they interlock.`;
+}
+
+/**
+ * The build sheet's wording, where each turned layer is already drawn turned as its own
+ * pattern: one sentence per pair of the pattern below and the pattern drawn, e.g. "Layers 3,
+ * 5, 7 are pattern B turned half a turn (shown as pattern C)." Null when no layer is turned.
+ */
+export function turnedPatternsText(l: Layout): string | null {
+  const patterns = stackPatterns(l);
+  const letterOf = new Map<number, string>(); // by 1-based layer number
+  for (const p of patterns) for (const n of p.layerNumbers) letterOf.set(n, p.letter);
+  const groups = new Map<string, { below: string | undefined; shown: string; layers: number[] }>();
+  for (const n of turnedLayerNumbers(l)) {
+    const below = letterOf.get(n - 1);
+    const shown = letterOf.get(n) as string;
+    const key = `${below ?? ''}|${shown}`;
+    const group = groups.get(key);
+    if (group) group.layers.push(n);
+    else groups.set(key, { below, shown, layers: [n] });
+  }
+  if (groups.size === 0) return null;
+  return [...groups.values()]
+    .map(({ below, shown, layers }) => {
+      const subject =
+        layers.length === 1 ? `Layer ${layers[0]} is` : `Layers ${layers.join(', ')} are`;
+      const what = below ? `pattern ${below} turned half a turn` : 'turned half a turn';
+      return `${subject} ${what} (shown as pattern ${shown}).`;
+    })
+    .join(' ');
 }
 
 const AXIS_WORD: Record<ProductAxis, string> = { L: 'length', W: 'width', H: 'height' };
@@ -42,7 +107,9 @@ function sameBlocks(a: Block[], b: Block[]): boolean {
 }
 
 function samePattern(a: Layer, b: Layer): boolean {
-  return a.vertical === b.vertical && sameBlocks(a.blocks, b.blocks);
+  return (
+    a.vertical === b.vertical && layerKind(a) === layerKind(b) && sameBlocks(a.blocks, b.blocks)
+  );
 }
 
 /** Pattern index (in order of first use) for every layer, bottom to top. */
@@ -69,18 +136,46 @@ export function stackPatterns(l: Layout): StackPattern[] {
       cartonsPerLayer: layer.cartonCount,
       vertical: layer.vertical,
       height: layer.height,
+      kind: layerKind(layer),
     };
   });
 }
 
-/** Consecutive layers sharing a pattern, bottom to top; layer numbers start at 1. */
+function blocksKey(blocks: Block[]): string {
+  return blocks
+    .map((b) => `${b.cols}x${b.rows}${b.rotated ? 'r' : 'u'}`)
+    .sort()
+    .join(',');
+}
+
+/**
+ * Whether `upper` is `lower` turned half a turn (or the other way): one is turned, the other
+ * not, and they hold the same blocks on the same axis. Interlocking turns only identical
+ * layers, so such neighbours are the same layer built two ways round.
+ */
+function turnedPair(lower: Layer, upper: Layer): boolean {
+  return (
+    !!lower.turned !== !!upper.turned &&
+    lower.vertical === upper.vertical &&
+    lower.height === upper.height &&
+    lower.cartonCount === upper.cartonCount &&
+    layerKind(lower) === layerKind(upper) &&
+    blocksKey(lower.blocks) === blocksKey(upper.blocks)
+  );
+}
+
+/**
+ * Consecutive layers sharing a pattern, bottom to top; layer numbers start at 1. A layer turned
+ * half a turn stays in the run of the layer it is a turn of (turnedLayersText says which).
+ */
 export function stackRuns(l: Layout): StackRun[] {
   const { indexOf } = classify(l);
   const runs: StackRun[] = [];
   l.layers.forEach((layer, i) => {
     const letter = patternLetter(indexOf[i] ?? 0);
     const last = runs[runs.length - 1];
-    if (last && last.pattern === letter) {
+    const below = l.layers[i - 1];
+    if (last && (last.pattern === letter || (below && turnedPair(below, layer)))) {
       last.to = i + 1;
       return;
     }

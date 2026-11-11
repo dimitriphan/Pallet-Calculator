@@ -8,6 +8,7 @@ import { loadPrintMascot } from '../export/mascotImage';
 import { composePng } from '../export/png';
 import { useNoticesStore } from '../store/noticesStore';
 import { BuildSheetDialog } from './BuildSheetDialog';
+import { useUnit } from './useUnit';
 import { BUTTON } from './ModalDialog';
 import type { ViewMode } from '../store/prefsStore';
 import { usePrefs, useResults, useScene } from './StoreContext';
@@ -44,6 +45,7 @@ export function ExportMenu() {
   const stale = useResults((s) => s.stale);
   const captureViews = useScene((s) => s.captureViews);
   const viewMode = usePrefs((s) => s.viewMode);
+  const unit = useUnit();
   const items = ITEMS.filter((item) => item.modes.includes(viewMode));
   const [open, setOpen] = useState(false);
   const [sheetDialog, setSheetDialog] = useState(false);
@@ -118,7 +120,8 @@ export function ExportMenu() {
   const sheetPictures = (): SheetPictures | null => {
     try {
       if (!captureViews) return null;
-      const { current, side } = captureViews();
+      // The builders' pictures never show the unused-space overlay, even when it is on.
+      const { current, side } = captureViews({ leaveOutUnusedSpace: true });
       return { current, side };
     } catch {
       return null;
@@ -129,7 +132,15 @@ export function ExportMenu() {
     try {
       if (!inputs || !result) throw new Error('No layout');
       const now = new Date();
-      const sheet = buildSheetContent({ inputs, result, selectedIndex, jobName, stale, now });
+      const sheet = buildSheetContent({
+        inputs,
+        result,
+        selectedIndex,
+        jobName,
+        stale,
+        now,
+        unit,
+      });
       const { renderBuildSheetPdf } = await import('../export/buildSheetPdf');
       // The mascot is decoration: a failed load gives a sheet without it, not a failed export.
       const mascot = await loadPrintMascot().catch(() => undefined);
@@ -161,13 +172,13 @@ export function ExportMenu() {
     } else if (format === 'csv') {
       // The byte-order mark makes Excel read the file as UTF-8 (×, ³, –).
       downloadBlob(
-        new Blob(['\uFEFF', buildCsv(payload)], { type: 'text/csv;charset=utf-8' }),
+        new Blob(['\uFEFF', buildCsv(payload, unit)], { type: 'text/csv;charset=utf-8' }),
         name,
       );
     } else {
       try {
         if (!captureViews) throw new Error('3D view is unavailable');
-        downloadBlob(await composePng(captureViews(), payload), name);
+        downloadBlob(await composePng(captureViews(), payload, unit), name);
       } catch {
         useNoticesStore.getState().push(PNG_FAILED);
       }

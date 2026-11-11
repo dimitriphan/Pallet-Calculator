@@ -1,21 +1,35 @@
 import { useId, useState } from 'react';
 import { DEFAULT_INPUTS } from '../domain/constants';
-import { draftFromInputs, parseDraft } from '../domain/schemas';
-import type { InputsDraft, OrientationCode, Preset, RotationMode } from '../domain/types';
+import type { OrientationCode, Preset, RotationMode } from '../domain/types';
 import { presetToInputs } from '../store/presetsStore';
+import {
+  draftInUnit,
+  isNumericPath,
+  NUMERIC_FIELDS,
+  parseInUnit,
+  typedOrigin,
+  withDraftText,
+} from '../store/unitFields';
 import { DimsFieldset } from './DimsFieldset';
+import { useUnit } from './useUnit';
 import { BUTTON, PRIMARY_BUTTON } from './ModalDialog';
 import { NumberField } from './NumberField';
 import { presetFieldsOf } from './presetFields';
 import { RotationFields } from './RotationControl';
+import { PRESET_WEIGHTS, WeightFieldset } from './WeightFields';
 
 const DIM_LABELS = { length: 'Length', width: 'Width', height: 'Height' };
 const MAX_LABELS = { length: 'Max length', width: 'Max width', height: 'Max height' };
 const PREFIX = 'preset-edit';
 const NO_ERRORS: Record<string, string> = {};
-
-type DimsGroup = 'pallet' | 'maxCarton';
-type ScalarField = 'boxesPerCarton' | 'targetQuantity' | 'leeway' | 'wallThickness' | 'overhang';
+/**
+ * The inputs a preset is edited against: the default product and a stand-in box weight, so a
+ * preset's maximum validates without one (presets never store the box weight).
+ */
+const FORM_BASE = {
+  ...DEFAULT_INPUTS,
+  weights: { ...DEFAULT_INPUTS.weights, productBox: 1 },
+};
 
 interface PresetEditFormProps {
   preset: Preset;
@@ -24,28 +38,32 @@ interface PresetEditFormProps {
 }
 
 /**
- * Edits a copy of a preset's fields. Validation reuses the inputs panel's parser, with the
- * product left at a valid placeholder because presets do not store one.
+ * Edits a copy of a preset's fields, shown in the display unit. Validation reuses the inputs
+ * panel's parser and field rule (an untouched field saves its exact value), with the product
+ * and its box weight left at valid placeholders because presets do not store them.
  */
 export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps) {
+  const unit = useUnit();
   const [name, setName] = useState(preset.name);
-  const [draft, setDraft] = useState<InputsDraft>(() =>
-    draftFromInputs(presetToInputs(preset, DEFAULT_INPUTS)),
+  const [{ draft, origins }, setForm] = useState(() =>
+    draftInUnit(presetToInputs(preset, FORM_BASE), unit),
   );
+  const setDraft = (update: (d: typeof draft) => typeof draft) =>
+    setForm((f) => ({ ...f, draft: update(f.draft) }));
   const nameId = useId();
-  const parsed = parseDraft(draft);
+  const parsed = parseInUnit(draft, origins, unit);
   const errors = parsed.ok ? NO_ERRORS : parsed.errors;
   const nameError = name.trim() === '' ? 'Enter a name' : undefined;
 
-  const setField = (path: string, value: string) =>
-    setDraft((d) => {
-      const [group, key] = path.split('.');
-      if (key !== undefined) {
-        const g = group as DimsGroup;
-        return { ...d, [g]: { ...d[g], [key]: value } };
-      }
-      return { ...d, [group as ScalarField]: value };
-    });
+  const setField = (path: string, value: string) => {
+    if (!isNumericPath(path)) return;
+    const kind = NUMERIC_FIELDS[path];
+    setForm((f) => ({
+      draft: withDraftText(f.draft, path, value),
+      origins:
+        kind === 'count' ? f.origins : { ...f.origins, [path]: typedOrigin(kind, value, unit) },
+    }));
+  };
   const setMode = (rotationMode: RotationMode) => setDraft((d) => ({ ...d, rotationMode }));
   const toggle = (code: OrientationCode) =>
     setDraft((d) => ({
@@ -157,6 +175,13 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
           onChange={(v) => setField('overhang', v)}
         />
       </fieldset>
+      <WeightFieldset
+        fields={PRESET_WEIGHTS}
+        idPrefix={PREFIX}
+        values={draft.weights}
+        errors={errors}
+        onChange={setField}
+      />
       <RotationFields
         idPrefix={`${PREFIX}-`}
         mode={draft.rotationMode}

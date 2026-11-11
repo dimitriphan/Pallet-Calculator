@@ -31,6 +31,22 @@ const layer = z.object({
   blocks: z.array(block),
   extent: z.object({ x: num, y: num }),
   z: num,
+  // Added in Round 4: absent on straight-cut layers and on results stored before it.
+  kind: z.enum(['grid', 'pinwheel']).optional(),
+  // Added in Round 4: only on layers turned half a turn to interlock.
+  turned: z.boolean().optional(),
+});
+
+const stabilityWarning = z.object({
+  check: z.enum(['stackHeight', 'cartonHeight', 'support', 'columns']),
+  level: z.enum(['caution', 'serious']),
+  value: num,
+  layer: num.optional(),
+});
+
+const stability = z.object({
+  rating: z.enum(['good', 'fair', 'poor']),
+  warnings: z.array(stabilityWarning),
 });
 
 const layout = z.object({
@@ -39,6 +55,10 @@ const layout = z.object({
   layers: z.array(layer),
   totalCartons: num,
   totalProducts: num,
+  // Added in Round 4: only on layouts trimmed to the maximum pallet weight.
+  weightTrim: z.object({ layersRemoved: num }).optional(),
+  // Added in Round 4: layouts stored before the stability rating have none (no badge shown).
+  stability: stability.optional(),
 });
 
 const score = z.object({
@@ -62,7 +82,13 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   layouts: z.array(rankedLayout),
   candidatesEvaluated: num,
   emptyReason: z
-    .enum(['NO_CARTON_FITS', 'CARTON_EXCEEDS_PALLET', 'NO_CARTON_WITH_COUNT'])
+    .enum([
+      'NO_CARTON_FITS',
+      'CARTON_EXCEEDS_PALLET',
+      'NO_CARTON_WITH_COUNT',
+      'OVER_WEIGHT',
+      'WEIGHT_SEARCH_LIMITED',
+    ])
     .nullable(),
   truncated: z.boolean(),
   // Added in Round 2: optional, so results saved before it still load.
@@ -70,9 +96,11 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
 });
 
 /** Analytics as stored, where fields added after the first release may be missing. */
-export type StoredAnalytics = Omit<Analytics, 'carton'> & {
+export type StoredAnalytics = Omit<Analytics, 'carton' | 'totals'> & {
   carton: Omit<Analytics['carton'], 'counts' | 'layerOrientations'> &
     Partial<Pick<Analytics['carton'], 'counts' | 'layerOrientations'>>;
+  totals: Omit<Analytics['totals'], 'headroomVolume' | 'layerGapVolume'> &
+    Partial<Pick<Analytics['totals'], 'headroomVolume' | 'layerGapVolume'>>;
 };
 
 export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
@@ -111,6 +139,10 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
     volumeAvailable: num,
     utilizationPct: num,
     remainingVolume: num,
+    // Added in Round 4: optional so older saved scenarios still load (the scenario schema
+    // recomputes analytics when they are missing).
+    headroomVolume: num.optional(),
+    layerGapVolume: num.optional(),
   }),
   target: z.object({
     status: z.enum(['none', 'met', 'exceeded', 'notAchievable']),
@@ -126,4 +158,30 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
     cartonsPerPallet: num,
     totalBoxes: num,
   }),
+  // Added in Round 4: analytics saved before weights read as "weight ignored".
+  weight: z
+    .object({
+      total: num,
+      perCarton: num,
+      perLayer: z.array(num),
+      centreOfMassHeight: num,
+      roomForCartons: num,
+      layersRemoved: num,
+      max: num.nullable(),
+    })
+    .nullable()
+    .default(null),
+  // Added in Round 4: analytics saved before the stability rating read as "not rated".
+  stability: stability
+    .extend({
+      measures: z.object({
+        stackHeightRatio: num,
+        cartonHeight: z.object({ ratio: num, layer: num }).nullable(),
+        support: z.object({ share: num, layer: num }).nullable(),
+        columns: z.object({ layers: num, from: num }).nullable(),
+      }),
+      turnedLayers: z.array(num),
+    })
+    .nullable()
+    .default(null),
 });

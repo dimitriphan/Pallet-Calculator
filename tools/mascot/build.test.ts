@@ -132,6 +132,39 @@ function decodePng(bytes: Uint8Array) {
   return { width, height, bitDepth, colourType, rawLength: raw.length, pixel };
 }
 
+const isHelmet = (ch: string) => ch === 'Y' || ch === 'H';
+
+function helmetPixels(grid: Grid) {
+  return filled(grid).filter((c) => isHelmet(c.ch));
+}
+
+/** Left and right edge of the helmet's widest row (the brim). */
+function brimExtent(grid: Grid) {
+  let best = { left: 0, right: -1, y: -1 };
+  grid.forEach((row, y) => {
+    const xs = [...row].flatMap((ch, x) => (isHelmet(ch) ? [x] : []));
+    if (xs.length === 0) return;
+    const left = Math.min(...xs);
+    const right = Math.max(...xs);
+    if (right - left > best.right - best.left) best = { left, right, y };
+  });
+  return best;
+}
+
+/** Left and right edge of the widest head row (brown, shade and eye pixels from the head top down to the bandana). */
+function headExtent(grid: Grid) {
+  const end = grid.findIndex((row) => row.includes('K'));
+  let best = { left: 0, right: -1 };
+  for (let y = headTop(grid); y < (end < 0 ? grid.length : end); y++) {
+    const xs = [...grid[y]!].flatMap((ch, x) => ('BSE'.includes(ch) ? [x] : []));
+    if (xs.length === 0) continue;
+    const left = Math.min(...xs);
+    const right = Math.max(...xs);
+    if (right - left > best.right - best.left) best = { left, right };
+  }
+  return best;
+}
+
 const idle = POSES.idle;
 const working = [POSES.working1, POSES.working2, POSES.working3];
 
@@ -146,13 +179,15 @@ describe('mascot poses', () => {
     }
   });
 
-  it('the palette is exactly the five mascot colours plus transparent', () => {
+  it('the palette is exactly the seven mascot colours plus transparent', () => {
     expect(PALETTE).toEqual({
       B: '#945743',
       S: '#79432F',
       K: '#35403A',
       G: '#7BCF80',
       E: '#99E550',
+      Y: '#E8B93C',
+      H: '#B98A22',
       '.': null,
     });
   });
@@ -293,6 +328,66 @@ describe('mascot poses', () => {
 
   it('the header mark has no bandana pixels', () => {
     expect(POSES.headerMark.join('')).not.toContain('K');
+  });
+});
+
+describe('mascot helmet', () => {
+  const grids: [string, Grid][] = [...Object.entries(POSES), ['tab icon', TAB_ICON]];
+
+  it('every pose has at least 12 helmet pixels', () => {
+    for (const [name, grid] of Object.entries(POSES)) {
+      expect(helmetPixels(grid).length, name).toBeGreaterThanOrEqual(12);
+    }
+  });
+
+  it('at least 3 leaf pixels sit above the topmost helmet pixel in every pose', () => {
+    for (const [name, grid] of grids) {
+      const top = Math.min(...helmetPixels(grid).map((c) => c.y));
+      const above = filled(grid).filter((c) => c.ch === 'G' && c.y < top);
+      expect(above.length, name).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('every pose keeps both eye pixels and idle keeps its ring opening', () => {
+    for (const [name, grid] of grids) {
+      expect(
+        filled(grid).filter((c) => c.ch === 'E'),
+        name,
+      ).toHaveLength(2);
+    }
+    expect(idle.slice(12, 15)).toEqual([
+      '...........BBBB..BBBB...........',
+      '...........SBE....EBB...........',
+      '...........SBB...BBBB...........',
+    ]);
+  });
+
+  it("the brim is the helmet's widest row, one pixel wider than the head on each side", () => {
+    for (const [name, grid] of grids) {
+      const brim = brimExtent(grid);
+      const head = headExtent(grid);
+      expect(brim.left, name).toBe(head.left - 1);
+      expect(brim.right, name).toBe(head.right + 1);
+      expect(brim.right - brim.left, name).toBe(head.right - head.left + 2);
+    }
+  });
+
+  it("helmet pixels lie only in the head's top three rows or above", () => {
+    for (const [name, grid] of grids) {
+      const limit = headTop(grid) + 2;
+      for (const c of helmetPixels(grid))
+        expect(c.y, `${name} ${c.x},${c.y}`).toBeLessThanOrEqual(limit);
+    }
+  });
+
+  it('the stem passes into the shell: stem pixels sit directly above helmet pixels', () => {
+    for (const [name, grid] of grids) {
+      const stem = filled(grid).filter((c) => c.ch === 'S' && grid[c.y + 1]?.[c.x] !== undefined);
+      expect(
+        stem.some((c) => isHelmet(grid[c.y + 1]![c.x]!)),
+        name,
+      ).toBe(true);
+    }
   });
 });
 

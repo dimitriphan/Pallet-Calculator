@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
+import { hasPinwheelLayer } from '../engine/analytics/stack';
+import { PINWHEEL_INPUTS } from '../engine/packing/testSupport';
 import { buildCsv, csvField } from './csv';
 import { buildExportPayload } from './exportData';
 
@@ -71,7 +73,7 @@ describe('buildCsv', () => {
     const blank = lines.indexOf('');
     expect(blank).toBeGreaterThan(0);
     expect(lines[blank + 1]).toBe(
-      '#,Carton (in),Products,Cartons,Layers,Utilization,Remaining volume (in³),Score',
+      '#,Carton (in),Products,Cartons,Layers,Stability,Utilization,Remaining volume (in³),Score',
     );
     expect(lines).toHaveLength(blank + 2 + payload.comparison.length + 1);
     expect(lines.at(-1)).toBe('');
@@ -121,5 +123,163 @@ describe('buildCsv', () => {
       out.findIndex((l) => l.startsWith('Target quantity,')) + 1,
     );
     expect(p.inputs.boxesPerCarton).toBe(2);
+  });
+});
+
+describe('buildCsv stability', () => {
+  const d = buildCsv(buildExportPayload(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0, NOW));
+  const out = d.split('\r\n');
+
+  it('writes the rating, the warnings, what the checks measured and the turned layers', () => {
+    expect(out).toContain('Stability rating,Fair');
+    expect(out).toContain(
+      'Stability warnings,Stack is tall for its base (1.6 times its shorter side).',
+    );
+    expect(out).toContain('Stack height ÷ shorter side of base,1.60');
+    expect(out).toContain('"Carton height ÷ shorter base side, worst layer",1.44');
+    expect(out).toContain('Least support from the layer below,95%');
+    expect(out).toContain('Layers turned half a turn (180°),3 5 7');
+    // Just before the score rows.
+    expect(out.findIndex((l) => l.startsWith('Overall score,'))).toBe(
+      out.findIndex((l) => l.startsWith('Layers turned half a turn')) + 1,
+    );
+  });
+
+  it('gives each compared layout its rating', () => {
+    const blank = out.indexOf('');
+    expect(out.slice(blank + 2, -1).map((l) => l.split(',')[5])).toEqual([
+      'Fair',
+      'Fair',
+      'Fair',
+      'Fair',
+      'Fair',
+    ]);
+  });
+
+  it('leaves the stability fields blank for a layout stored before ratings', () => {
+    const r = structuredClone(optimize(DEFAULT_INPUTS));
+    for (const { layout } of r.layouts) {
+      delete layout.stability;
+      for (const layer of layout.layers) delete layer.turned;
+    }
+    const old = buildCsv(buildExportPayload(DEFAULT_INPUTS, r, 0, NOW)).split('\r\n');
+    expect(old).toContain('Stability rating,');
+    expect(old).toContain('Layers turned half a turn (180°),');
+    const blank = old.indexOf('');
+    expect(old[blank + 2]?.split(',')[5]).toBe('');
+  });
+});
+
+describe('buildCsv in another unit', () => {
+  const cm = buildCsv(payload, 'cm').split('\r\n');
+  const mm = buildCsv(payload, 'mm').split('\r\n');
+
+  it('is the same file as before in inches', () => {
+    expect(buildCsv(payload, 'in')).toBe(csv);
+  });
+
+  it('titles lengths and volumes with the unit and converts the values', () => {
+    expect(cm).toContain('Pallet length (cm),101.6');
+    expect(cm).toContain('Box leeway (cm),0.0');
+    expect(cm).toContain('Load total height (cm),63.5');
+    expect(mm).toContain('Pallet length (mm),1016');
+    expect(cm.some((l) => /^Volume used \(cm³\),\d+\.\d$/.test(l))).toBe(true);
+    expect(mm.some((l) => /^Volume used \(cm³\),\d+\.\d$/.test(l))).toBe(true);
+    expect(cm).toContain('Total boxes per pallet,32');
+    expect(cm.join('\n')).not.toMatch(/\(in\)|in³/);
+  });
+
+  it('titles the comparison table with the unit', () => {
+    const blank = cm.indexOf('');
+    expect(cm[blank + 1]).toBe(
+      '#,Carton (cm),Products,Cartons,Layers,Stability,Utilization,Remaining volume (cm³),Score',
+    );
+    // Rank 1 is the 20 x 20 x 10 carton lying on its side (Good); before the stability
+    // tie-break it was the same carton standing 20 in tall on a 10 in side (Fair, 2.0).
+    expect(cm[blank + 2]).toMatch(/^1,50\.8 × 50\.8 × 25\.4,32,8,2,Good,/);
+  });
+});
+
+describe('buildCsv with weights', () => {
+  const W: Inputs = {
+    ...DEFAULT_INPUTS,
+    weights: { productBox: 2, emptyCarton: 1, maxPallet: 290, pallet: 40 },
+  };
+  const p = buildExportPayload(W, optimize(W), 0, NOW);
+  const out = buildCsv(p).split('\r\n');
+
+  it('writes nothing about weight while the box weight is blank', () => {
+    expect(csv).not.toMatch(/weight/i);
+    expect(
+      buildCsv(buildExportPayload(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0, NOW)),
+    ).not.toMatch(/weight/i);
+  });
+
+  it('adds the weight inputs and results after the score rows', () => {
+    // The winner: 108 boxes in 13 lb cartons, 274 lb, two layers removed, room for one more.
+    const end = out.indexOf('');
+    const rows = out.slice(out.findIndex((l) => l.startsWith('Space contribution,')) + 1, end);
+    expect(rows.map((l) => l.split(',')[0])).toEqual([
+      'Weight per product box (lb)',
+      'Maximum pallet weight (lb)',
+      'Empty carton weight (lb)',
+      'Pallet weight (lb)',
+      'Total weight (lb)',
+      'Weight per carton (lb)',
+      'Weight per layer (lb)',
+      'Centre of mass height above floor (in)',
+      'Layers removed for weight',
+      'Room for more cartons by weight',
+    ]);
+    expect(out).toContain('Weight per product box (lb),2.0');
+    expect(out).toContain('Maximum pallet weight (lb),290.0');
+    expect(out).toContain('Total weight (lb),274.0');
+    expect(out).toContain('Weight per carton (lb),13.0');
+    expect(out).toContain('Layers removed for weight,2');
+    expect(out).toContain('Room for more cartons by weight,1');
+    expect(out.find((l) => l.startsWith('Weight per layer (lb),'))).toMatch(
+      /^Weight per layer \(lb\),\d+\.\d( \d+\.\d)*$/,
+    );
+  });
+
+  it('adds a weight column to the comparison table', () => {
+    const blank = out.indexOf('');
+    expect(out[blank + 1]).toBe(
+      '#,Carton (in),Products,Cartons,Layers,Stability,Utilization,Weight (lb),Remaining volume (in³),Score',
+    );
+    expect(out[blank + 2]?.split(',')[7]).toBe('274.0');
+  });
+
+  it('writes kg with cm and leaves a blank maximum empty', () => {
+    const open = { ...W, weights: { ...W.weights, maxPallet: null } };
+    const cm = buildCsv(buildExportPayload(open, optimize(open), 0, NOW), 'cm').split('\r\n');
+    expect(cm).toContain('Weight per product box (kg),0.9');
+    expect(cm).toContain('Maximum pallet weight (kg),');
+    expect(cm).toContain('Pallet weight (kg),18.1');
+    expect(cm).toContain('Layers removed for weight,0');
+    // Nothing was removed for weight, so no room is offered.
+    expect(cm.some((l) => l.startsWith('Room for more cartons by weight'))).toBe(false);
+    expect(cm.some((l) => /^Centre of mass height above floor \(cm\),\d+\.\d$/.test(l))).toBe(true);
+  });
+});
+
+describe('buildCsv with a pinwheel layout', () => {
+  it('adds a Pattern column that says Pinwheel where the table shows the badge', () => {
+    const r = optimize(PINWHEEL_INPUTS);
+    const out = buildCsv(buildExportPayload(PINWHEEL_INPUTS, r, 0, NOW)).split('\r\n');
+    const blank = out.indexOf('');
+    expect(out[blank + 1]).toBe(
+      '#,Carton (in),Products,Cartons,Layers,Pattern,Stability,Utilization,Remaining volume (in³),Score',
+    );
+    const patterns = r.layouts.map((_, k) => out[blank + 2 + k]?.split(',')[5]);
+    expect(patterns).toEqual(
+      r.layouts.map(({ layout }) => (hasPinwheelLayer(layout) ? 'Pinwheel' : '')),
+    );
+    expect(patterns[0]).toBe('Pinwheel');
+    expect(patterns).toContain('');
+  });
+
+  it('adds no Pattern column when no layout has a pinwheel', () => {
+    expect(lines.some((l) => l.includes('Pattern'))).toBe(false);
   });
 });

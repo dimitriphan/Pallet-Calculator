@@ -10,10 +10,11 @@ const TOGGLES: [ToggleKey, string][] = [
   ['showGrid', 'Grid'],
   ['showWireframe', 'Wireframe'],
   ['showMeasurements', 'Measurements'],
+  ['unusedSpace', 'Unused space'],
 ];
 
 /** The toggles Basic mode offers; the others keep their state but are not shown. */
-const BASIC_TOGGLES = new Set<ToggleKey>(['showProducts', 'showMeasurements']);
+const BASIC_TOGGLES = new Set<ToggleKey>(['showProducts', 'showMeasurements', 'unusedSpace']);
 
 const BUTTON =
   'focus-ticks border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-50 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline';

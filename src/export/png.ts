@@ -1,4 +1,5 @@
-import { formatDims } from '../engine/units/units';
+import type { Unit } from '../engine/units/units';
+import { dimsText, weightStabilityText } from '../ui/format';
 import type { ExportPayload } from './exportData';
 
 export interface Rect {
@@ -33,9 +34,13 @@ export function localMinute(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/** The caption text, one string per line. */
-export function captionLines(p: ExportPayload): string[] {
-  const { summary, carton, pallet } = p.analytics;
+/**
+ * The caption text, one string per line, lengths and weights in `unit`. A line with the
+ * weight, the trim and the stability follows the carton when any of them exists.
+ */
+export function captionLines(p: ExportPayload, unit: Unit = 'in'): string[] {
+  const { summary, carton, pallet, weight, stability } = p.analytics;
+  const weightLine = weightStabilityText(weight, stability?.rating ?? null, unit);
   return [
     [
       `Boxes per carton: ${summary.boxesPerCarton}`,
@@ -44,8 +49,9 @@ export function captionLines(p: ExportPayload): string[] {
       `Cartons per pallet: ${summary.cartonsPerPallet}`,
       `Total boxes per pallet: ${summary.totalBoxes}`,
     ].join('   |   '),
-    `Load: ${formatDims({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight })} in (including pallet)`,
-    `Carton: ${formatDims(carton.outer)} in (outer)`,
+    `Load: ${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} (including pallet)`,
+    `Carton: ${dimsText(carton.outer, unit)} (outer)`,
+    ...(weightLine ? [weightLine] : []),
     [
       `Layout ${p.selectedLayout.rank}`,
       `Exported ${localMinute(p.exportedAt)}`,
@@ -87,6 +93,7 @@ function drawImage(
 export async function composePng(
   views: { current: string; top: string; side: string },
   p: ExportPayload,
+  unit: Unit = 'in',
 ): Promise<Blob> {
   const layout = pngLayout();
   const [current, top, side] = await Promise.all([
@@ -125,7 +132,7 @@ export async function composePng(
   title('Top view', layout.top);
   title('Side view', layout.side);
 
-  const lines = captionLines(p);
+  const lines = captionLines(p, unit);
   const c = layout.caption;
   // The figures line shrinks until it fits the strip.
   let size = 44;
@@ -135,8 +142,11 @@ export async function composePng(
     ctx.font = `600 ${size}px sans-serif`;
   }
   ctx.fillText(lines[0] ?? '', c.x + 40, c.y + 28);
-  ctx.font = '40px sans-serif';
-  lines.slice(1).forEach((text, k) => ctx.fillText(text, c.x + 40, c.y + 98 + k * 60));
+  // Three more lines fit at 40 px; a fourth (weight and stability) closes them up.
+  const rest = lines.slice(1);
+  const [restSize, restTop, step] = rest.length > 3 ? [36, 92, 48] : [40, 98, 60];
+  ctx.font = `${restSize}px sans-serif`;
+  rest.forEach((text, k) => ctx.fillText(text, c.x + 40, c.y + restTop + k * step));
 
   return new Promise((resolve, reject) =>
     canvas.toBlob(
