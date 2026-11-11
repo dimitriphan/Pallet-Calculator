@@ -1,9 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Inputs } from '../domain/types';
 import { computeAnalytics } from '../engine/analytics/analytics';
 import { optimize } from '../engine/optimize';
-import { act } from '@testing-library/react';
 import { flush, renderApp, summaryTile } from './testUtils';
 
 type Stores = Awaited<ReturnType<typeof renderApp>>['stores'];

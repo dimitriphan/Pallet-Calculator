@@ -540,6 +540,19 @@ describe('pinwheel layers', () => {
     expect(ws.cartonCount).toBe(9);
   });
 
+  it('searches for a pinwheel only while the shared allowance lasts, and spends from it', () => {
+    const c = candidateByKey(PINWHEEL_INPUTS, '1x1x1');
+    const spent = { remaining: 0 };
+    const none = bestLayer(c, 'H', PINWHEEL_INPUTS, new Map(), undefined, spent)!;
+    expect(none.kind).toBeUndefined();
+    expect(none.cartonCount).toBe(9);
+    const allowance = { remaining: 100_000 };
+    const layer = bestLayer(c, 'H', PINWHEEL_INPUTS, new Map(), undefined, allowance)!;
+    expect(layer.kind).toBe('pinwheel');
+    expect(allowance.remaining).toBeLessThan(100_000);
+    expect(allowance.remaining).toBeGreaterThan(0);
+  });
+
   it('does not search for a pinwheel once shouldStop says so', () => {
     const c = candidateByKey(PINWHEEL_INPUTS, '1x1x1');
     const cache: LayerCache = new Map();
@@ -549,14 +562,26 @@ describe('pinwheel layers', () => {
     expect(cache.size).toBe(1);
   });
 
-  it('offers the straight-cut stacks beside the pinwheel ones', () => {
+  it('offers the straight-cut stacks beside the pinwheel ones only under a weight limit', () => {
     const c = candidateByKey(PINWHEEL_INPUTS, '1x1x1');
-    const layouts = buildLayouts(c, PINWHEEL_INPUTS, new Map());
-    const onH = layouts.filter((l) => l.layers.every((layer) => layer.vertical === 'H'));
+    const straightOnH = (layouts: Layout[]) =>
+      layouts.some((l) =>
+        l.layers.every((layer) => layer.vertical === 'H' && layer.cartonCount === 9),
+      );
+    const weighed: Inputs = {
+      ...PINWHEEL_INPUTS,
+      weights: { ...PINWHEEL_INPUTS.weights, productBox: 10, maxPallet: 1000 },
+    };
+    const limited = buildLayouts(c, weighed, new Map());
+    const onH = limited.filter((l) => l.layers.every((layer) => layer.vertical === 'H'));
     expect(onH.some((l) => l.layers.every((layer) => layer.kind === 'pinwheel'))).toBe(true);
-    expect(onH.some((l) => l.layers.every((layer) => layer.cartonCount === 9))).toBe(true);
-    expect(Math.max(...layouts.map((l) => l.totalCartons))).toBe(30);
-    expectValidLayers(PINWHEEL_INPUTS, layouts);
+    expect(straightOnH(limited)).toBe(true);
+    expect(Math.max(...limited.map((l) => l.totalCartons))).toBe(30);
+    expectValidLayers(weighed, limited);
+    // Without a limit the straight-cut stack always holds fewer products: not built.
+    const free = buildLayouts(c, PINWHEEL_INPUTS, new Map());
+    expect(straightOnH(free)).toBe(false);
+    expect(Math.max(...free.map((l) => l.totalCartons))).toBe(30);
   });
 
   it('keeps every pinwheel carton inside the usable footprint with overhang', () => {

@@ -4,15 +4,17 @@ import type {
   Inputs,
   Layer,
   LayerPattern,
+  LayerPatternKind,
   Layout,
   ProductAxis,
 } from '../../domain/types';
 import { cartonKey } from './cartons';
 import { usableFootprint, usableHeight } from './geometry';
 import { gridLayer, searchLayer, type LayerSearchResult } from './layerSearch';
-import { layerCountBound, pinwheelLayer } from './pinwheel';
+import { layerCountBound, pinwheelLayer, type PinwheelAllowance } from './pinwheel';
 import { allowedVerticalAxes } from './rotation';
 import { fitsCount, fitsWithin } from './tolerance';
+import { weightLimited } from './weightLimit';
 
 /**
  * Best layer patterns keyed by footprint `${a}|${b}`. The layer search depends only on the
@@ -78,7 +80,7 @@ function toPattern(
   height: number,
   a: number,
   b: number,
-  kind?: 'pinwheel',
+  kind?: LayerPatternKind,
 ): LayerPattern {
   // On a square footprint a turned block is the same block; store it unrotated.
   const blocks = isSquare(a, b)
@@ -92,7 +94,7 @@ function toPattern(
     extent: blocksBounds(blocks, a, b).size,
   };
   // Straight-cut layers carry no kind, exactly as before pinwheels existed.
-  if (kind) pattern.kind = kind;
+  if (kind === 'pinwheel') pattern.kind = kind;
   return pattern;
 }
 
@@ -100,7 +102,9 @@ function toPattern(
  * The best layer of a x b cartons in the usable rectangle: the straight-cut layer, or the
  * pinwheel when it holds strictly more cartons (with equal counts straight cuts are easier
  * to build). The pinwheel is not searched once `shouldStop` says so, nor on a square
- * footprint, nor when the straight-cut layer already holds as many cartons as any layer can.
+ * footprint, nor when the straight-cut layer already holds as many cartons as any layer can,
+ * nor once the allowance is spent. A search under way checks `shouldStop` as it goes and
+ * spends from the allowance.
  */
 function searchBestLayer(
   x: number,
@@ -108,17 +112,19 @@ function searchBestLayer(
   a: number,
   b: number,
   shouldStop?: () => boolean,
+  allowance?: PinwheelAllowance,
 ): { result: LayerSearchResult; straight: LayerSearchResult | null } {
   const result = searchLayer(x, y, a, b);
   if (
     result.count === 0 ||
     isSquare(a, b) ||
     result.count >= layerCountBound(x, y, a, b) ||
+    (allowance !== undefined && allowance.remaining <= 0) ||
     shouldStop?.()
   ) {
     return { result, straight: null };
   }
-  const pinwheel = pinwheelLayer(x, y, a, b);
+  const pinwheel = pinwheelLayer(x, y, a, b, { beat: result.count, shouldStop, allowance });
   if (pinwheel && pinwheel.count > result.count) {
     return { result: { count: pinwheel.count, blocks: pinwheel.blocks }, straight: result };
   }
@@ -134,7 +140,8 @@ function usableVerticalAxes(c: CartonCandidate, i: Inputs): ProductAxis[] {
 /**
  * Best layer for the carton standing on `vertical` (straight cuts, or a pinwheel that holds
  * more), or null if no carton fits. Both searches run once per footprint: the cache keeps
- * the winner. `shouldStop` is checked before the pinwheel search.
+ * the winner. `shouldStop` is checked before and during the pinwheel search; `allowance`, when
+ * given, is the pinwheel work all searches sharing it may still spend (see optimize).
  */
 export function bestLayer(
   c: CartonCandidate,
@@ -142,13 +149,14 @@ export function bestLayer(
   i: Inputs,
   cache: LayerCache,
   shouldStop?: () => boolean,
+  allowance?: PinwheelAllowance,
 ): LayerPattern | null {
   const [a, b] = footprintSizes(c, vertical);
   const key = `${a}|${b}`;
   let pattern = cache.get(key);
   if (pattern === undefined) {
     const { x, y } = usableFootprint(i);
-    const { result, straight } = searchBestLayer(x, y, a, b, shouldStop);
+    const { result, straight } = searchBestLayer(x, y, a, b, shouldStop, allowance);
     const height = c.outer[vertical];
     pattern =
       result.count > 0
@@ -363,29 +371,32 @@ function layoutsFromTypes(
  * before every layer search after the first: once it returns true the remaining vertical
  * axes are skipped, so the result covers only the axes searched so far.
  *
- * When a pinwheel is the best layer on some axis, the layouts built from the straight-cut
- * layers follow those built from the best layers, so every layout offered before pinwheels
- * existed is still offered. A weight limit removes whole layers, and a layer with more
- * cartons can be too heavy where the straight-cut layer is not.
+ * Under a weight limit, when a pinwheel is the best layer on some axis, the layouts built
+ * from the straight-cut layers follow those built from the best layers, so every layout
+ * offered before pinwheels existed is still offered: the limit removes whole layers, and a
+ * layer with more cartons can be too heavy where the straight-cut layer is not. Without a
+ * limit they always hold fewer products than their pinwheel twins, so they are not built.
+ * `allowance` is passed on to bestLayer.
  */
 export function buildLayouts(
   c: CartonCandidate,
   i: Inputs,
   cache: LayerCache,
   shouldStop?: () => boolean,
+  allowance?: PinwheelAllowance,
 ): Layout[] {
   const types: LayerPattern[] = [];
   const straight: LayerPattern[] = [];
   for (const [k, v] of usableVerticalAxes(c, i).entries()) {
     if (k > 0 && shouldStop?.()) break;
-    const layer = bestLayer(c, v, i, cache, shouldStop);
+    const layer = bestLayer(c, v, i, cache, shouldStop, allowance);
     if (!layer) continue;
     types.push(layer);
     straight.push(layer.kind === 'pinwheel' ? straightCutLayer(c, v, i, cache) : layer);
   }
 
   const candidates = layoutsFromTypes(c, i, types, shouldStop);
-  if (straight.some((t, k) => t !== types[k])) {
+  if (weightLimited(i) && straight.some((t, k) => t !== types[k])) {
     candidates.push(...layoutsFromTypes(c, i, straight, shouldStop));
   }
 

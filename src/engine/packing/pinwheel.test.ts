@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { searchLayer } from './layerSearch';
 import { assertNoOverlapWithin, cartonRects } from './overlap.testSupport';
-import { layerCountBound, MAX_PINWHEEL_WORK, pinwheelLayer } from './pinwheel';
+import {
+  layerCountBound,
+  MAX_PINWHEEL_WORK,
+  PINWHEEL_STOP_CHECK,
+  pinwheelLayer,
+  type PinwheelAllowance,
+} from './pinwheel';
 
 /** A seeded linear congruential generator, so every run sees the same "random" cases. */
 function seeded(seed: number): () => number {
@@ -16,7 +22,7 @@ function seeded(seed: number): () => number {
  * The pinned realistic case: a 16.5 x 10.5 in carton footprint on a 48 x 40 in pallet. The
  * best straight-cut layer holds 9 cartons; the pinwheel holds 10. Found by the search below.
  */
-export const PINNED = { rectX: 48, rectY: 40, a: 16.5, b: 10.5, guillotine: 9, pinwheel: 10 };
+const PINNED = { rectX: 48, rectY: 40, a: 16.5, b: 10.5, guillotine: 9, pinwheel: 10 };
 
 describe('pinwheelLayer', () => {
   it('fits 4 cartons of 3 x 2 in a 5 x 5 square, where straight cuts fit 3', () => {
@@ -138,15 +144,77 @@ describe('pinwheelLayer', () => {
     expect(pinwheelLayer(5, 5, 0, 2)).toBeNull();
   });
 
-  it('keeps a huge case quick: stops at the work cap with a valid layer', () => {
-    const t0 = performance.now();
-    const r = pinwheelLayer(500, 500, 3, 2);
-    const ms = performance.now() - t0;
-    expect(ms).toBeLessThan(500);
+  it('stops a huge case at the work cap, by work counted, with a valid layer', () => {
+    // A generous allowance only measures the work: the cap of one search still applies.
+    const allowance: PinwheelAllowance = { remaining: 1e12 };
+    const r = pinwheelLayer(500, 500, 3, 2, { allowance });
+    const spent = 1e12 - allowance.remaining;
+    expect(spent).toBeGreaterThan(0);
+    // A few rectangle checks may follow the last counted iteration before the cap is seen.
+    expect(spent).toBeLessThanOrEqual(MAX_PINWHEEL_WORK + 100);
     expect(r).not.toBeNull();
-    expect(typeof r!.capped).toBe('boolean');
+    expect(r!.capped).toBe(spent > MAX_PINWHEEL_WORK);
     expect(r!.count).toBe(cartonRects(r!.blocks, 3, 2).length);
     assertNoOverlapWithin(r!.blocks, 3, 2, 500, 500);
     expect(MAX_PINWHEEL_WORK).toBe(2_000_000);
+  });
+
+  it('spends no more than a shared allowance and leaves what it did not use', () => {
+    const allowance: PinwheelAllowance = { remaining: 5000 };
+    const r = pinwheelLayer(500, 500, 3, 2, { allowance });
+    expect(allowance.remaining).toBe(0);
+    if (r) {
+      expect(r.capped).toBe(true);
+      assertNoOverlapWithin(r.blocks, 3, 2, 500, 500);
+    }
+    // Spent: nothing more is searched.
+    expect(pinwheelLayer(48, 40, 16.5, 10.5, { allowance })).toBeNull();
+    // The pinned case costs little and leaves the rest.
+    const plenty: PinwheelAllowance = { remaining: 1_000_000 };
+    expect(pinwheelLayer(48, 40, 16.5, 10.5, { allowance: plenty })!.count).toBe(10);
+    expect(plenty.remaining).toBeGreaterThan(990_000);
+  });
+
+  it('stops when asked, returning the best found so far or null', () => {
+    let calls = 0;
+    const r = pinwheelLayer(500, 500, 3, 2, {
+      shouldStop: () => ++calls >= 2,
+      allowance: { remaining: 1e12 },
+    });
+    expect(calls).toBe(2);
+    if (r) {
+      expect(r.capped).toBe(true);
+      assertNoOverlapWithin(r.blocks, 3, 2, 500, 500);
+    }
+    // Checked only every PINWHEEL_STOP_CHECK units: a small search never asks.
+    let asked = 0;
+    pinwheelLayer(5, 5, 3, 2, { shouldStop: () => (asked++, true) });
+    expect(asked).toBe(0);
+    expect(PINWHEEL_STOP_CHECK).toBeGreaterThan(1000);
+  });
+
+  it('returns only a pinwheel that beats the count it is given, with the same layer', () => {
+    const { rectX, rectY, a, b } = PINNED;
+    expect(pinwheelLayer(rectX, rectY, a, b, { beat: 10 })).toBeNull();
+    expect(pinwheelLayer(rectX, rectY, a, b, { beat: 9 })).toEqual(
+      pinwheelLayer(rectX, rectY, a, b),
+    );
+  });
+
+  it('finds the same pinwheels with the empty-strip pruning as the plain count', () => {
+    // beat only prunes branches that cannot exceed it: whenever the unpruned search beats
+    // the straight-cut count, the pruned one finds a pinwheel of the same count.
+    const rnd = seeded(7);
+    for (let k = 0; k < 200; k++) {
+      const rectX = 10 + rnd() * 40;
+      const rectY = 10 + rnd() * 40;
+      const a = 2 + rnd() * 12;
+      const b = 2 + rnd() * 12;
+      const straight = searchLayer(rectX, rectY, a, b).count;
+      const free = pinwheelLayer(rectX, rectY, a, b);
+      const pruned = pinwheelLayer(rectX, rectY, a, b, { beat: straight });
+      if (free && free.count > straight) expect(pruned?.count).toBe(free.count);
+      else expect(pruned).toBeNull();
+    }
   });
 });

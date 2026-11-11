@@ -5,6 +5,7 @@ import {
   nearestAchievableCounts,
 } from './packing/cartons';
 import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
+import { PINWHEEL_WORK_PER_OPTIMIZE, type PinwheelAllowance } from './packing/pinwheel';
 import { buildLayouts, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { rankLayouts } from './ranking/rank';
@@ -60,6 +61,8 @@ export function optimize(
     .sort((p, q) => q.bound - p.bound);
 
   const cache: LayerCache = new Map();
+  // Shared by every pinwheel search of this call (deterministic: counted, not timed).
+  const pinwheelWork: PinwheelAllowance = { remaining: PINWHEEL_WORK_PER_OPTIMIZE };
   const layouts: Layout[] = [];
   // With a weight limit, layouts that trim to the same layers are kept once, by id. Without
   // one, nothing is trimmed and buildLayouts already gives distinct layouts.
@@ -90,7 +93,7 @@ export function optimize(
       continue;
     }
     // The same check runs between this carton's layer searches.
-    for (const full of buildLayouts(c, i, cache, overBudget)) {
+    for (const full of buildLayouts(c, i, cache, overBudget, pinwheelWork)) {
       built++;
       // Trimmed to the weight limit before anything counts it: the keep-best list above
       // (and so every later skip) and the ranking only ever see what can really be loaded.
