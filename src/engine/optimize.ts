@@ -1,4 +1,4 @@
-import type { Inputs, Layout, OptimizeResult } from '../domain/types';
+import type { CartonCandidate, Inputs, Layout, OptimizeResult } from '../domain/types';
 import {
   anyCartonFits,
   generateCartonCandidatesWithInfo,
@@ -8,6 +8,7 @@ import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
 import { buildLayouts, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { rankLayouts } from './ranking/rank';
+import { trimToWeight } from './analytics/weight';
 
 export const TIME_BUDGET_MS = 4000;
 
@@ -48,11 +49,22 @@ export function optimize(
 
   const available = availableVolume(i);
   const ordered = candidates
-    .map((c) => ({ c, bound: c.boxesPerCarton * fitsCount(available, volumeOf(c.outer)) }))
+    .map((c) => ({
+      c,
+      bound: Math.min(
+        c.boxesPerCarton * fitsCount(available, volumeOf(c.outer)),
+        weightBound(c, i),
+      ),
+    }))
     .sort((p, q) => q.bound - p.bound);
 
   const cache: LayerCache = new Map();
   const layouts: Layout[] = [];
+  // With a weight limit, layouts that trim to the same layers are kept once, by id. Without
+  // one, nothing is trimmed and buildLayouts already gives distinct layouts.
+  const limited = i.weights.productBox !== null && i.weights.maxPallet !== null;
+  const indexById = new Map<string, number>();
+  let built = 0;
   const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
   let evaluated = 0;
   // Stop at the budget once there is something to show, or at the hard limit regardless.
@@ -70,7 +82,16 @@ export function optimize(
     if (evaluated > 0 && overBudget()) break;
     evaluated++;
     // The same check runs between this carton's layer searches.
-    for (const l of buildLayouts(c, i, cache, overBudget)) {
+    for (const full of buildLayouts(c, i, cache, overBudget)) {
+      built++;
+      // Trimmed to the weight limit before anything counts it: the keep-best list above
+      // (and so every later skip) and the ranking only ever see what can really be loaded.
+      const l = trimToWeight(full, i);
+      if (l === null) continue;
+      if (limited) {
+        if (!isNewOrFewerRemoved(l, layouts, indexById)) continue;
+        indexById.set(l.id, layouts.length);
+      }
       layouts.push(l);
       insertDescending(best, l.totalProducts);
     }
@@ -78,7 +99,8 @@ export function optimize(
   }
 
   if (layouts.length === 0) {
-    return { ...empty('CARTON_EXCEEDS_PALLET'), candidatesEvaluated: evaluated };
+    const reason = built > 0 ? 'OVER_WEIGHT' : 'CARTON_EXCEEDS_PALLET';
+    return { ...empty(reason), candidatesEvaluated: evaluated };
   }
   return {
     layouts: rankLayouts(layouts, i),
@@ -103,6 +125,38 @@ function noCandidates(
   // Stopped: say no carton of N fits, but name no counts that might not be the nearest.
   if (nearestCounts === null) return empty('NO_CARTON_WITH_COUNT');
   return { ...empty('NO_CARTON_WITH_COUNT'), nearestCounts };
+}
+
+/**
+ * Most products a carton could give under the weight limit: the cartons whose weight on the
+ * pallet stays at or under the maximum, times boxes per carton. Infinity without a limit.
+ */
+function weightBound(c: CartonCandidate, i: Inputs): number {
+  const { productBox: box, maxPallet: max, emptyCarton, pallet } = i.weights;
+  if (box === null || max === null) return Infinity;
+  const perCarton = emptyCarton + c.boxesPerCarton * box;
+  if (!(perCarton > 0)) return Infinity;
+  // Generous by one carton, so rounding can never make the bound too low.
+  return c.boxesPerCarton * (Math.max(0, Math.floor((max - pallet) / perCarton)) + 1);
+}
+
+/**
+ * Whether a layout is new by id. A layout with the same id already kept (the same carton and
+ * layers, reached by trimming) is replaced in place when this one had fewer layers removed,
+ * so it says the least about trimming; either way only one is kept.
+ */
+function isNewOrFewerRemoved(
+  l: Layout,
+  layouts: Layout[],
+  indexById: Map<string, number>,
+): boolean {
+  const at = indexById.get(l.id);
+  if (at === undefined) return true;
+  const kept = layouts[at] as Layout;
+  if ((l.weightTrim?.layersRemoved ?? 0) < (kept.weightTrim?.layersRemoved ?? 0)) {
+    layouts[at] = l;
+  }
+  return false;
 }
 
 /** Inserts `v` into the descending list, keeping at most KEEP_BEST entries. */

@@ -11,7 +11,9 @@ function visibleInBasic(errorKey: string): boolean {
     errorKey.startsWith('pallet.') ||
     errorKey.startsWith('product.') ||
     errorKey.startsWith('maxCarton.') ||
-    errorKey === 'boxesPerCarton'
+    errorKey === 'boxesPerCarton' ||
+    errorKey === 'weights.productBox' ||
+    errorKey === 'weights.maxPallet'
   );
 }
 

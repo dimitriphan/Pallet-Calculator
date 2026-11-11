@@ -480,7 +480,19 @@ const STACK_COLUMNS: { title: string; width: number }[] = [
   { title: 'Top of layer (incl. pallet)', width: 2.4 },
 ];
 
+/** The same table with each layer's weight, when the sheet has weights. */
+const WEIGHED_STACK_COLUMNS: { title: string; width: number }[] = [
+  { title: 'Layer', width: 0.9 },
+  { title: 'Pattern', width: 0.9 },
+  { title: 'Cartons', width: 1.0 },
+  { title: 'Layer height', width: 1.4 },
+  { title: 'Top of layer (incl. pallet)', width: 2.0 },
+  { title: 'Layer weight', width: 1.3 },
+];
+
 function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
+  const weighed = sheet.stacking.some((r) => r.weight !== undefined);
+  const columns = weighed ? WEIGHED_STACK_COLUMNS : STACK_COLUMNS;
   font(doc, 13, 'bold');
   doc.text(
     part.first === 0 ? 'Stacking order' : 'Stacking order (continued)',
@@ -493,7 +505,7 @@ function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
   const cell = (values: string[], top: number) => {
     let x = LEFT;
     values.forEach((v, i) => {
-      const col = STACK_COLUMNS[i];
+      const col = columns[i];
       if (!col) return;
       doc.text(v, x + col.width / 2, top + 0.155, { align: 'center' });
       x += col.width;
@@ -505,7 +517,7 @@ function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
   doc.rect(LEFT, top, CONTENT_W, STACK_ROW_H, 'F');
   font(doc, 9, 'bold');
   cell(
-    STACK_COLUMNS.map((c) => c.title),
+    columns.map((c) => c.title),
     top,
   );
   top += STACK_ROW_H;
@@ -516,7 +528,8 @@ function drawStacking(doc: jsPDF, sheet: BuildSheet, part: StackingPart) {
       doc.setFillColor(...ZEBRA);
       doc.rect(LEFT, top, CONTENT_W, STACK_ROW_H, 'F');
     }
-    cell([String(row.layer), row.pattern, String(row.cartons), row.height, row.topHeight], top);
+    const values = [String(row.layer), row.pattern, String(row.cartons), row.height, row.topHeight];
+    cell(weighed ? [...values, row.weight ?? ''] : values, top);
     top += STACK_ROW_H;
   });
   rule(doc, LEFT, top, RIGHT, 0.012, BLACK);

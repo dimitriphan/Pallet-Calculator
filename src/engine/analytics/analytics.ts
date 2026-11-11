@@ -3,6 +3,7 @@ import type { Dims, Inputs, Layout, ProductAxis } from '../../domain/types';
 import { availableVolume, usableFootprint, usableHeight } from '../packing/geometry';
 import { layoutMetrics } from '../packing/metrics';
 import { footprintAxes } from '../packing/stacking';
+import { layoutWeight, roomForCartons, type LayoutWeight } from './weight';
 
 export type TargetStatus = 'none' | 'met' | 'exceeded' | 'notAchievable';
 
@@ -88,6 +89,16 @@ export interface Analytics {
     cartonsPerPallet: number;
     totalBoxes: number;
   };
+  /** Null when the product box weight is blank (weight ignored). Pounds and inches. */
+  weight:
+    | (LayoutWeight & {
+        /** More full cartons the maximum would allow; 0 without a maximum. */
+        roomForCartons: number;
+        /** Whole layers removed from the top to keep under the maximum. */
+        layersRemoved: number;
+        max: number | null;
+      })
+    | null;
 }
 
 /**
@@ -189,5 +200,17 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       cartonsPerPallet: l.totalCartons,
       totalBoxes: l.totalProducts,
     },
+    weight: weightAnalytics(l, i),
+  };
+}
+
+function weightAnalytics(l: Layout, i: Inputs): Analytics['weight'] {
+  const w = layoutWeight(l, i);
+  if (w === null) return null;
+  return {
+    ...w,
+    roomForCartons: roomForCartons(l, i),
+    layersRemoved: l.weightTrim?.layersRemoved ?? 0,
+    max: i.weights.maxPallet,
   };
 }

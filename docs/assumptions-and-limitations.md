@@ -66,8 +66,10 @@ A strict product setting also limits how the carton may be turned on the pallet.
 - **Guillotine layers only.** Each layer is built by straight cuts from edge to edge. Pinwheel (interlocked) layers can sometimes fit one or two more cartons per layer. The tool does not find them.
 - **Flat layers.** A load is a stack of flat layers. A carton never straddles two layers.
 - **One carton size per layout.** Mixed carton sizes in one load are not supported.
-- **No weight, stability or crush checks.** Tipped cartons and tall columns are allowed without any warning. You must judge whether the load is safe.
-- **Basic view cannot edit** leeway, walls, overhang, rotation or the target quantity. Use Full view.
+- **Weight limit by whole layers only.** With a weight per product box and a maximum pallet weight, layers are removed from the top until the whole load (pallet included) is at or under the maximum; the tool then reports "Room for N more cartons by weight" but never places a part layer. The maximum is the only weight check: there is no limit per carton, no crush or load-bearing check, and the weight per carton is shown without judgement.
+- **Weight is optional.** With the weight per product box blank, weight is ignored everywhere and nothing about it is shown or exported. The empty carton weight defaults to 0 and the pallet to 40 lb. Weights are in pounds with inches and in kilograms with cm or mm. Presets keep the maximum, empty carton and pallet weights; the product box weight stays with the product.
+- **No stability or crush checks.** Tipped cartons and tall columns are allowed without any warning. You must judge whether the load is safe.
+- **Basic view cannot edit** leeway, walls, overhang, rotation, the target quantity or the empty carton and pallet weights. Use Full view.
 - **Layer order.** Layers are ordered with the fullest layer at the bottom, so a narrower layer can sit under a slightly wider one; check overhang between layers when building mixed stacks.
 
 ## Search limits
@@ -98,7 +100,7 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 ## Planned for a later round (not built yet)
 
-- Advanced optimization (stability preference, weights, centre of mass, interlocked layer patterns).
+- Advanced optimization (stability preference, interlocked layer patterns).
 - Transparent overlays showing unused space.
 - A target-quantity field in Basic view, company branding on exports, shareable links.
 

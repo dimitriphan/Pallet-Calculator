@@ -11,6 +11,7 @@ import {
   footprintAxes,
   layoutSignature,
   plainLayers,
+  withLayers,
   type LayerCache,
 } from './stacking';
 import { fitsWithin } from './tolerance';
@@ -350,6 +351,41 @@ describe('buildLayouts', () => {
         expect(fitsWithin(z, h)).toBe(true);
       }
     }
+  });
+});
+
+describe('single-type stacks', () => {
+  it('offers a stack of only that layer for every layer type any layout uses', () => {
+    // Weight trimming removes layers from the top; a carton whose layers are lighter must
+    // still be offered as its own stack, never only inside a mix.
+    const layerKey = (l: Layer) =>
+      `${l.vertical}:${l.cartonCount}:${l.blocks.map((b) => `${b.cols}x${b.rows}${b.rotated}`).sort()}`;
+    for (const inputs of [DEFAULT_INPUTS, MIXED, CUBES]) {
+      for (const c of generateCartonCandidates(inputs)) {
+        const layouts = buildLayouts(c, inputs, new Map());
+        const singles = new Set(
+          layouts
+            .filter((l) => new Set(l.layers.map(layerKey)).size === 1)
+            .map((l) => layerKey(l.layers[0] as Layer)),
+        );
+        for (const l of layouts)
+          for (const layer of l.layers) expect(singles).toContain(layerKey(layer));
+      }
+    }
+  });
+});
+
+describe('withLayers', () => {
+  it('keeps the bottom layers and recomputes totals and id', () => {
+    const layouts = buildLayouts(candidateByKey(MIXED, '1x1x1'), MIXED, new Map());
+    const mixed = layouts.find((l) => verticals(l).size > 1) as Layout;
+    const two = withLayers(mixed, mixed.layers.slice(0, 2));
+    expect(two.layers).toEqual(mixed.layers.slice(0, 2));
+    expect(two.totalCartons).toBe(30);
+    expect(two.totalProducts).toBe(30 * mixed.carton.boxesPerCarton);
+    expect(two.id).toBe(layoutSignature(two));
+    expect(two.carton).toBe(mixed.carton);
+    expect(mixed.totalCartons).toBe(42);
   });
 });
 

@@ -22,6 +22,8 @@ export interface ExportPayload {
     utilizationPct: number;
     remainingVolume: number;
     score: number;
+    /** Total weight in pounds; present only when the box weight was set. */
+    weight?: number;
   }[];
 }
 
@@ -53,6 +55,7 @@ export function buildExportPayload(
         utilizationPct: a.totals.utilizationPct,
         remainingVolume: a.totals.remainingVolume,
         score: r.score.total,
+        ...(a.weight ? { weight: a.weight.total } : {}),
       };
     }),
   };

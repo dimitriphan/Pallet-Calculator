@@ -3,6 +3,7 @@ import { DEFAULT_INPUTS } from '../../domain/constants';
 import type { Inputs, Layout } from '../../domain/types';
 import { optimize } from '../optimize';
 import { computeAnalytics, cartonDisplayDims, layerOrientations } from './analytics';
+import { trimToWeight } from './weight';
 
 const CASE_I: Inputs = {
   ...DEFAULT_INPUTS,
@@ -211,5 +212,45 @@ describe('computeAnalytics, the default inputs winner (literal values)', () => {
     expect(a.totals.volumeAvailable).toBe(140700);
     expect(a.totals.utilizationPct).toBeCloseTo(90.806, 3);
     expect(a.pallet.remainingHeight).toBe(0);
+  });
+});
+
+describe('computeAnalytics, weight', () => {
+  const free = winner(DEFAULT_INPUTS);
+
+  it('is null when the product box weight is blank', () => {
+    expect(computeAnalytics(free, DEFAULT_INPUTS).weight).toBeNull();
+  });
+
+  it('reports totals, room left and layers removed for a trimmed layout', () => {
+    // Box 2 lb, empty carton 1 lb (11 lb per 5-box carton), pallet 40 lb, maximum 611 lb:
+    // the 612 lb default winner loses its top layer of 7 cartons and weighs 535 lb.
+    const i: Inputs = {
+      ...DEFAULT_INPUTS,
+      weights: { productBox: 2, emptyCarton: 1, pallet: 40, maxPallet: 611 },
+    };
+    const a = computeAnalytics(trimToWeight(free, i)!, i);
+    expect(a.weight).toEqual({
+      total: 535,
+      perCarton: 11,
+      perLayer: [110, 77, 77, 77, 77, 77],
+      // (100 + 1265 + 77 x (22.5 + 31.5 + 40.5 + 49.5 + 58.5)) / 535
+      centreOfMassHeight: expect.closeTo((100 + 1265 + 77 * 202.5) / 535, 10),
+      roomForCartons: 6, // (611 - 535) / 11 = 6.9
+      layersRemoved: 1,
+      max: 611,
+    });
+    expect(a.totals.products).toBe(225);
+  });
+
+  it('reports no layers removed and no room without a maximum', () => {
+    const i: Inputs = { ...DEFAULT_INPUTS, weights: { ...DEFAULT_INPUTS.weights, productBox: 2 } };
+    const a = computeAnalytics(free, i);
+    expect(a.weight).toMatchObject({
+      total: 40 + 52 * 10,
+      layersRemoved: 0,
+      roomForCartons: 0,
+      max: null,
+    });
   });
 });

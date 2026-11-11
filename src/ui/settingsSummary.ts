@@ -1,5 +1,5 @@
 import type { Inputs } from '../domain/types';
-import { fmtCount, lengthText, type Unit } from './format';
+import { fmtCount, lengthText, weightText, type Unit } from './format';
 
 function rotationPhrase(i: Inputs): string {
   switch (i.rotationMode) {
@@ -14,7 +14,7 @@ function rotationPhrase(i: Inputs): string {
   }
 }
 
-/** One plain sentence naming the settings that shaped the result, lengths in `unit`. */
+/** One plain sentence naming the settings that shaped the result, in `unit` (lb or kg for weights). */
 export function settingsSummary(i: Inputs, unit: Unit = 'in'): string {
   const parts = [
     `${lengthText(i.leeway, unit)} leeway`,
@@ -24,5 +24,11 @@ export function settingsSummary(i: Inputs, unit: Unit = 'in'): string {
   ];
   if (i.keepCartonsUpright) parts.push('cartons kept upright');
   if (i.targetQuantity !== null) parts.push(`target ${fmtCount(i.targetQuantity)} boxes`);
+  // The box weight and maximum show in both views; these two only matter once weight is used.
+  if (i.weights.productBox !== null) {
+    parts.push(`${weightText(i.weights.pallet, unit)} pallet`);
+    if (i.weights.emptyCarton > 0)
+      parts.push(`${weightText(i.weights.emptyCarton, unit)} per empty carton`);
+  }
   return `Using ${parts.join(', ')}.`;
 }

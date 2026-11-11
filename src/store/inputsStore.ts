@@ -3,7 +3,13 @@ import { useStore } from 'zustand';
 import { z } from 'zod';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { ParseResult } from '../domain/schemas';
-import type { Inputs, InputsDraft, OrientationCode, RotationMode } from '../domain/types';
+import type {
+  Inputs,
+  InputsDraft,
+  OrientationCode,
+  PresetFields,
+  RotationMode,
+} from '../domain/types';
 import type { Unit } from '../engine/units/units';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { usePrefsStore } from './prefsStore';
@@ -39,8 +45,11 @@ export interface InputsState {
   toggleOrientation(c: OrientationCode): void;
   setKeepCartonsUpright(v: boolean): void;
   replaceInputs(i: Inputs): void;
-  /** Writes the fields a preset covers (everything but the product) and leaves the product text as typed. */
-  applyPreset(fields: Omit<Inputs, 'product'>): void;
+  /**
+   * Writes the fields a preset covers (everything but the product and its box weight) and
+   * leaves the product and box weight text as typed.
+   */
+  applyPreset(fields: PresetFields): void;
   reset(): void;
 }
 
@@ -70,12 +79,32 @@ const draftShapeSchema = z.object({
   rotationMode: z.enum(['full', 'upright', 'noSide', 'custom']),
   customOrientations: z.array(orientationSchema),
   keepCartonsUpright: z.boolean(),
+  // Added in Round 4: a draft remembered before weights has none; loadSnapshot fills them in.
+  weights: z
+    .object({
+      productBox: z.string(),
+      maxPallet: z.string(),
+      emptyCarton: z.string(),
+      pallet: z.string(),
+    })
+    .optional(),
 });
 // Added in Round 4: a draft remembered before units existed is in inches, with no origins.
 const storedSchema = draftShapeSchema.extend({
   unit: unitSchema.catch('in').default('in'),
   origins: z.record(z.string(), z.unknown()).catch({}).default({}),
 });
+
+const WEIGHT_PATHS = (Object.keys(NUMERIC_FIELDS) as NumericPath[]).filter((p) =>
+  p.startsWith('weights.'),
+);
+/** Fields that belong to the product, which a preset never covers. */
+const PRODUCT_PATHS: NumericPath[] = [
+  'product.length',
+  'product.width',
+  'product.height',
+  'weights.productBox',
+];
 
 interface Snapshot {
   draft: InputsDraft;
@@ -89,13 +118,21 @@ function loadSnapshot(storage: Storage | undefined, fallbackUnit: Unit): Snapsho
     if (raw) {
       const parsed = storedSchema.safeParse(JSON.parse(raw));
       if (parsed.success) {
-        const { unit, origins: storedOrigins, ...draft } = parsed.data;
+        const { unit, origins: storedOrigins, weights, ...rest } = parsed.data;
         // Keep only well-formed origins; originsFor() drops any that do not match the text.
         const origins: FieldOrigins = {};
         for (const [path, o] of Object.entries(storedOrigins)) {
           const ok = originSchema.safeParse(o);
           if (ok.success) origins[path] = ok.data;
         }
+        // Remembered before weights: the default weights, shown in the draft's own unit.
+        let draftWeights = weights;
+        if (draftWeights === undefined) {
+          const defaults = defaultDraft(unit);
+          draftWeights = defaults.draft.weights;
+          for (const path of WEIGHT_PATHS) origins[path] = defaults.origins[path];
+        }
+        const draft: InputsDraft = { ...rest, weights: draftWeights };
         return { draft, unit, origins: originsFor(draft, origins, unit) };
       }
     }
@@ -155,9 +192,15 @@ export function createInputsStore(
         return;
       }
       const kept: FieldOrigins = { ...origins };
-      for (const key of ['length', 'width', 'height'] as const)
-        kept[`product.${key}`] = oldOrigins[`product.${key}`];
-      apply({ draft: { ...draft, product: old.product }, origins: kept });
+      for (const path of PRODUCT_PATHS) kept[path] = oldOrigins[path];
+      apply({
+        draft: {
+          ...draft,
+          product: old.product,
+          weights: { ...draft.weights, productBox: old.weights.productBox },
+        },
+        origins: kept,
+      });
     };
     const initial = loadSnapshot(storage, options.unit ?? 'in');
     return {
@@ -189,7 +232,15 @@ export function createInputsStore(
       setKeepCartonsUpright: (keepCartonsUpright) =>
         apply({ draft: { ...get().draft, keepCartonsUpright } }),
       replaceInputs: (i) => write(i, false),
-      applyPreset: (fields) => write({ ...fields, product: DEFAULT_INPUTS.product }, true),
+      applyPreset: (fields) =>
+        write(
+          {
+            ...fields,
+            product: DEFAULT_INPUTS.product,
+            weights: { ...fields.weights, productBox: null },
+          },
+          true,
+        ),
       reset: () => write(DEFAULT_INPUTS, false),
     };
   });

@@ -1,7 +1,7 @@
-import type { Inputs, Preset } from '../domain/types';
+import type { Inputs, PresetFields } from '../domain/types';
 
-/** The part of the inputs a preset stores (everything but the product). */
-export function presetFieldsOf(i: Inputs): Omit<Preset, 'id' | 'name' | 'advanced'> {
+/** The part of the inputs a preset stores (everything but the product and its box weight). */
+export function presetFieldsOf(i: Inputs): PresetFields {
   return {
     pallet: { ...i.pallet },
     maxCarton: { ...i.maxCarton },
@@ -13,5 +13,10 @@ export function presetFieldsOf(i: Inputs): Omit<Preset, 'id' | 'name' | 'advance
     rotationMode: i.rotationMode,
     customOrientations: [...i.customOrientations],
     keepCartonsUpright: i.keepCartonsUpright,
+    weights: {
+      maxPallet: i.weights.maxPallet,
+      emptyCarton: i.weights.emptyCarton,
+      pallet: i.weights.pallet,
+    },
   };
 }

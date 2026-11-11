@@ -307,3 +307,81 @@ describe('PresetMenu boxes per carton', () => {
     expect(screen.getByRole('textbox', { name: 'Desired boxes per carton' })).toHaveValue('6');
   });
 });
+
+describe('PresetMenu weights', () => {
+  async function openManage(user: Awaited<ReturnType<typeof renderApp>>['user']) {
+    await user.click(screen.getByRole('button', { name: 'Manage' }));
+    return screen.getByRole('dialog', { name: 'Manage presets' });
+  }
+
+  function weight(label: string, within_: HTMLElement = document.body) {
+    return within(within(within_).getByRole('group', { name: 'Weight' })).getByRole('textbox', {
+      name: label,
+    });
+  }
+
+  it('saves the maximum, carton and pallet weights but never the box weight', async () => {
+    const { user, stores } = await renderApp();
+    await user.type(weight('Weight per product box'), '2');
+    await user.type(weight('Maximum pallet weight'), '1500');
+    await user.clear(weight('Empty carton weight'));
+    await user.type(weight('Empty carton weight'), '1.5');
+    await user.clear(weight('Pallet weight'));
+    await user.type(weight('Pallet weight'), '45');
+    await flush();
+    await user.click(screen.getByRole('button', { name: 'Save as new' }));
+    const dialog = screen.getByRole('dialog', { name: 'Save as new preset' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Heavy');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    const saved = stores.presets.getState().presets.find((p) => p.name === 'Heavy')!;
+    expect(saved.weights).toEqual({ maxPallet: 1500, emptyCarton: 1.5, pallet: 45 });
+    expect('productBox' in saved.weights).toBe(false);
+
+    // Another preset writes its own weights and keeps the box weight as typed.
+    await choosePreset(user, GMA);
+    expect(weight('Weight per product box')).toHaveValue('2');
+    expect(weight('Maximum pallet weight')).toHaveValue('');
+    expect(weight('Pallet weight')).toHaveValue('40');
+    await user.clear(weight('Weight per product box'));
+    await flush();
+    // Choosing a preset with a maximum while the box weight is blank asks for the box weight,
+    // and the preset does not read as Modified.
+    await choosePreset(user, 'Heavy');
+    expect(weight('Maximum pallet weight')).toHaveValue('1500');
+    expect(weight('Empty carton weight')).toHaveValue('1.5');
+    expect(weight('Weight per product box')).toHaveAccessibleDescription(
+      'Enter the weight of one product box to use a maximum pallet weight.',
+    );
+    expect(screen.queryByText('Modified')).not.toBeInTheDocument();
+    await user.type(weight('Weight per product box'), '3');
+    await flush();
+    expect(screen.queryByText('Modified')).not.toBeInTheDocument();
+    await user.clear(weight('Pallet weight'));
+    await user.type(weight('Pallet weight'), '50');
+    await flush();
+    expect(screen.getByText('Modified')).toBeInTheDocument();
+  });
+
+  it('edits a preset’s weights without a box weight field', async () => {
+    const { user, stores } = await renderApp();
+    const dialog = await openManage(user);
+    const row = within(dialog).getByText(GMA).closest('li') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: 'Edit' }));
+    const edit = screen.getByRole('dialog', { name: 'Edit preset' });
+    const group = within(edit).getByRole('group', { name: 'Weight' });
+    expect(
+      within(group)
+        .getAllByRole('textbox')
+        .map((f) => (f as HTMLInputElement).labels?.[0]?.textContent),
+    ).toEqual(['Maximum pallet weight', 'Empty carton weight', 'Pallet weight']);
+    await user.type(weight('Maximum pallet weight', edit), '30');
+    expect(weight('Maximum pallet weight', edit)).toHaveAccessibleDescription(
+      "The maximum must be more than the pallet's own weight.",
+    );
+    expect(within(edit).getByRole('button', { name: 'Save' })).toBeDisabled();
+    await user.type(weight('Maximum pallet weight', edit), '00');
+    await user.click(within(edit).getByRole('button', { name: 'Save' }));
+    const stored = stores.presets.getState().presets.find((p) => p.id === 'sample-standard-gma');
+    expect(stored?.weights).toEqual({ maxPallet: 3000, emptyCarton: 0, pallet: 40 });
+  });
+});

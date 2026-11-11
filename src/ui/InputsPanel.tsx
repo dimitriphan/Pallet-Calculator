@@ -7,6 +7,7 @@ import { RotationControl } from './RotationControl';
 import { lengthText, palletNotice } from './format';
 import { useUnit } from './useUnit';
 import { useInputs } from './StoreContext';
+import { WeightFields } from './WeightFields';
 
 const NO_ERRORS: Record<string, string> = {};
 const DIM_LABELS = { length: 'Length', width: 'Width', height: 'Height' };
@@ -138,6 +139,8 @@ export function InputsPanel() {
           onChange={(v) => setField('overhang', v)}
         />
       </fieldset>
+      <div className="root-divider" aria-hidden="true" />
+      <WeightFields full />
       <div className="root-divider" aria-hidden="true" />
       <RotationControl />
       <AdvancedSection />

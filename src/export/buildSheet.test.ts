@@ -274,3 +274,60 @@ describe('buildSheetContent in another unit', () => {
     expect(strings(s).join(' ')).not.toMatch(/\d in\b/);
   });
 });
+
+describe('buildSheetContent with weights', () => {
+  const weighed = (maxPallet: number | null) =>
+    build({ weights: { productBox: 2, emptyCarton: 1, maxPallet, pallet: 40 } });
+
+  it('adds nothing about weight while the box weight is blank', () => {
+    expect(strings(build()).join('\n')).not.toMatch(/weight/i);
+    expect(build().stacking.every((r) => !('weight' in r))).toBe(true);
+  });
+
+  it('adds the weights, the trim and the room left to the pallet and load rows', () => {
+    // Under 290 lb: 108 boxes in 13 lb cartons at 274 lb, two layers removed, room for one.
+    const s = weighed(290);
+    const rows = Object.fromEntries(s.palletAndLoad.map((r) => [r.label, r.value]));
+    expect(rows['Total weight']).toBe('274.0 lb (maximum 290.0 lb)');
+    expect(rows['Weight per carton']).toBe('13.0 lb');
+    expect(rows['Limited by weight']).toBe('2 layers removed');
+    expect(rows['Room by weight']).toBe('Room for 1 more carton by weight');
+    expect(s.summary.find((r) => r.label === 'Total boxes per pallet')?.value).toBe('108');
+    expect(s.footer).toContain('40.0 lb pallet, 1.0 lb per empty carton.');
+  });
+
+  it('gives each stacking row its layer weight', () => {
+    const s = weighed(null);
+    expect(s.stacking.map((r) => r.weight)).toEqual([
+      '110.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+      '77.0 lb',
+    ]);
+    const rows = Object.fromEntries(s.palletAndLoad.map((r) => [r.label, r.value]));
+    expect(rows['Total weight']).toBe('612.0 lb');
+    expect(rows['Limited by weight']).toBeUndefined();
+    expect(rows['Room by weight']).toBeUndefined();
+  });
+
+  it('writes kg with cm', () => {
+    const s = buildSheetContent({
+      inputs: {
+        ...DEFAULT_INPUTS,
+        weights: { productBox: 2, emptyCarton: 1, maxPallet: null, pallet: 40 },
+      },
+      result: RESULT,
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+      unit: 'cm',
+    });
+    // 612 lb = 277.6 kg; 110 lb = 49.9 kg.
+    expect(s.palletAndLoad.find((r) => r.label === 'Total weight')?.value).toBe('277.6 kg');
+    expect(s.stacking[0]?.weight).toBe('49.9 kg');
+  });
+});

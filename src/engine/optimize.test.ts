@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
-import type { Inputs, ProductAxis } from '../domain/types';
+import type { Inputs, OptimizeResult, ProductAxis, WeightInputs } from '../domain/types';
 import { cartonKey, generateCartonCandidates } from './packing/cartons';
 import { usableFootprint, usableHeight } from './packing/geometry';
 import { gridLayer } from './packing/layerSearch';
 import { footprintAxes } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { HARD_LIMIT_MS, optimize, TIME_BUDGET_MS } from './optimize';
+import { computeAnalytics } from './analytics/analytics';
+import { layoutWeight, trimToWeight } from './analytics/weight';
+import { buildLayouts } from './packing/stacking';
+import baseline from './fixtures/blankWeightBaseline.json';
 import { cartonPlacements } from './packing/positions';
 import { boxesOutside, overlappingPairs } from './packing/testSupport';
 
@@ -302,5 +306,152 @@ describe('optimize', () => {
     );
     expect(r.truncated).toBe(true);
     expect(r.layouts.length).toBeGreaterThan(0);
+  });
+
+  describe('weight', () => {
+    const MIXED: Inputs = {
+      ...DEFAULT_INPUTS,
+      overhang: 2,
+      targetQuantity: 150,
+      boxesPerCarton: 6,
+      rotationMode: 'upright',
+    };
+    const weighed = (i: Inputs, w: Partial<WeightInputs>): Inputs => ({
+      ...i,
+      weights: { ...i.weights, ...w },
+    });
+
+    /** The most products of any layout of any carton, each trimmed to the maximum on its own. */
+    function bestTrimmedProducts(i: Inputs): number {
+      let best = 0;
+      for (const c of generateCartonCandidates(i)) {
+        for (const l of buildLayouts(c, i, new Map())) {
+          const t = trimToWeight(l, i);
+          if (t) best = Math.max(best, t.totalProducts);
+        }
+      }
+      return best;
+    }
+
+    it('gives the results recorded before weight existed when the weights are blank', () => {
+      // Recorded at 25f2d6d, before weights were part of the inputs.
+      const recorded = baseline as unknown as Record<string, OptimizeResult>;
+      expect(DEFAULT_INPUTS.weights).toEqual({
+        productBox: null,
+        maxPallet: null,
+        emptyCarton: 0,
+        pallet: 40,
+      });
+      expect(optimize(DEFAULT_INPUTS)).toEqual(recorded.default);
+      expect(optimize(CUBES)).toEqual(recorded.cubes);
+      expect(optimize(MIXED)).toEqual(recorded.overhangTargetSix);
+      // A maximum alone (box weight blank) is ignored too.
+      expect(optimize(weighed(DEFAULT_INPUTS, { maxPallet: 100 }))).toEqual(recorded.default);
+      // So is a box weight with no maximum.
+      expect(optimize(weighed(DEFAULT_INPUTS, { productBox: 3 })).layouts).toEqual(
+        recorded.default!.layouts,
+      );
+    });
+
+    it('never returns a layout over the maximum, and ranks the most products first', () => {
+      const i = weighed(DEFAULT_INPUTS, { productBox: 2, emptyCarton: 1, maxPallet: 450 });
+      const r = optimize(i);
+      expect(r.emptyReason).toBeNull();
+      expect(r.layouts.length).toBeGreaterThan(0);
+      for (const { layout } of r.layouts) {
+        expect(layoutWeight(layout, i)!.total).toBeLessThanOrEqual(450);
+        expect(layout.layers.length).toBeGreaterThan(0);
+      }
+      expect(r.layouts[0]!.layout.totalProducts).toBe(bestTrimmedProducts(i));
+      // Unlimited, the default winner holds 260 boxes; 450 lb cannot carry that.
+      expect(r.layouts[0]!.layout.totalProducts).toBeLessThan(260);
+      expect(r.layouts.some((x) => x.layout.weightTrim)).toBe(true);
+      expect(new Set(r.layouts.map((x) => x.layout.id)).size).toBe(r.layouts.length);
+    });
+
+    it('trims before keeping the best, so a carton with lighter layers is not lost', () => {
+      // Product 6 x 4 x 3 in at 5 lb, empty carton 1 lb, pallet 40 lb, maximum 1600 lb.
+      const i = weighed(
+        { ...DEFAULT_INPUTS, product: { length: 6, width: 4, height: 3 } },
+        { productBox: 5, emptyCarton: 1, maxPallet: 1600 },
+      );
+      // Without a limit the winner is a 30-box carton (2 x 5 x 3) in layers of 10 cartons:
+      // 1500 boxes. A layer weighs 10 x (1 + 30 x 5) = 1510 lb, so under 1600 lb it keeps one
+      // layer: 40 + 1510 = 1550 lb, 300 boxes, with 50 lb unused.
+      const free = optimize({ ...i, weights: DEFAULT_INPUTS.weights }).layouts[0]!.layout;
+      expect(free.carton.boxesPerCarton).toBe(30);
+      expect(free.totalProducts).toBe(1500);
+      expect(trimToWeight(free, i)!.totalProducts).toBe(300);
+      // An 8-box carton (2 x 4 x 1) lays 38 cartons in a layer: 304 boxes at
+      // 40 + 38 x (1 + 8 x 5) = 1598 lb. Its untrimmed total is far below the 30-box layouts',
+      // so it survives only if every layout is trimmed before the keep-best list counts it.
+      const r = optimize(i);
+      const winner = r.layouts[0]!.layout;
+      expect(winner.carton.boxesPerCarton).toBe(8);
+      expect(winner.totalProducts).toBe(304);
+      expect(winner.layers.map((l) => l.cartonCount)).toEqual([38]);
+      expect(layoutWeight(winner, i)!.total).toBe(1598);
+      expect(winner.totalProducts).toBe(bestTrimmedProducts(i));
+    });
+
+    it('reports OVER_WEIGHT when one layer is already over the maximum', () => {
+      // The lightest layer of any carton holds several boxes of 50 lb.
+      const r = optimize(weighed(DEFAULT_INPUTS, { productBox: 50, maxPallet: 100 }));
+      expect(r.layouts).toEqual([]);
+      expect(r.emptyReason).toBe('OVER_WEIGHT');
+      expect(r.candidatesEvaluated).toBeGreaterThan(0);
+    });
+
+    it('keeps the other empty reasons ahead of OVER_WEIGHT', () => {
+      const r = optimize(
+        weighed(
+          { ...DEFAULT_INPUTS, product: { length: 30, width: 8, height: 4 } },
+          {
+            productBox: 50,
+            maxPallet: 100,
+          },
+        ),
+      );
+      expect(r.emptyReason).toBe('NO_CARTON_FITS');
+    });
+
+    it('works with a target quantity', () => {
+      const limit = { productBox: 2, emptyCarton: 1, maxPallet: 300 };
+      // Unlimited, 150 boxes is well within the 260 of the winner.
+      const free = { ...DEFAULT_INPUTS, targetQuantity: 150 };
+      expect(computeAnalytics(optimize(free).layouts[0]!.layout, free).target.status).toBe(
+        'exceeded',
+      );
+      // Under 300 lb the winner is two layers of 6 ten-box cartons at 21 lb: 40 + 12 x 21 = 292 lb.
+      const over = weighed(free, limit);
+      const best = optimize(over).layouts[0]!.layout;
+      expect(best.totalProducts).toBe(120);
+      expect(best.weightTrim).toEqual({ layersRemoved: 1 });
+      expect(computeAnalytics(best, over).target).toMatchObject({
+        status: 'notAchievable',
+        maxPossible: 120,
+      });
+      const under = weighed({ ...DEFAULT_INPUTS, targetQuantity: 100 }, limit);
+      expect(computeAnalytics(optimize(under).layouts[0]!.layout, under).target).toMatchObject({
+        status: 'exceeded',
+        maxPossible: 120,
+        cartonsNeeded: 10,
+      });
+    });
+
+    it('works with an exact number of boxes per carton', () => {
+      const i = weighed(
+        { ...DEFAULT_INPUTS, boxesPerCarton: 6 },
+        { productBox: 2, emptyCarton: 1, maxPallet: 400 },
+      );
+      const r = optimize(i);
+      expect(r.emptyReason).toBeNull();
+      expect(r.layouts.length).toBeGreaterThan(0);
+      for (const { layout } of r.layouts) {
+        expect(layout.carton.boxesPerCarton).toBe(6);
+        expect(layoutWeight(layout, i)!.total).toBeLessThanOrEqual(400);
+      }
+      expect(r.layouts[0]!.layout.totalProducts).toBe(bestTrimmedProducts(i));
+    });
   });
 });

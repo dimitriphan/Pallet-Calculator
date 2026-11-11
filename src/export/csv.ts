@@ -10,8 +10,10 @@ import {
   fmtPct,
   formatLength,
   formatVolume,
+  formatWeight,
   unitLabel,
   volumeLabel,
+  weightLabel,
   withUnit,
 } from '../ui/format';
 import type { ExportPayload } from './exportData';
@@ -53,6 +55,8 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   const vol = (v: number) => formatVolume(v, unit);
   const L = (title: string) => withUnit(title, unitLabel(unit));
   const V = (title: string) => withUnit(title, volumeLabel(unit));
+  const wt = (v: number) => formatWeight(v, unit);
+  const W = (title: string) => withUnit(title, weightLabel(unit));
   const yesNo = (v: boolean) => (v ? 'Yes' : 'No');
   const rows: Row[] = [
     ['Exported at', p.exportedAt],
@@ -106,6 +110,23 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Utilization contribution', n(sel.score.utilizationContribution)],
     ['Space contribution', n(sel.score.spaceContribution)],
   ];
+  // Weight is reported only when the box weight was set; otherwise the file is as before.
+  const w = a.weight;
+  if (w) {
+    rows.push(
+      [W('Weight per product box'), i.weights.productBox === null ? '' : wt(i.weights.productBox)],
+      [W('Maximum pallet weight'), i.weights.maxPallet === null ? '' : wt(i.weights.maxPallet)],
+      [W('Empty carton weight'), wt(i.weights.emptyCarton)],
+      [W('Pallet weight'), wt(i.weights.pallet)],
+      [W('Total weight'), wt(w.total)],
+      [W('Weight per carton'), wt(w.perCarton)],
+      [W('Weight per layer'), w.perLayer.map(wt).join(' ')],
+      [L('Centre of mass height above floor'), len(w.centreOfMassHeight)],
+      ['Layers removed for weight', w.layersRemoved],
+      ['Room for more cartons by weight', w.roomForCartons],
+    );
+  }
+  const weighed = p.comparison.some((c) => c.weight !== undefined);
 
   const header = [
     '#',
@@ -114,6 +135,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     'Cartons',
     'Layers',
     'Utilization',
+    ...(weighed ? [W('Weight')] : []),
     V('Remaining volume'),
     'Score',
   ];
@@ -124,6 +146,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     c.cartons,
     c.layers,
     fmtPct(c.utilizationPct),
+    ...(weighed ? [c.weight === undefined ? '' : wt(c.weight)] : []),
     vol(c.remainingVolume),
     n(c.score),
   ]);

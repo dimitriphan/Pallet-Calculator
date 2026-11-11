@@ -12,10 +12,10 @@ describe('root dividers', () => {
     expect(dividersIn(inputsPanel())).toHaveLength(2);
   });
 
-  it('separates the five input groups in Full', async () => {
+  it('separates the six input groups in Full', async () => {
     await renderApp();
-    // Pallet | product | maximum carton | packing | product rotation.
-    expect(dividersIn(inputsPanel())).toHaveLength(4);
+    // Pallet | product | maximum carton | packing | weight | product rotation.
+    expect(dividersIn(inputsPanel())).toHaveLength(5);
   });
 
   it('separates the four analytics groups', async () => {

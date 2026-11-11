@@ -1,7 +1,7 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
 import { describeRun, stackRuns } from '../engine/analytics/stack';
-import { dimsText } from './format';
+import { dimsText, roomText, weightText, weightTrimText } from './format';
 import { useUnit } from './useUnit';
 import { Mascot } from './Mascot';
 import { StaleBadge } from './StaleBadge';
@@ -51,6 +51,7 @@ export function WhatToBuildCard() {
     const { ranked, analytics } = selected;
     const layout = ranked.layout;
     const p = analytics.pallet;
+    const w = analytics.weight;
     const carton: [string, string][] = [
       ['Outer size', dimsText(cartonDisplayDims(layout, 'outer'), unit)],
       ['Inner size', dimsText(cartonDisplayDims(layout, 'inner'), unit)],
@@ -108,6 +109,35 @@ export function WhatToBuildCard() {
           <p className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
             {`${dimsText({ length: p.loadLength, width: p.loadWidth, height: p.totalLoadHeight }, unit)} (including pallet)`}
           </p>
+          {w && (
+            <>
+              <dl className="bracket divide-y divide-gray-100 dark:divide-harbor-foam/40">
+                {(
+                  [
+                    ['Total weight', weightText(w.total, unit)],
+                    ['Weight per carton', weightText(w.perCarton, unit)],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label} className="px-3 py-1.5">
+                    <dt className="text-xs text-gray-600 dark:text-harbor-mist">{label}</dt>
+                    <dd className="text-base tabular-nums text-gray-900 dark:text-harbor-foam">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {w.layersRemoved > 0 && (
+                <p className="border border-amber-200 bg-amber-50 px-2 py-1.5 text-sm text-amber-900 dark:border-b-0 dark:border-r-0 dark:border-harbor-sand dark:bg-harbor-panel dark:text-harbor-sand">
+                  {weightTrimText(w.layersRemoved)}
+                </p>
+              )}
+              {w.roomForCartons >= 1 && (
+                <p className="text-sm tabular-nums text-gray-700 dark:text-harbor-mist">
+                  {roomText(w.roomForCartons)}
+                </p>
+              )}
+            </>
+          )}
         </Part>
       </>
     );

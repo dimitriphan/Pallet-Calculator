@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import { draftFromInputs } from '../domain/schemas';
-import type { Inputs } from '../domain/types';
+import type { Inputs, PresetFields } from '../domain/types';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { FakeStorage } from '../persistence/testStorage';
+import { presetFieldsOf } from '../ui/presetFields';
 import { createInputsStore, useInputsStore } from './inputsStore';
 
 describe('inputsStore', () => {
@@ -124,7 +125,7 @@ describe('inputsStore', () => {
   it('applyPreset writes only the preset-covered fields and keeps the product text', () => {
     const store = createInputsStore(new FakeStorage());
     store.getState().setField('product.length', 'abc');
-    const fields: Omit<Inputs, 'product'> = {
+    const fields: PresetFields = {
       pallet: { length: 48, width: 40, height: 60 },
       maxCarton: DEFAULT_INPUTS.maxCarton,
       targetQuantity: 100,
@@ -135,6 +136,7 @@ describe('inputsStore', () => {
       rotationMode: DEFAULT_INPUTS.rotationMode,
       customOrientations: DEFAULT_INPUTS.customOrientations,
       keepCartonsUpright: DEFAULT_INPUTS.keepCartonsUpright,
+      weights: { maxPallet: null, emptyCarton: 0, pallet: 40 },
     };
     store.getState().applyPreset(fields);
     const s = store.getState();
@@ -147,7 +149,41 @@ describe('inputsStore', () => {
     store.getState().setField('product.length', '12');
     expect(store.getState().parsed).toEqual({
       ok: true,
-      inputs: { ...DEFAULT_INPUTS, ...fields },
+      inputs: { ...DEFAULT_INPUTS, ...fields, weights: { ...fields.weights, productBox: null } },
+    });
+  });
+
+  it('applyPreset writes the preset weights and keeps the product box weight as typed', () => {
+    const store = createInputsStore(new FakeStorage());
+    store.getState().setField('weights.productBox', '2.50');
+    store.getState().setUnit('cm');
+    store.getState().setField('weights.emptyCarton', '1');
+    store.getState().applyPreset({
+      ...presetFieldsOf(DEFAULT_INPUTS),
+      weights: { maxPallet: 2000, emptyCarton: 0.5, pallet: 45 },
+    });
+    const s = store.getState();
+    // Box weight: typed in lb, shown in kg, still exactly 2.5 lb.
+    expect(s.draft.weights.productBox).toBe('1.1');
+    // Preset weights are written in pounds and shown in kg.
+    expect(s.draft.weights).toMatchObject({
+      maxPallet: '907.2',
+      emptyCarton: '0.2',
+      pallet: '20.4',
+    });
+    expect(s.parsed).toEqual({
+      ok: true,
+      inputs: {
+        ...DEFAULT_INPUTS,
+        weights: { productBox: 2.5, maxPallet: 2000, emptyCarton: 0.5, pallet: 45 },
+      },
+    });
+    store.getState().setUnit('in');
+    expect(store.getState().draft.weights).toEqual({
+      productBox: '2.50',
+      maxPallet: '2000',
+      emptyCarton: '0.5',
+      pallet: '45',
     });
   });
 });
@@ -248,7 +284,7 @@ describe('inputsStore units', () => {
     const store = fresh();
     store.getState().setUnit('cm');
     store.getState().setField('product.length', '30');
-    const fields: Omit<Inputs, 'product'> = {
+    const fields: PresetFields = {
       ...DEFAULT_INPUTS,
       pallet: { length: 48, width: 40, height: 60.125 },
     };
@@ -399,6 +435,95 @@ describe('inputsStore units', () => {
       store.getState().replaceInputs(FINE);
       store.getState().setField('wallThickness', store.getState().draft.wallThickness);
       expect(store.getState().parsed).toEqual({ ok: true, inputs: FINE });
+    });
+  });
+});
+
+describe('inputsStore weights', () => {
+  const fresh = (unit?: 'in' | 'cm' | 'mm') => createInputsStore(new FakeStorage(), { unit });
+  const withoutWeights = (draft: Record<string, unknown>) => {
+    const copy = { ...draft };
+    delete copy.weights;
+    return copy;
+  };
+
+  it('starts with a blank box weight and maximum, a 0 lb carton and a 40 lb pallet', () => {
+    expect(fresh().getState().draft.weights).toEqual({
+      productBox: '',
+      maxPallet: '',
+      emptyCarton: '0',
+      pallet: '40',
+    });
+    // In cm or mm the weights are in kg: 40 lb shows as 18.1.
+    expect(fresh('cm').getState().draft.weights).toEqual({
+      productBox: '',
+      maxPallet: '',
+      emptyCarton: '0',
+      pallet: '18.1',
+    });
+    expect(fresh('mm').getState().parsed).toEqual({ ok: true, inputs: DEFAULT_INPUTS });
+  });
+
+  it('reads typed kg as pounds and never changes the parse on a unit switch', () => {
+    const store = fresh('cm');
+    store.getState().setField('weights.productBox', '2');
+    store.getState().setField('weights.maxPallet', '1000');
+    const parsed = store.getState().parsed;
+    expect(parsed.ok && parsed.inputs.weights.productBox).toBeCloseTo(4.409245, 5);
+    expect(parsed.ok && parsed.inputs.weights.maxPallet).toBeCloseTo(2204.6226, 4);
+    store.getState().setUnit('in');
+    expect(store.getState().draft.weights).toEqual({
+      productBox: '4.4',
+      maxPallet: '2204.6',
+      emptyCarton: '0',
+      pallet: '40',
+    });
+    expect(store.getState().parsed).toBe(parsed);
+    store.getState().setUnit('mm');
+    expect(store.getState().draft.weights.productBox).toBe('2');
+    expect(store.getState().parsed).toBe(parsed);
+  });
+
+  it('keeps a blank box weight blank across unit switches', () => {
+    const store = fresh();
+    store.getState().setUnit('cm');
+    store.getState().setUnit('in');
+    expect(store.getState().draft.weights.productBox).toBe('');
+    expect(store.getState().draft.weights.maxPallet).toBe('');
+  });
+
+  it('loads a draft remembered before weights with the default weights', () => {
+    const storage = new FakeStorage();
+    const old = withoutWeights({ ...draftFromInputs(DEFAULT_INPUTS), leeway: '2' });
+    storage.setItem(STORAGE_KEYS.inputs, JSON.stringify(old));
+    const s = createInputsStore(storage).getState();
+    expect(s.draft.weights).toEqual(draftFromInputs(DEFAULT_INPUTS).weights);
+    expect(s.parsed).toEqual({ ok: true, inputs: { ...DEFAULT_INPUTS, leeway: 2 } });
+  });
+
+  it('loads a cm draft remembered before weights with the default weights in kg', () => {
+    const storage = new FakeStorage();
+    const store = createInputsStore(storage, { unit: 'cm' });
+    store.getState().setField('leeway', '2.54');
+    const saved = JSON.parse(storage.getItem(STORAGE_KEYS.inputs)!) as Record<string, unknown>;
+    const origins = saved.origins as Record<string, unknown>;
+    for (const k of Object.keys(origins)) if (k.startsWith('weights.')) delete origins[k];
+    storage.setItem(STORAGE_KEYS.inputs, JSON.stringify(withoutWeights(saved)));
+    const s = createInputsStore(storage).getState();
+    expect(s.unit).toBe('cm');
+    expect(s.draft.weights.pallet).toBe('18.1');
+    // Exactly 40 lb, not 18.1 kg read back.
+    expect(s.parsed).toEqual({ ok: true, inputs: { ...DEFAULT_INPUTS, leeway: 1 } });
+  });
+
+  it('shows the weight field messages', () => {
+    const store = fresh();
+    store.getState().setField('weights.maxPallet', '1500');
+    expect(store.getState().parsed).toEqual({
+      ok: false,
+      errors: {
+        'weights.productBox': 'Enter the weight of one product box to use a maximum pallet weight.',
+      },
     });
   });
 });

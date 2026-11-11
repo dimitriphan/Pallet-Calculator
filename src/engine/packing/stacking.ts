@@ -143,6 +143,22 @@ export function layoutSignature(l: Layout): string {
   return `${cartonKey(l.carton)}|${layers}`;
 }
 
+/**
+ * The layout with only `layers` (a prefix of its own, bottom first): totals and id recomputed,
+ * every other field kept. Used to remove whole layers from the top.
+ */
+export function withLayers(l: Layout, layers: Layer[]): Layout {
+  const totalCartons = layers.reduce((s, layer) => s + layer.cartonCount, 0);
+  const next: Layout = {
+    ...l,
+    layers,
+    totalCartons,
+    totalProducts: totalCartons * l.carton.boxesPerCarton,
+  };
+  next.id = layoutSignature(next);
+  return next;
+}
+
 /** Orders layers (most cartons, then tallest, at the bottom), assigns z and totals. */
 function makeLayout(c: CartonCandidate, patterns: LayerPattern[]): Layout {
   const sorted = [...patterns].sort((p, q) => q.cartonCount - p.cartonCount || q.height - p.height);

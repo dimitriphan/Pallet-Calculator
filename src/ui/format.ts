@@ -91,6 +91,16 @@ export function weightText(lb: number, unit: Unit): string {
   return `${formatWeight(lb, unit)} ${weightLabel(unit)}`;
 }
 
+/** "Limited by weight: 2 layers removed". */
+export function weightTrimText(layersRemoved: number): string {
+  return `Limited by weight: ${fmtCount(layersRemoved)} ${layersRemoved === 1 ? 'layer' : 'layers'} removed`;
+}
+
+/** "Room for 6 more cartons by weight". */
+export function roomText(cartons: number): string {
+  return `Room for ${fmtCount(cartons)} more ${cartons === 1 ? 'carton' : 'cartons'} by weight`;
+}
+
 /** A column or row title with its unit: "Carton (in)". */
 export function withUnit(title: string, label: string): string {
   return `${title} (${label})`;

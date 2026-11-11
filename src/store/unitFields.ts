@@ -44,6 +44,10 @@ export const NUMERIC_FIELDS = {
   leeway: 'length',
   wallThickness: 'length',
   overhang: 'length',
+  'weights.productBox': 'weight',
+  'weights.maxPallet': 'weight',
+  'weights.emptyCarton': 'weight',
+  'weights.pallet': 'weight',
 } as const satisfies Record<string, FieldKind>;
 
 export type NumericPath = keyof typeof NUMERIC_FIELDS;

@@ -39,7 +39,11 @@ function sameInputs(a: Inputs, b: Inputs): boolean {
     a.rotationMode === b.rotationMode &&
     a.keepCartonsUpright === b.keepCartonsUpright &&
     a.customOrientations.length === b.customOrientations.length &&
-    a.customOrientations.every((c, i) => c === b.customOrientations[i])
+    a.customOrientations.every((c, i) => c === b.customOrientations[i]) &&
+    a.weights.productBox === b.weights.productBox &&
+    a.weights.maxPallet === b.weights.maxPallet &&
+    a.weights.emptyCarton === b.weights.emptyCarton &&
+    a.weights.pallet === b.weights.pallet
   );
 }
 

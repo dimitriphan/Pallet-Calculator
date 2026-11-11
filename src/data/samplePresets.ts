@@ -16,6 +16,11 @@ function fromDefaults(id: string, name: string, pallet: Preset['pallet']): Prese
     rotationMode: d.rotationMode,
     customOrientations: [...d.customOrientations],
     keepCartonsUpright: d.keepCartonsUpright,
+    weights: {
+      maxPallet: d.weights.maxPallet,
+      emptyCarton: d.weights.emptyCarton,
+      pallet: d.weights.pallet,
+    },
     advanced: {},
   };
 }

@@ -9,13 +9,19 @@ import {
   fmtPct,
   formatDims,
   formatVolume,
+  formatWeight,
   unitLabel,
   volumeLabel,
+  weightLabel,
+  weightTrimText,
   withUnit,
 } from './format';
 import { useUnit } from './useUnit';
 import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
+
+/** Limited-by-weight note under a layout's weight. */
+const WEIGHT_BADGE = 'bg-amber-100 text-amber-900 dark:bg-harbor-sand dark:text-harbor-deep';
 
 const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; className: string }> = {
   met: {
@@ -40,6 +46,8 @@ export function LayoutComparisonTable() {
   const selectedIndex = useResults((s) => s.selectedIndex);
   const select = useResults((s) => s.select);
   const unit = useUnit();
+  // Weight is shown only when the result was computed with a box weight.
+  const weighed = !!inputs && inputs.weights.productBox !== null;
 
   const rows = useMemo(
     () =>
@@ -89,6 +97,11 @@ export function LayoutComparisonTable() {
                 <th scope="col" className={`${th} text-right`}>
                   Utilization
                 </th>
+                {weighed && (
+                  <th scope="col" className={`${th} text-right`}>
+                    {withUnit('Weight', weightLabel(unit))}
+                  </th>
+                )}
                 <th scope="col" className={`${th} text-right`}>
                   {withUnit('Remaining volume', volumeLabel(unit))}
                 </th>
@@ -137,6 +150,22 @@ export function LayoutComparisonTable() {
                     <td className={`${td} text-right`}>
                       {fmtPct(analytics.totals.utilizationPct)}
                     </td>
+                    {weighed && (
+                      <td className={`${td} text-right`}>
+                        <span className="flex flex-col items-end gap-0.5">
+                          <span>
+                            {analytics.weight ? formatWeight(analytics.weight.total, unit) : ''}
+                          </span>
+                          {analytics.weight && analytics.weight.layersRemoved > 0 && (
+                            <span
+                              className={`whitespace-nowrap px-1.5 text-[11px] leading-4 ${WEIGHT_BADGE}`}
+                            >
+                              {weightTrimText(analytics.weight.layersRemoved)}
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                    )}
                     <td className={`${td} text-right`}>
                       {formatVolume(analytics.totals.remainingVolume, unit)}
                     </td>

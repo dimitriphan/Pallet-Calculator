@@ -10,6 +10,14 @@ export type ProductAxis = 'L' | 'W' | 'H';
 export type OrientationCode = 'LWH' | 'LHW' | 'WLH' | 'WHL' | 'HLW' | 'HWL';
 export type RotationMode = 'full' | 'upright' | 'noSide' | 'custom';
 
+/** Weights in pounds. Blank box weight means weight is ignored everywhere. */
+export interface WeightInputs {
+  productBox: number | null; // lb; null = weight ignored
+  maxPallet: number | null; // lb, whole load including pallet
+  emptyCarton: number; // lb, default 0
+  pallet: number; // lb, default 40
+}
+
 export interface Inputs {
   pallet: Dims;
   product: Dims;
@@ -22,6 +30,7 @@ export interface Inputs {
   rotationMode: RotationMode;
   customOrientations: OrientationCode[]; // used only when rotationMode === 'custom'
   keepCartonsUpright: boolean;
+  weights: WeightInputs;
 }
 
 /** Same shape as Inputs but every numeric field is the raw text the user typed. */
@@ -37,6 +46,7 @@ export interface InputsDraft {
   rotationMode: RotationMode;
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;
+  weights: Record<keyof WeightInputs, string>; // '' = blank
 }
 
 /**
@@ -84,6 +94,8 @@ export interface Layout {
   layers: Layer[];
   totalCartons: number;
   totalProducts: number;
+  /** Set when whole layers were removed from the top to keep under the maximum pallet weight. */
+  weightTrim?: { layersRemoved: number };
 }
 
 export interface ScoreBreakdown {
@@ -103,7 +115,8 @@ export interface RankedLayout {
   explanation: string;
 }
 
-export type EmptyReason = 'NO_CARTON_FITS' | 'CARTON_EXCEEDS_PALLET' | 'NO_CARTON_WITH_COUNT';
+export type EmptyReason =
+  'NO_CARTON_FITS' | 'CARTON_EXCEEDS_PALLET' | 'NO_CARTON_WITH_COUNT' | 'OVER_WEIGHT';
 
 export interface OptimizeResult {
   layouts: RankedLayout[];
@@ -127,8 +140,13 @@ export interface Preset {
   rotationMode: RotationMode;
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;
+  /** The product box weight stays with the product, so a preset never holds it. */
+  weights: Omit<WeightInputs, 'productBox'>;
   advanced: Record<string, unknown>; // reserved for the later Advanced Optimization release
 }
+
+/** What a preset holds and applies: every input but the product and its box weight. */
+export type PresetFields = Omit<Preset, 'id' | 'name' | 'advanced'>;
 
 export interface Scenario {
   id: string;

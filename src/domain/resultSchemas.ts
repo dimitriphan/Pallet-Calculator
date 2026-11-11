@@ -39,6 +39,8 @@ const layout = z.object({
   layers: z.array(layer),
   totalCartons: num,
   totalProducts: num,
+  // Added in Round 4: only on layouts trimmed to the maximum pallet weight.
+  weightTrim: z.object({ layersRemoved: num }).optional(),
 });
 
 const score = z.object({
@@ -62,7 +64,7 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   layouts: z.array(rankedLayout),
   candidatesEvaluated: num,
   emptyReason: z
-    .enum(['NO_CARTON_FITS', 'CARTON_EXCEEDS_PALLET', 'NO_CARTON_WITH_COUNT'])
+    .enum(['NO_CARTON_FITS', 'CARTON_EXCEEDS_PALLET', 'NO_CARTON_WITH_COUNT', 'OVER_WEIGHT'])
     .nullable(),
   truncated: z.boolean(),
   // Added in Round 2: optional, so results saved before it still load.
@@ -126,4 +128,17 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
     cartonsPerPallet: num,
     totalBoxes: num,
   }),
+  // Added in Round 4: analytics saved before weights read as "weight ignored".
+  weight: z
+    .object({
+      total: num,
+      perCarton: num,
+      perLayer: z.array(num),
+      centreOfMassHeight: num,
+      roomForCartons: num,
+      layersRemoved: num,
+      max: num.nullable(),
+    })
+    .nullable()
+    .default(null),
 });

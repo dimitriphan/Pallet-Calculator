@@ -59,11 +59,16 @@ describe('presets store', () => {
     const p = store.getState().create('Defaults', DEFAULT_INPUTS);
     expect(inputsMatchPreset(DEFAULT_INPUTS, p)).toBe(true);
     const variants = singleFieldVariants(DEFAULT_INPUTS);
-    const covered = variants.filter((v) => !v.path.startsWith('product.'));
+    // The product, and with it the product box weight, is not part of a preset.
+    const ofProduct = (path: string) =>
+      path.startsWith('product.') || path === 'weights.productBox';
+    const covered = variants.filter((v) => !ofProduct(v.path));
     expect(covered.map((v) => v.path)).toContain('boxesPerCarton');
+    expect(covered.map((v) => v.path)).toEqual(
+      expect.arrayContaining(['weights.maxPallet', 'weights.emptyCarton', 'weights.pallet']),
+    );
     for (const { path, inputs } of covered) expect(inputsMatchPreset(inputs, p), path).toBe(false);
-    // The product is not part of a preset.
-    for (const { path, inputs } of variants.filter((v) => v.path.startsWith('product.')))
+    for (const { path, inputs } of variants.filter((v) => ofProduct(v.path)))
       expect(inputsMatchPreset(inputs, p), path).toBe(true);
   });
 

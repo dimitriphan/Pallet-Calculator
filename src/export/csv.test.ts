@@ -151,3 +151,65 @@ describe('buildCsv in another unit', () => {
     expect(cm[blank + 2]).toMatch(/^1,50\.8 × 25\.4 × 50\.8,/);
   });
 });
+
+describe('buildCsv with weights', () => {
+  const W: Inputs = {
+    ...DEFAULT_INPUTS,
+    weights: { productBox: 2, emptyCarton: 1, maxPallet: 290, pallet: 40 },
+  };
+  const p = buildExportPayload(W, optimize(W), 0, NOW);
+  const out = buildCsv(p).split('\r\n');
+
+  it('writes nothing about weight while the box weight is blank', () => {
+    expect(csv).not.toMatch(/weight/i);
+    expect(
+      buildCsv(buildExportPayload(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0, NOW)),
+    ).not.toMatch(/weight/i);
+  });
+
+  it('adds the weight inputs and results after the score rows', () => {
+    // The winner: 108 boxes in 13 lb cartons, 274 lb, two layers removed, room for one more.
+    const end = out.indexOf('');
+    const rows = out.slice(out.findIndex((l) => l.startsWith('Space contribution,')) + 1, end);
+    expect(rows.map((l) => l.split(',')[0])).toEqual([
+      'Weight per product box (lb)',
+      'Maximum pallet weight (lb)',
+      'Empty carton weight (lb)',
+      'Pallet weight (lb)',
+      'Total weight (lb)',
+      'Weight per carton (lb)',
+      'Weight per layer (lb)',
+      'Centre of mass height above floor (in)',
+      'Layers removed for weight',
+      'Room for more cartons by weight',
+    ]);
+    expect(out).toContain('Weight per product box (lb),2.0');
+    expect(out).toContain('Maximum pallet weight (lb),290.0');
+    expect(out).toContain('Total weight (lb),274.0');
+    expect(out).toContain('Weight per carton (lb),13.0');
+    expect(out).toContain('Layers removed for weight,2');
+    expect(out).toContain('Room for more cartons by weight,1');
+    expect(out.find((l) => l.startsWith('Weight per layer (lb),'))).toMatch(
+      /^Weight per layer \(lb\),\d+\.\d( \d+\.\d)*$/,
+    );
+  });
+
+  it('adds a weight column to the comparison table', () => {
+    const blank = out.indexOf('');
+    expect(out[blank + 1]).toBe(
+      '#,Carton (in),Products,Cartons,Layers,Utilization,Weight (lb),Remaining volume (in³),Score',
+    );
+    expect(out[blank + 2]?.split(',')[6]).toBe('274.0');
+  });
+
+  it('writes kg with cm and leaves a blank maximum empty', () => {
+    const open = { ...W, weights: { ...W.weights, maxPallet: null } };
+    const cm = buildCsv(buildExportPayload(open, optimize(open), 0, NOW), 'cm').split('\r\n');
+    expect(cm).toContain('Weight per product box (kg),0.9');
+    expect(cm).toContain('Maximum pallet weight (kg),');
+    expect(cm).toContain('Pallet weight (kg),18.1');
+    expect(cm).toContain('Layers removed for weight,0');
+    expect(cm).toContain('Room for more cartons by weight,0');
+    expect(cm.some((l) => /^Centre of mass height above floor \(cm\),\d+\.\d$/.test(l))).toBe(true);
+  });
+});

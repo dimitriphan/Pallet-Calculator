@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import type { Preset } from '../domain/types';
 import type { InputsState } from '../store/inputsStore';
 import { inputsMatchPreset } from '../store/presetsStore';
-import { defaultDraft, parseInUnit } from '../store/unitFields';
+import { defaultDraft, originText, parseInUnit, writtenOrigin } from '../store/unitFields';
 import { BUTTON, ModalDialog } from './ModalDialog';
 import { NamePrompt } from './NamePrompt';
 import { PresetDialog } from './PresetDialog';
@@ -11,9 +11,13 @@ import { useInputs, usePrefs, usePresets, useStores } from './StoreContext';
 
 const NO_PRESET = '';
 
+/** A valid stand-in for the product box weight, which a preset never covers. */
+const PLACEHOLDER_BOX_WEIGHT = writtenOrigin(1);
+
 /**
- * Whether the draft's preset-covered fields (everything but the product) parse and equal the
- * preset's. The product is swapped for the default so a product being edited does not matter.
+ * Whether the draft's preset-covered fields (everything but the product and its box weight)
+ * parse and equal the preset's. The product and box weight are swapped for valid stand-ins so
+ * a product being edited, or a blank box weight under a preset's maximum, does not matter.
  */
 function coveredFieldsMatch(
   { draft, origins, unit }: Pick<InputsState, 'draft' | 'origins' | 'unit'>,
@@ -21,12 +25,20 @@ function coveredFieldsMatch(
 ): boolean {
   const placeholder = defaultDraft(unit);
   const parsed = parseInUnit(
-    { ...draft, product: placeholder.draft.product },
+    {
+      ...draft,
+      product: placeholder.draft.product,
+      weights: {
+        ...draft.weights,
+        productBox: originText('weight', PLACEHOLDER_BOX_WEIGHT, unit),
+      },
+    },
     {
       ...origins,
       'product.length': placeholder.origins['product.length'],
       'product.width': placeholder.origins['product.width'],
       'product.height': placeholder.origins['product.height'],
+      'weights.productBox': PLACEHOLDER_BOX_WEIGHT,
     },
     unit,
   );

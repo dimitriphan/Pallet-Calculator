@@ -13,7 +13,7 @@ import {
 import { describeLayerList, stackPatterns } from '../engine/analytics/stack';
 import { cartonPlacements } from '../engine/packing/positions';
 import type { Unit } from '../engine/units/units';
-import { dimsText, fmtCount, lengthText, pairText } from '../ui/format';
+import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
 import { settingsSummary } from '../ui/settingsSummary';
 
 export interface SheetRow {
@@ -66,6 +66,8 @@ export interface BuildSheet {
     cartons: number;
     height: string;
     topHeight: string;
+    /** The layer's weight; only when the box weight was set. */
+    weight?: string;
   }[];
   footer: string;
   layoutLabel: string;
@@ -117,6 +119,29 @@ export function buildSheetFilename(now: Date): string {
   return `pallet-build-sheet-${date}-${time}.pdf`;
 }
 
+/** Total and per-carton weight, then the trim and the room left when there is a maximum. */
+function weightRows(
+  w: NonNullable<ReturnType<typeof computeAnalytics>['weight']>,
+  weightOf: (lb: number) => string,
+): SheetRow[] {
+  const rows: SheetRow[] = [
+    {
+      label: 'Total weight',
+      value:
+        w.max === null ? weightOf(w.total) : `${weightOf(w.total)} (maximum ${weightOf(w.max)})`,
+    },
+    { label: 'Weight per carton', value: weightOf(w.perCarton) },
+  ];
+  if (w.layersRemoved > 0)
+    rows.push({
+      label: 'Limited by weight',
+      value: `${fmtCount(w.layersRemoved)} ${w.layersRemoved === 1 ? 'layer' : 'layers'} removed`,
+    });
+  if (w.roomForCartons >= 1)
+    rows.push({ label: 'Room by weight', value: roomText(w.roomForCartons) });
+  return rows;
+}
+
 export function buildSheetContent(a: {
   inputs: Inputs;
   result: OptimizeResult;
@@ -136,7 +161,8 @@ export function buildSheetContent(a: {
   const layout = ranked.layout;
   const best = result.layouts[0];
   const analytics = computeAnalytics(layout, inputs);
-  const { summary, pallet } = analytics;
+  const { summary, pallet, weight } = analytics;
+  const weightOf = (lb: number) => weightText(lb, unit);
 
   const trimmed = a.jobName.trim().slice(0, MAX_JOB_NAME);
   const placements = cartonPlacements(layout, inputs);
@@ -210,6 +236,7 @@ export function buildSheetContent(a: {
       cartons: layer.cartonCount,
       height: length(layer.height),
       topHeight: length(top),
+      ...(weight ? { weight: weightOf(weight.perLayer[i] as number) } : {}),
     };
   });
 
@@ -231,6 +258,7 @@ export function buildSheetContent(a: {
       label: 'Finished load',
       value: `${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} including pallet`,
     },
+    ...(weight ? weightRows(weight, weightOf) : []),
   ];
 
   const palletSize = sizeText(palletRect.dx, palletRect.dy);

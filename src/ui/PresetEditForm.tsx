@@ -16,11 +16,20 @@ import { BUTTON, PRIMARY_BUTTON } from './ModalDialog';
 import { NumberField } from './NumberField';
 import { presetFieldsOf } from './presetFields';
 import { RotationFields } from './RotationControl';
+import { PRESET_WEIGHTS, WeightFieldset } from './WeightFields';
 
 const DIM_LABELS = { length: 'Length', width: 'Width', height: 'Height' };
 const MAX_LABELS = { length: 'Max length', width: 'Max width', height: 'Max height' };
 const PREFIX = 'preset-edit';
 const NO_ERRORS: Record<string, string> = {};
+/**
+ * The inputs a preset is edited against: the default product and a stand-in box weight, so a
+ * preset's maximum validates without one (presets never store the box weight).
+ */
+const FORM_BASE = {
+  ...DEFAULT_INPUTS,
+  weights: { ...DEFAULT_INPUTS.weights, productBox: 1 },
+};
 
 interface PresetEditFormProps {
   preset: Preset;
@@ -31,13 +40,13 @@ interface PresetEditFormProps {
 /**
  * Edits a copy of a preset's fields, shown in the display unit. Validation reuses the inputs
  * panel's parser and field rule (an untouched field saves its exact value), with the product
- * left at a valid placeholder because presets do not store one.
+ * and its box weight left at valid placeholders because presets do not store them.
  */
 export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps) {
   const unit = useUnit();
   const [name, setName] = useState(preset.name);
   const [{ draft, origins }, setForm] = useState(() =>
-    draftInUnit(presetToInputs(preset, DEFAULT_INPUTS), unit),
+    draftInUnit(presetToInputs(preset, FORM_BASE), unit),
   );
   const setDraft = (update: (d: typeof draft) => typeof draft) =>
     setForm((f) => ({ ...f, draft: update(f.draft) }));
@@ -166,6 +175,13 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
           onChange={(v) => setField('overhang', v)}
         />
       </fieldset>
+      <WeightFieldset
+        fields={PRESET_WEIGHTS}
+        idPrefix={PREFIX}
+        values={draft.weights}
+        errors={errors}
+        onChange={setField}
+      />
       <RotationFields
         idPrefix={`${PREFIX}-`}
         mode={draft.rotationMode}

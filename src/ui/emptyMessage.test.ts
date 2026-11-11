@@ -24,6 +24,16 @@ describe('emptyMessage', () => {
     );
   });
 
+  it('explains OVER_WEIGHT, from the optimizer too', () => {
+    const msg = 'Nothing fits: one layer is already over the maximum pallet weight.';
+    expect(emptyMessage(empty({ emptyReason: 'OVER_WEIGHT' }), DEFAULT_INPUTS)).toBe(msg);
+    const heavy: Inputs = {
+      ...DEFAULT_INPUTS,
+      weights: { ...DEFAULT_INPUTS.weights, productBox: 50, maxPallet: 100 },
+    };
+    expect(emptyMessage(optimize(heavy), heavy)).toBe(msg);
+  });
+
   it('explains CARTON_EXCEEDS_PALLET', () => {
     expect(emptyMessage(empty({ emptyReason: 'CARTON_EXCEEDS_PALLET' }), DEFAULT_INPUTS)).toBe(
       'No layout fits: the smallest possible carton is larger than the usable pallet space.',

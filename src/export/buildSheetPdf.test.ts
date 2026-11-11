@@ -211,3 +211,31 @@ describe('renderBuildSheetPdf', () => {
     expect(text).not.toContain(`Page ${totalPages + 1} of`);
   });
 });
+
+describe('renderBuildSheetPdf with weights', () => {
+  it('adds a layer weight column only when the sheet has weights', async () => {
+    const inputs = {
+      ...DEFAULT_INPUTS,
+      weights: { productBox: 2, emptyCarton: 1, maxPallet: 290, pallet: 40 },
+    };
+    const sheet = buildSheetContent({
+      inputs,
+      result: optimize(inputs),
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    const text = await pdfText(await renderBuildSheetPdf(sheet, null));
+    for (const s of [
+      'Layer weight',
+      'Total weight',
+      '274.0 lb \\(maximum 290.0 lb\\)',
+      'Limited by weight',
+    ])
+      expect(text).toContain(s);
+    const plain = await pdfText(await renderBuildSheetPdf(defaultSheet(), null));
+    expect(plain).not.toContain('Layer weight');
+    expect(plain).not.toMatch(/weight/i);
+  });
+});
