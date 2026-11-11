@@ -10,7 +10,7 @@ import {
   computeAnalytics,
   describeBoxCounts,
 } from '../engine/analytics/analytics';
-import { describeLayerList, stackPatterns } from '../engine/analytics/stack';
+import { describeLayerList, PINWHEEL_NOTE, stackPatterns } from '../engine/analytics/stack';
 import { cartonPlacements } from '../engine/packing/positions';
 import type { Unit } from '../engine/units/units';
 import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
@@ -34,6 +34,8 @@ export interface SheetPattern {
   letter: string;
   heading: string;
   facts: SheetRow[];
+  /** How to build the layer; only on a pinwheel pattern. */
+  note?: string;
   drawing: {
     footprint: { x: number; y: number };
     pallet: SheetRect;
@@ -221,6 +223,7 @@ export function buildSheetContent(a: {
         },
       ],
       drawing: { footprint: { ...footprint }, pallet: { ...palletRect }, cartons, blocks },
+      ...(p.kind === 'pinwheel' ? { note: PINWHEEL_NOTE } : {}),
     };
   });
 

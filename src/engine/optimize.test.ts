@@ -12,7 +12,8 @@ import { layoutWeight, trimToWeight } from './analytics/weight';
 import { buildLayouts } from './packing/stacking';
 import baseline from './fixtures/blankWeightBaseline.json';
 import { cartonPlacements } from './packing/positions';
-import { boxesOutside, overlappingPairs } from './packing/testSupport';
+import { boxesOutside, overlappingPairs, PINWHEEL_INPUTS } from './packing/testSupport';
+import { assertNoOverlapWithin } from './packing/overlap.testSupport';
 
 /** Case I: 10-inch cube, no leeway or walls, max carton 20 x 20 x 10, pallet 40 x 40 x 25. */
 const CUBES: Inputs = {
@@ -528,6 +529,89 @@ describe('optimize', () => {
         expect(layoutWeight(layout, i)!.total).toBeLessThanOrEqual(400);
       }
       expect(r.layouts[0]!.layout.totalProducts).toBe(bestTrimmedProducts(i));
+    });
+  });
+
+  describe('pinwheel layers', () => {
+    const hasPinwheel = (l: { layers: { kind?: string }[] }) =>
+      l.layers.some((layer) => layer.kind === 'pinwheel');
+
+    /** The verifier over every layer of every returned layout, and the 3D placements. */
+    function expectValidResult(i: Inputs, r: OptimizeResult): void {
+      const { x, y } = usableFootprint(i);
+      for (const { layout } of r.layouts) {
+        for (const layer of layout.layers) {
+          const [fa, fb] = footprintAxes(layer.vertical);
+          assertNoOverlapWithin(
+            layer.blocks,
+            layout.carton.outer[fa],
+            layout.carton.outer[fb],
+            x,
+            y,
+          );
+        }
+        const placed = cartonPlacements(layout, i);
+        expect(boxesOutside(placed, { x, y, z: usableHeight(i) })).toBe(0);
+        expect(overlappingPairs(placed)).toBe(0);
+      }
+    }
+
+    it('puts three pinwheel layers first in the pinned case: 30 boxes, where straight cuts gave 27', () => {
+      const r = optimize(PINWHEEL_INPUTS);
+      const winner = r.layouts[0]!.layout;
+      expect(winner.totalProducts).toBe(30);
+      expect(winner.layers.map((l) => [l.vertical, l.cartonCount, l.kind])).toEqual([
+        ['H', 10, 'pinwheel'],
+        ['H', 10, 'pinwheel'],
+        ['H', 10, 'pinwheel'],
+      ]);
+      expect(r.layouts[1]!.layout.totalProducts).toBe(27);
+      expectValidResult(PINWHEEL_INPUTS, r);
+    });
+
+    it('still uses the pinwheel with an exact number of boxes per carton', () => {
+      // Two 8.25 x 10.5 x 18 boxes side by side make the same 16.5 x 10.5 x 18 carton.
+      const i: Inputs = {
+        ...PINWHEEL_INPUTS,
+        product: { length: 8.25, width: 10.5, height: 18 },
+        boxesPerCarton: 2,
+      };
+      const r = optimize(i);
+      const winner = r.layouts[0]!.layout;
+      expect(winner.carton.boxesPerCarton).toBe(2);
+      expect(hasPinwheel(winner)).toBe(true);
+      expect(winner.totalProducts).toBe(60);
+      expectValidResult(i, r);
+    });
+
+    it('falls back to the straight-cut layer when a pinwheel layer is too heavy', () => {
+      // 10 lb a carton: a pinwheel layer of 10 weighs 100 lb, a straight-cut layer of 9, 90 lb.
+      // Under 130 lb with a 40 lb pallet only the straight-cut layer fits. Upright, so the
+      // only other layers are the plain grids of 6 and 8.
+      const i: Inputs = {
+        ...PINWHEEL_INPUTS,
+        rotationMode: 'upright',
+        weights: { ...PINWHEEL_INPUTS.weights, productBox: 10, maxPallet: 130 },
+      };
+      const r = optimize(i);
+      expect(r.layouts[0]!.layout.totalProducts).toBe(9);
+      expect(hasPinwheel(r.layouts[0]!.layout)).toBe(false);
+      expectValidResult(i, r);
+    });
+
+    it('gives valid layers in every layout of the optimizer fixtures', () => {
+      for (const i of [
+        DEFAULT_INPUTS,
+        CUBES,
+        PINWHEEL_INPUTS,
+        { ...PINWHEEL_INPUTS, overhang: 2, keepCartonsUpright: true },
+        { ...DEFAULT_INPUTS, overhang: 2, targetQuantity: 150, boxesPerCarton: 6 },
+        { ...DEFAULT_INPUTS, product: { length: 6, width: 4, height: 3 } },
+      ]) {
+        const r = optimize(i);
+        expect(r.layouts.length).toBeGreaterThan(0);
+        expectValidResult(i, r);
+      }
     });
   });
 });

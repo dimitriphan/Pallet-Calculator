@@ -443,7 +443,8 @@ function drawLayerDrawing(
   }
 }
 
-function drawFacts(doc: jsPDF, facts: SheetRow[], x: number, y: number, w: number) {
+/** Label/value rows down a column; returns the bottom of the last row. */
+function drawFacts(doc: jsPDF, facts: SheetRow[], x: number, y: number, w: number): number {
   let top = y;
   facts.forEach((fact, i) => {
     if (i > 0) rule(doc, x, top, x + w, 0.006);
@@ -454,6 +455,7 @@ function drawFacts(doc: jsPDF, facts: SheetRow[], x: number, y: number, w: numbe
     lines.forEach((l, k) => doc.text(l, x, top + 0.36 + k * lineH(10.5)));
     top += 0.36 + (lines.length - 1) * lineH(10.5) + 0.11;
   });
+  return top;
 }
 
 function drawPatternBlock(
@@ -469,7 +471,14 @@ function drawPatternBlock(
   const top = y + 0.42;
   drawLayerDrawing(doc, pattern.drawing, key, LEFT, top, unit);
   const factsX = LEFT + DRAW_W + 0.35;
-  drawFacts(doc, pattern.facts, factsX, top - 0.04, RIGHT - factsX);
+  const bottom = drawFacts(doc, pattern.facts, factsX, top - 0.04, RIGHT - factsX);
+  if (pattern.note) {
+    rule(doc, factsX, bottom, RIGHT, 0.006);
+    font(doc, 10.5, 'bold');
+    wrap(doc, pattern.note, RIGHT - factsX).forEach((l, k) =>
+      doc.text(l, factsX, bottom + 0.22 + k * lineH(10.5)),
+    );
+  }
 }
 
 const STACK_COLUMNS: { title: string; width: number }[] = [

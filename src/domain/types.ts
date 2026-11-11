@@ -76,12 +76,17 @@ export interface Block {
   rotated: boolean;
 }
 
+/** How a layer's blocks are arranged: straight cuts, or four blocks turning round a centre gap. */
+export type LayerPatternKind = 'grid' | 'pinwheel';
+
 export interface LayerPattern {
   vertical: ProductAxis;
   height: number;
   cartonCount: number;
   blocks: Block[];
   extent: { x: number; y: number };
+  /** Absent means 'grid' (straight-cut layers, and every layer stored before Round 4). */
+  kind?: LayerPatternKind;
 }
 
 export interface Layer extends LayerPattern {

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import type { Inputs } from '../domain/types';
@@ -84,6 +84,37 @@ describe('Basic mode', () => {
     );
     expect(c.getByText(DEFAULT_LOAD)).toBeInTheDocument();
     expect(c.queryByText(/Showing layout/)).not.toBeInTheDocument();
+  });
+
+  it('explains how to build a pinwheel layer, and says nothing of it otherwise', async () => {
+    const NOTE =
+      'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.';
+    const { stores } = await renderBasic();
+    expect(within(card()).queryByText(NOTE)).not.toBeInTheDocument();
+    act(() => {
+      for (const [path, value] of Object.entries({
+        'pallet.length': '48',
+        'pallet.width': '40',
+        'pallet.height': '60',
+        'product.length': '16.5',
+        'product.width': '10.5',
+        'product.height': '18',
+        'maxCarton.length': '16.5',
+        'maxCarton.width': '10.5',
+        'maxCarton.height': '18',
+        leeway: '0',
+        wallThickness: '0',
+      }))
+        stores.inputs.getState().setField(path, value);
+    });
+    await flush();
+    const c = within(card());
+    expect(
+      within(c.getByRole('list'))
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Layers 1–3: 10 cartons each, product height side up']);
+    expect(c.getByText(NOTE)).toBeInTheDocument();
   });
 
   it('hides the analytical parts of the screen', async () => {

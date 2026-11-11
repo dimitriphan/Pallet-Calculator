@@ -1,4 +1,4 @@
-import type { Block, Layer, Layout, ProductAxis } from '../../domain/types';
+import type { Block, Layer, LayerPatternKind, Layout, ProductAxis } from '../../domain/types';
 
 export interface StackRun {
   from: number;
@@ -16,6 +16,21 @@ export interface StackPattern {
   cartonsPerLayer: number;
   vertical: ProductAxis;
   height: number;
+  kind: LayerPatternKind;
+}
+
+/** How to build a pinwheel layer, said on the card and the build sheet. */
+export const PINWHEEL_NOTE =
+  'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.';
+
+/** A layer's arrangement; layers stored before pinwheels existed have no kind and are grids. */
+export function layerKind(layer: Layer): LayerPatternKind {
+  return layer.kind ?? 'grid';
+}
+
+/** Whether any layer of the layout is a pinwheel. */
+export function hasPinwheelLayer(l: Layout): boolean {
+  return l.layers.some((layer) => layerKind(layer) === 'pinwheel');
 }
 
 const AXIS_WORD: Record<ProductAxis, string> = { L: 'length', W: 'width', H: 'height' };
@@ -42,7 +57,9 @@ function sameBlocks(a: Block[], b: Block[]): boolean {
 }
 
 function samePattern(a: Layer, b: Layer): boolean {
-  return a.vertical === b.vertical && sameBlocks(a.blocks, b.blocks);
+  return (
+    a.vertical === b.vertical && layerKind(a) === layerKind(b) && sameBlocks(a.blocks, b.blocks)
+  );
 }
 
 /** Pattern index (in order of first use) for every layer, bottom to top. */
@@ -69,6 +86,7 @@ export function stackPatterns(l: Layout): StackPattern[] {
       cartonsPerLayer: layer.cartonCount,
       vertical: layer.vertical,
       height: layer.height,
+      kind: layerKind(layer),
     };
   });
 }

@@ -3,6 +3,7 @@ import { DEFAULT_INPUTS } from './constants';
 import { computeAnalytics } from '../engine/analytics/analytics';
 import { optimize } from '../engine/optimize';
 import { optimizeResultSchema } from './resultSchemas';
+import { PINWHEEL_INPUTS } from '../engine/packing/testSupport';
 import { draftFromInputs, inputsSchema, parseDraft, presetSchema, scenarioSchema } from './schemas';
 import type { InputsDraft, Preset } from './types';
 
@@ -283,6 +284,20 @@ describe('optimizeResultSchema', () => {
       nearestCounts: { below: 6, above: null },
     };
     expect(optimizeResultSchema.parse(r)).toEqual(r);
+  });
+
+  it('keeps the pinwheel kind of a layer and loads layers stored without a kind', () => {
+    const r = optimize(PINWHEEL_INPUTS);
+    expect(r.layouts[0]!.layout.layers[0]!.kind).toBe('pinwheel');
+    expect(optimizeResultSchema.parse(structuredClone(r))).toEqual(r);
+    const plain = optimize(DEFAULT_INPUTS);
+    expect(plain.layouts.every((x) => x.layout.layers.every((l) => !('kind' in l)))).toBe(true);
+    expect(optimizeResultSchema.parse(structuredClone(plain))).toEqual(plain);
+    const bad = structuredClone(r) as unknown as {
+      layouts: { layout: { layers: { kind: string }[] } }[];
+    };
+    bad.layouts[0]!.layout.layers[0]!.kind = 'spiral';
+    expect(optimizeResultSchema.safeParse(bad).success).toBe(false);
   });
 
   it('accepts a Round 1 result without nearestCounts', () => {

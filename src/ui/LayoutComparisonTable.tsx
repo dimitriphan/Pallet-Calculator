@@ -4,6 +4,7 @@ import {
   cartonDisplayDims,
   type TargetStatus,
 } from '../engine/analytics/analytics';
+import { hasPinwheelLayer } from '../engine/analytics/stack';
 import {
   fmtDecimal,
   fmtPct,
@@ -19,6 +20,10 @@ import {
 import { useUnit } from './useUnit';
 import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
+
+/** "Pinwheel" under the layer count of a layout that has a pinwheel layer. */
+const PINWHEEL_BADGE =
+  'bg-gray-100 text-gray-800 dark:border dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-foam';
 
 /** Limited-by-weight note under a layout's weight. */
 const WEIGHT_BADGE = 'bg-amber-100 text-amber-900 dark:bg-harbor-sand dark:text-harbor-deep';
@@ -146,7 +151,20 @@ export function LayoutComparisonTable() {
                       </span>
                     </td>
                     <td className={`${td} text-right`}>{ranked.layout.totalCartons}</td>
-                    <td className={`${td} text-right`}>{ranked.layout.layers.length}</td>
+                    <td className={`${td} text-right`}>
+                      {hasPinwheelLayer(ranked.layout) ? (
+                        <span className="flex flex-col items-end gap-0.5">
+                          <span>{ranked.layout.layers.length}</span>
+                          <span
+                            className={`whitespace-nowrap px-1.5 text-[11px] leading-4 ${PINWHEEL_BADGE}`}
+                          >
+                            Pinwheel
+                          </span>
+                        </span>
+                      ) : (
+                        ranked.layout.layers.length
+                      )}
+                    </td>
                     <td className={`${td} text-right`}>
                       {fmtPct(analytics.totals.utilizationPct)}
                     </td>

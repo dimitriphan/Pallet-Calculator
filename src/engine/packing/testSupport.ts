@@ -2,7 +2,8 @@
  * Geometry invariant checks shared by engine tests. Pure functions that return counts,
  * so each test decides what to expect. Not used by application code.
  */
-import { EPS } from '../../domain/constants';
+import { DEFAULT_INPUTS, EPS } from '../../domain/constants';
+import type { Inputs } from '../../domain/types';
 
 export interface Box3 {
   x: number;
@@ -58,3 +59,18 @@ export function isInside(inner: Box3, outer: Box3, clearance: number): boolean {
     inner.z + inner.dz <= outer.z + outer.dz - clearance + EPS
   );
 }
+
+/**
+ * The pinned realistic pinwheel case, as a user types it: pallet 48 x 40 x 60 in, product and
+ * maximum carton 16.5 x 10.5 x 18 in, no leeway or walls (so the carton is the product).
+ * Standing on its height the carton lays 10 to a layer in a pinwheel; straight cuts fit 9.
+ * The best layout is three pinwheel layers, 30 products; without pinwheels it was 27.
+ */
+export const PINWHEEL_INPUTS: Inputs = {
+  ...DEFAULT_INPUTS,
+  pallet: { length: 48, width: 40, height: 60 },
+  product: { length: 16.5, width: 10.5, height: 18 },
+  maxCarton: { length: 16.5, width: 10.5, height: 18 },
+  leeway: 0,
+  wallThickness: 0,
+};

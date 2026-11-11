@@ -3,7 +3,33 @@ import { describe, expect, it } from 'vitest';
 import type { Inputs } from '../domain/types';
 import { computeAnalytics } from '../engine/analytics/analytics';
 import { optimize } from '../engine/optimize';
+import { act } from '@testing-library/react';
 import { flush, renderApp, summaryTile } from './testUtils';
+
+type Stores = Awaited<ReturnType<typeof renderApp>>['stores'];
+
+/** The pinned pinwheel case, typed into the fields. */
+const PINWHEEL_FIELDS: Record<string, string> = {
+  'pallet.length': '48',
+  'pallet.width': '40',
+  'pallet.height': '60',
+  'product.length': '16.5',
+  'product.width': '10.5',
+  'product.height': '18',
+  'maxCarton.length': '16.5',
+  'maxCarton.width': '10.5',
+  'maxCarton.height': '18',
+  leeway: '0',
+  wallThickness: '0',
+};
+
+async function setFields(stores: Stores, values: Record<string, string>) {
+  act(() => {
+    for (const [path, value] of Object.entries(values))
+      stores.inputs.getState().setField(path, value);
+  });
+  await flush();
+}
 
 function tableRows() {
   return within(screen.getByRole('table', { name: 'Layout comparison' }))
@@ -74,6 +100,37 @@ describe('LayoutComparisonTable', () => {
       'Remaining volume (in³)',
       'Score',
     ]);
+  });
+
+  it('marks a layout with a pinwheel layer "Pinwheel" in the Layers column', async () => {
+    const { stores } = await renderApp();
+    expect(screen.queryByText('Pinwheel')).not.toBeInTheDocument();
+    await setFields(stores, PINWHEEL_FIELDS);
+    const layouts = stores.results.getState().result!.layouts;
+    expect(layouts[0]!.layout.totalProducts).toBe(30);
+    const rows = tableRows();
+    layouts.forEach(({ layout }, k) => {
+      const pinwheel = layout.layers.some((l) => l.kind === 'pinwheel');
+      const cells = within(rows[k] as HTMLElement).getAllByRole('cell');
+      // The Layers cell: the layer count, with the badge only for a pinwheel layout.
+      expect(cells[4]?.textContent).toBe(`${layout.layers.length}${pinwheel ? 'Pinwheel' : ''}`);
+    });
+    expect(within(rows[0] as HTMLElement).getByText('Pinwheel')).toBeInTheDocument();
+    // The headers are unchanged.
+    expect(screen.getAllByRole('columnheader')).toHaveLength(8);
+  });
+
+  it('shows a stored result whose layers have no kind as before, without "Pinwheel"', async () => {
+    const stripKinds = (i: Inputs) => {
+      const r = structuredClone(optimize(i));
+      for (const { layout } of r.layouts) for (const layer of layout.layers) delete layer.kind;
+      return Promise.resolve(r);
+    };
+    const { stores } = await renderApp(stripKinds);
+    await setFields(stores, PINWHEEL_FIELDS);
+    expect(tableRows().length).toBeGreaterThan(1);
+    expect(screen.queryByText('Pinwheel')).not.toBeInTheDocument();
+    expect(within(tableRows()[0] as HTMLElement).getAllByRole('cell')[4]?.textContent).toBe('3');
   });
 
   it('says the search was limited without blaming the time limit', async () => {

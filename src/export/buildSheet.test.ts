@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
+import { PINWHEEL_INPUTS } from '../engine/packing/testSupport';
 import { buildSheetContent, buildSheetFilename, pdfSafe, type SheetRect } from './buildSheet';
 
 const NOW = new Date(2026, 10, 10, 9, 5);
@@ -329,5 +330,46 @@ describe('buildSheetContent with weights', () => {
     // 612 lb = 277.6 kg; 110 lb = 49.9 kg.
     expect(s.palletAndLoad.find((r) => r.label === 'Total weight')?.value).toBe('277.6 kg');
     expect(s.stacking[0]?.weight).toBe('49.9 kg');
+  });
+});
+
+describe('buildSheetContent with a pinwheel layer', () => {
+  const NOTE =
+    'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.';
+  const s = buildSheetContent({
+    inputs: PINWHEEL_INPUTS,
+    result: optimize(PINWHEEL_INPUTS),
+    selectedIndex: 0,
+    jobName: '',
+    stale: false,
+    now: NOW,
+  });
+
+  it('says how to build the pinwheel under its pattern', () => {
+    expect(s.patterns).toHaveLength(1);
+    expect(s.patterns[0]?.heading).toBe('Pattern A: layers 1-3');
+    expect(s.patterns[0]?.note).toBe(NOTE);
+    expect(s.patterns[0]?.facts.find((f) => f.label === 'Blocks (rows × columns)')?.value).toBe(
+      '2 × 1, 1 × 3, 2 × 1, 1 × 3',
+    );
+  });
+
+  it('draws the four blocks round the centre gap without overlaps', () => {
+    const { cartons, blocks, footprint } = s.patterns[0]!.drawing;
+    expect(cartons).toHaveLength(10);
+    expect(blocks).toHaveLength(4);
+    for (const c of cartons) {
+      expect(c.x).toBeGreaterThanOrEqual(-1e-9);
+      expect(c.y).toBeGreaterThanOrEqual(-1e-9);
+      expect(c.x + c.dx).toBeLessThanOrEqual(footprint.x + 1e-9);
+      expect(c.y + c.dy).toBeLessThanOrEqual(footprint.y + 1e-9);
+    }
+    for (let i = 0; i < cartons.length; i++)
+      for (let k = i + 1; k < cartons.length; k++)
+        expect(overlaps(cartons[i] as SheetRect, cartons[k] as SheetRect)).toBe(false);
+  });
+
+  it('adds no note to a straight-cut pattern', () => {
+    for (const p of build().patterns) expect('note' in p).toBe(false);
   });
 });

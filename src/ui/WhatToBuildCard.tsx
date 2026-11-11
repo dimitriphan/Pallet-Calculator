@@ -1,6 +1,6 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
-import { describeRun, stackRuns } from '../engine/analytics/stack';
+import { describeRun, hasPinwheelLayer, PINWHEEL_NOTE, stackRuns } from '../engine/analytics/stack';
 import { dimsText, roomText, weightText, weightTrimText } from './format';
 import { useUnit } from './useUnit';
 import { Mascot } from './Mascot';
@@ -103,6 +103,9 @@ export function WhatToBuildCard() {
               </li>
             ))}
           </ol>
+          {hasPinwheelLayer(layout) && (
+            <p className="text-sm text-gray-700 dark:text-harbor-mist">{PINWHEEL_NOTE}</p>
+          )}
         </Part>
         <div className="root-divider" aria-hidden="true" />
         <Part title="Finished load">

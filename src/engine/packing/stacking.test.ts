@@ -4,6 +4,8 @@ import type { Inputs, Layer, Layout } from '../../domain/types';
 import { cartonKey, generateCartonCandidates } from './cartons';
 import { usableFootprint, usableHeight } from './geometry';
 import { gridLayer, searchLayer } from './layerSearch';
+import { assertNoOverlapWithin } from './overlap.testSupport';
+import { cartonPlacements } from './positions';
 import {
   bestLayer,
   blocksBounds,
@@ -11,9 +13,11 @@ import {
   footprintAxes,
   layoutSignature,
   plainLayers,
+  straightCutLayer,
   withLayers,
   type LayerCache,
 } from './stacking';
+import { boxesOutside, overlappingPairs, PINWHEEL_INPUTS } from './testSupport';
 import { fitsWithin } from './tolerance';
 
 /** 10-inch cube, no leeway or walls, max carton 20 x 20 x 10, pallet 40 x 40 x 25 (usable height 20). */
@@ -432,5 +436,157 @@ describe('layoutSignature', () => {
       ]),
     ]);
     expect(layoutSignature(mirrored)).toBe(layoutSignature(one));
+  });
+});
+
+describe('pinwheel layers', () => {
+  const axes = ['L', 'W', 'H'] as const;
+  const usableBox = (i: Inputs) => ({ ...usableFootprint(i), z: usableHeight(i) });
+
+  /** Every layer of every layout: no carton outside the usable footprint, no overlaps. */
+  function expectValidLayers(i: Inputs, layouts: Layout[]): void {
+    const { x, y } = usableFootprint(i);
+    for (const l of layouts) {
+      for (const layer of l.layers) {
+        const [fa, fb] = footprintAxes(layer.vertical);
+        assertNoOverlapWithin(layer.blocks, l.carton.outer[fa], l.carton.outer[fb], x, y);
+      }
+      const placed = cartonPlacements(l, i);
+      expect(boxesOutside(placed, usableBox(i))).toBe(0);
+      expect(overlappingPairs(placed)).toBe(0);
+    }
+  }
+
+  const hasPinwheel = (l: Layout) => l.layers.some((layer) => layer.kind === 'pinwheel');
+
+  it('uses a pinwheel only when it holds more; otherwise the straight-cut layer is unchanged', () => {
+    let pinwheels = 0;
+    let straight = 0;
+    for (const i of [DEFAULT_INPUTS, PINWHEEL_INPUTS, CUBES, MIXED]) {
+      const { x, y } = usableFootprint(i);
+      for (const c of generateCartonCandidates(i)) {
+        for (const v of axes) {
+          if (!fitsWithin(c.outer[v], usableHeight(i))) continue;
+          const [fa, fb] = footprintAxes(v);
+          const [a, b] = [c.outer[fa], c.outer[fb]];
+          const search = searchLayer(x, y, a, b);
+          const layer = bestLayer(c, v, i, new Map());
+          if (layer?.kind === 'pinwheel') {
+            pinwheels++;
+            expect(layer.cartonCount).toBeGreaterThan(search.count);
+            assertNoOverlapWithin(layer.blocks, a, b, x, y);
+            continue;
+          }
+          if (search.count === 0) {
+            expect(layer).toBeNull();
+            continue;
+          }
+          straight++;
+          // Exactly the pattern built before pinwheels existed: no kind field at all.
+          const blocks =
+            a === b ? search.blocks.map((blk) => ({ ...blk, rotated: false })) : search.blocks;
+          expect(layer).toStrictEqual({
+            vertical: v,
+            height: c.outer[v],
+            cartonCount: search.count,
+            blocks,
+            extent: blocksBounds(blocks, a, b).size,
+          });
+        }
+      }
+    }
+    expect(pinwheels).toBeGreaterThan(0);
+    expect(straight).toBeGreaterThan(20);
+  });
+
+  it('lays the pinned case 10 to a layer in a pinwheel, where straight cuts fit 9', () => {
+    const c = candidateByKey(PINWHEEL_INPUTS, '1x1x1');
+    const cache: LayerCache = new Map();
+    const layer = bestLayer(c, 'H', PINWHEEL_INPUTS, cache)!;
+    expect(layer.kind).toBe('pinwheel');
+    expect(layer.cartonCount).toBe(10);
+    expect(layer.blocks).toHaveLength(4);
+    expect(layer.extent).toEqual({ x: 48, y: 37.5 });
+    assertNoOverlapWithin(layer.blocks, 16.5, 10.5, 48, 40);
+    const straight = straightCutLayer(c, 'H', PINWHEEL_INPUTS, cache);
+    expect(straight.kind).toBeUndefined();
+    expect(straight.cartonCount).toBe(9);
+    expect(straight.vertical).toBe('H');
+    // Searched once: the pinwheel and the straight-cut layer are kept for the footprint.
+    expect([...cache.keys()].sort()).toEqual(['16.5|10.5', '16.5|10.5|straight']);
+  });
+
+  it('keeps the pinwheel in the cache across vertical axes with the same footprint', () => {
+    // Outer 16.5 x 10.5 x 10.5: standing on W or on H both leave a 16.5 x 10.5 footprint.
+    const i: Inputs = {
+      ...PINWHEEL_INPUTS,
+      product: { length: 16.5, width: 10.5, height: 10.5 },
+      maxCarton: { length: 16.5, width: 10.5, height: 10.5 },
+    };
+    const c = candidateByKey(i, '1x1x1');
+    const cache: LayerCache = new Map();
+    const h = bestLayer(c, 'H', i, cache)!;
+    const size = cache.size;
+    const w = bestLayer(c, 'W', i, cache)!;
+    expect(cache.size).toBe(size);
+    expect(h.kind).toBe('pinwheel');
+    expect(w.kind).toBe('pinwheel');
+    expect(w.vertical).toBe('W');
+    expect(w.height).toBe(c.outer.W);
+    expect(w.blocks).toEqual(h.blocks);
+    const ws = straightCutLayer(c, 'W', i, cache);
+    expect(ws.vertical).toBe('W');
+    expect(ws.height).toBe(c.outer.W);
+    expect(ws.cartonCount).toBe(9);
+  });
+
+  it('does not search for a pinwheel once shouldStop says so', () => {
+    const c = candidateByKey(PINWHEEL_INPUTS, '1x1x1');
+    const cache: LayerCache = new Map();
+    const layer = bestLayer(c, 'H', PINWHEEL_INPUTS, cache, () => true)!;
+    expect(layer.kind).toBeUndefined();
+    expect(layer.cartonCount).toBe(9);
+    expect(cache.size).toBe(1);
+  });
+
+  it('offers the straight-cut stacks beside the pinwheel ones', () => {
+    const c = candidateByKey(PINWHEEL_INPUTS, '1x1x1');
+    const layouts = buildLayouts(c, PINWHEEL_INPUTS, new Map());
+    const onH = layouts.filter((l) => l.layers.every((layer) => layer.vertical === 'H'));
+    expect(onH.some((l) => l.layers.every((layer) => layer.kind === 'pinwheel'))).toBe(true);
+    expect(onH.some((l) => l.layers.every((layer) => layer.cartonCount === 9))).toBe(true);
+    expect(Math.max(...layouts.map((l) => l.totalCartons))).toBe(30);
+    expectValidLayers(PINWHEEL_INPUTS, layouts);
+  });
+
+  it('keeps every pinwheel carton inside the usable footprint with overhang', () => {
+    // A 17 x 11 carton on a 48 x 40 pallet with 2 in of overhang: usable 50 x 42.
+    const i: Inputs = {
+      ...PINWHEEL_INPUTS,
+      overhang: 2,
+      product: { length: 17, width: 11, height: 18 },
+      maxCarton: { length: 17, width: 11, height: 18 },
+    };
+    const layouts = buildLayouts(candidateByKey(i, '1x1x1'), i, new Map());
+    expect(layouts.some(hasPinwheel)).toBe(true);
+    expectValidLayers(i, layouts);
+  });
+
+  it('still uses a pinwheel with "Keep cartons upright" and with the product upright', () => {
+    for (const i of [
+      { ...PINWHEEL_INPUTS, keepCartonsUpright: true },
+      { ...PINWHEEL_INPUTS, rotationMode: 'upright' as const },
+    ]) {
+      const layouts = buildLayouts(candidateByKey(i, '1x1x1'), i, new Map());
+      expect(layouts.some(hasPinwheel)).toBe(true);
+      expectValidLayers(i, layouts);
+    }
+  });
+
+  it('gives valid layers for every candidate of the test inputs', () => {
+    for (const i of [DEFAULT_INPUTS, PINWHEEL_INPUTS, MIXED, { ...DEFAULT_INPUTS, overhang: 3 }]) {
+      const cache: LayerCache = new Map();
+      for (const c of generateCartonCandidates(i)) expectValidLayers(i, buildLayouts(c, i, cache));
+    }
   });
 });

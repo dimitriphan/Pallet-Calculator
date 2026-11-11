@@ -31,6 +31,8 @@ const layer = z.object({
   blocks: z.array(block),
   extent: z.object({ x: num, y: num }),
   z: num,
+  // Added in Round 4: absent on straight-cut layers and on results stored before it.
+  kind: z.enum(['grid', 'pinwheel']).optional(),
 });
 
 const layout = z.object({

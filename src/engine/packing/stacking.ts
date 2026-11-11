@@ -10,14 +10,20 @@ import type {
 import { cartonKey } from './cartons';
 import { usableFootprint, usableHeight } from './geometry';
 import { gridLayer, searchLayer, type LayerSearchResult } from './layerSearch';
+import { layerCountBound, pinwheelLayer } from './pinwheel';
 import { allowedVerticalAxes } from './rotation';
 import { fitsCount, fitsWithin } from './tolerance';
 
 /**
  * Best layer patterns keyed by footprint `${a}|${b}`. The layer search depends only on the
  * footprint sizes and the usable area, so one cache serves every candidate of one set of inputs.
+ * When a pinwheel is best, the straight-cut layer is kept beside it under `${a}|${b}|straight`.
  */
 export type LayerCache = Map<string, LayerPattern | null>;
+
+function straightKey(key: string): string {
+  return `${key}|straight`;
+}
 
 /** Footprint axes for a vertical axis: the other two product axes in L, W, H order. */
 export function footprintAxes(vertical: ProductAxis): [ProductAxis, ProductAxis] {
@@ -72,18 +78,51 @@ function toPattern(
   height: number,
   a: number,
   b: number,
+  kind?: 'pinwheel',
 ): LayerPattern {
   // On a square footprint a turned block is the same block; store it unrotated.
   const blocks = isSquare(a, b)
     ? result.blocks.map((blk) => (blk.rotated ? { ...blk, rotated: false } : blk))
     : result.blocks;
-  return {
+  const pattern: LayerPattern = {
     vertical,
     height,
     cartonCount: result.count,
     blocks,
     extent: blocksBounds(blocks, a, b).size,
   };
+  // Straight-cut layers carry no kind, exactly as before pinwheels existed.
+  if (kind) pattern.kind = kind;
+  return pattern;
+}
+
+/**
+ * The best layer of a x b cartons in the usable rectangle: the straight-cut layer, or the
+ * pinwheel when it holds strictly more cartons (with equal counts straight cuts are easier
+ * to build). The pinwheel is not searched once `shouldStop` says so, nor on a square
+ * footprint, nor when the straight-cut layer already holds as many cartons as any layer can.
+ */
+function searchBestLayer(
+  x: number,
+  y: number,
+  a: number,
+  b: number,
+  shouldStop?: () => boolean,
+): { result: LayerSearchResult; straight: LayerSearchResult | null } {
+  const result = searchLayer(x, y, a, b);
+  if (
+    result.count === 0 ||
+    isSquare(a, b) ||
+    result.count >= layerCountBound(x, y, a, b) ||
+    shouldStop?.()
+  ) {
+    return { result, straight: null };
+  }
+  const pinwheel = pinwheelLayer(x, y, a, b);
+  if (pinwheel && pinwheel.count > result.count) {
+    return { result: { count: pinwheel.count, blocks: pinwheel.blocks }, straight: result };
+  }
+  return { result, straight: null };
 }
 
 /** Whether the carton may stand with `vertical` up: allowed by rotation rules and not too tall. */
@@ -92,24 +131,54 @@ function usableVerticalAxes(c: CartonCandidate, i: Inputs): ProductAxis[] {
   return allowedVerticalAxes(i).filter((v) => fitsWithin(c.outer[v], h));
 }
 
-/** Best guillotine layer for the carton standing on `vertical`, or null if no carton fits. */
+/**
+ * Best layer for the carton standing on `vertical` (straight cuts, or a pinwheel that holds
+ * more), or null if no carton fits. Both searches run once per footprint: the cache keeps
+ * the winner. `shouldStop` is checked before the pinwheel search.
+ */
 export function bestLayer(
   c: CartonCandidate,
   vertical: ProductAxis,
   i: Inputs,
   cache: LayerCache,
+  shouldStop?: () => boolean,
 ): LayerPattern | null {
   const [a, b] = footprintSizes(c, vertical);
   const key = `${a}|${b}`;
   let pattern = cache.get(key);
   if (pattern === undefined) {
     const { x, y } = usableFootprint(i);
-    const result = searchLayer(x, y, a, b);
-    pattern = result.count > 0 ? toPattern(result, vertical, c.outer[vertical], a, b) : null;
+    const { result, straight } = searchBestLayer(x, y, a, b, shouldStop);
+    const height = c.outer[vertical];
+    pattern =
+      result.count > 0
+        ? toPattern(result, vertical, height, a, b, straight ? 'pinwheel' : undefined)
+        : null;
     cache.set(key, pattern);
+    if (straight) cache.set(straightKey(key), toPattern(straight, vertical, height, a, b));
   }
   if (pattern === null) return null;
   // The cached pattern may come from another vertical axis or carton with the same footprint.
+  return { ...pattern, vertical, height: c.outer[vertical] };
+}
+
+/**
+ * The best straight-cut layer for the carton standing on `vertical`: the best layer itself
+ * unless that is a pinwheel, then the straight-cut layer bestLayer kept beside it.
+ * Call after bestLayer for the same carton and axis returned a layer.
+ */
+export function straightCutLayer(
+  c: CartonCandidate,
+  vertical: ProductAxis,
+  i: Inputs,
+  cache: LayerCache,
+): LayerPattern {
+  const best = bestLayer(c, vertical, i, cache);
+  if (best === null) throw new Error('straightCutLayer: no layer fits');
+  if (best.kind !== 'pinwheel') return best;
+  const [a, b] = footprintSizes(c, vertical);
+  const pattern = cache.get(straightKey(`${a}|${b}`));
+  if (!pattern) throw new Error('straightCutLayer: the straight-cut layer was not kept');
   return { ...pattern, vertical, height: c.outer[vertical] };
 }
 
@@ -254,25 +323,14 @@ function bestMix(
   return stopped ? null : best;
 }
 
-/**
- * All distinct layouts for one carton; [] if it cannot be placed. `shouldStop` is checked
- * before every layer search after the first: once it returns true the remaining vertical
- * axes are skipped, so the result covers only the axes searched so far.
- */
-export function buildLayouts(
+/** Candidate layouts for one carton from one best layer per vertical axis (may repeat). */
+function layoutsFromTypes(
   c: CartonCandidate,
   i: Inputs,
-  cache: LayerCache,
+  types: LayerPattern[],
   shouldStop?: () => boolean,
 ): Layout[] {
   const h = usableHeight(i);
-  const types: LayerPattern[] = [];
-  for (const [k, v] of usableVerticalAxes(c, i).entries()) {
-    if (k > 0 && shouldStop?.()) break;
-    const layer = bestLayer(c, v, i, cache);
-    if (layer) types.push(layer);
-  }
-
   const candidates: Layout[] = [];
   // 1. single-type stacks of the best layer
   for (const t of types) candidates.push(makeLayout(c, repeat(t, fitsCount(h, t.height))));
@@ -296,6 +354,39 @@ export function buildLayouts(
         ),
       );
     }
+  }
+  return candidates;
+}
+
+/**
+ * All distinct layouts for one carton; [] if it cannot be placed. `shouldStop` is checked
+ * before every layer search after the first: once it returns true the remaining vertical
+ * axes are skipped, so the result covers only the axes searched so far.
+ *
+ * When a pinwheel is the best layer on some axis, the layouts built from the straight-cut
+ * layers follow those built from the best layers, so every layout offered before pinwheels
+ * existed is still offered. A weight limit removes whole layers, and a layer with more
+ * cartons can be too heavy where the straight-cut layer is not.
+ */
+export function buildLayouts(
+  c: CartonCandidate,
+  i: Inputs,
+  cache: LayerCache,
+  shouldStop?: () => boolean,
+): Layout[] {
+  const types: LayerPattern[] = [];
+  const straight: LayerPattern[] = [];
+  for (const [k, v] of usableVerticalAxes(c, i).entries()) {
+    if (k > 0 && shouldStop?.()) break;
+    const layer = bestLayer(c, v, i, cache, shouldStop);
+    if (!layer) continue;
+    types.push(layer);
+    straight.push(layer.kind === 'pinwheel' ? straightCutLayer(c, v, i, cache) : layer);
+  }
+
+  const candidates = layoutsFromTypes(c, i, types, shouldStop);
+  if (straight.some((t, k) => t !== types[k])) {
+    candidates.push(...layoutsFromTypes(c, i, straight, shouldStop));
   }
 
   const seen = new Set<string>();

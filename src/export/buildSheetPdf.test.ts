@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import { optimize } from '../engine/optimize';
+import { PINWHEEL_INPUTS } from '../engine/packing/testSupport';
 import { buildSheetContent, type BuildSheet } from './buildSheet';
 import { PAGE, planPages, renderBuildSheetPdf, stackingHeight } from './buildSheetPdf';
 
@@ -180,6 +181,23 @@ describe('renderBuildSheetPdf', () => {
     });
     const text2 = await pdfText(await renderBuildSheetPdf(second, null));
     expect(text2).toContain('Layout 2 of 5 selected. Layout 1 fits 260 boxes.');
+  });
+
+  it('prints how to build a pinwheel layer under its facts, and nothing for straight cuts', async () => {
+    const sheet = buildSheetContent({
+      inputs: PINWHEEL_INPUTS,
+      result: optimize(PINWHEEL_INPUTS),
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    const text = await pdfText(await renderBuildSheetPdf(sheet, null));
+    // Wrapped to the facts column, so look for the start and the end of the sentence.
+    expect(text).toMatch(/\(Pinwheel layer: build the four/);
+    expect(text).toMatch(/as shown in the top view\.\) Tj/);
+    const plain = await pdfText(await renderBuildSheetPdf(defaultSheet(), null));
+    expect(plain).not.toContain('Pinwheel');
   });
 
   it('boxes the out-of-date line when stale', async () => {

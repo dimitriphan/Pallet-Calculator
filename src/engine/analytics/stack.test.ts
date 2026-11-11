@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../../domain/constants';
 import type { Layer, Layout } from '../../domain/types';
 import { optimize } from '../optimize';
-import { describeLayerList, describeRun, stackPatterns, stackRuns, type StackRun } from './stack';
+import { PINWHEEL_INPUTS } from '../packing/testSupport';
+import {
+  describeLayerList,
+  describeRun,
+  hasPinwheelLayer,
+  layerKind,
+  stackPatterns,
+  stackRuns,
+  type StackRun,
+} from './stack';
 
 const layerAt = (l: Layout, i: number): Layer => l.layers[i] as Layer;
 const winner = (): Layout => optimize(DEFAULT_INPUTS).layouts[0]!.layout;
@@ -108,5 +117,28 @@ describe('describeLayerList', () => {
     [[3, 4], 'layers 3–4'],
   ])('%j -> %s', (nums, text) => {
     expect(describeLayerList(nums)).toBe(text);
+  });
+});
+
+describe('pinwheel layers', () => {
+  const pinwheel = (): Layout => optimize(PINWHEEL_INPUTS).layouts[0]!.layout;
+
+  it('says whether a layout has a pinwheel layer', () => {
+    expect(hasPinwheelLayer(pinwheel())).toBe(true);
+    expect(hasPinwheelLayer(winner())).toBe(false);
+  });
+
+  it('treats a layer stored without a kind as a grid', () => {
+    const layer = layerAt(winner(), 0);
+    expect('kind' in layer).toBe(false);
+    expect(layerKind(layer)).toBe('grid');
+    expect(layerKind({ ...layer, kind: 'pinwheel' })).toBe('pinwheel');
+  });
+
+  it('gives each stack pattern its kind', () => {
+    expect(stackPatterns(pinwheel()).map((p) => [p.letter, p.kind, p.layerNumbers])).toEqual([
+      ['A', 'pinwheel', [1, 2, 3]],
+    ]);
+    expect(stackPatterns(winner()).map((p) => p.kind)).toEqual(['grid', 'grid']);
   });
 });
