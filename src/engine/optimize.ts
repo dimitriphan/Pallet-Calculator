@@ -10,6 +10,8 @@ import { buildLayouts, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { rankLayouts } from './ranking/rank';
 import { trimToWeight } from './analytics/weight';
+import { assessStability } from './analytics/stability';
+import { interlockLayers } from './packing/interlock';
 import { maxCartonsByWeight, weightBound, weightLimited, withinMax } from './packing/weightLimit';
 
 export const TIME_BUDGET_MS = 4000;
@@ -115,7 +117,13 @@ export function optimize(
     return { ...empty(reason), candidatesEvaluated: evaluated };
   }
   return {
-    layouts: rankLayouts(layouts, i),
+    // Then, for every layout the ranking reaches: alternate identical layers turned where
+    // that is free (same boxes; nothing above changes, since product counts and weights stay
+    // as they are), and the result rated. Better-rated layouts win ties on products.
+    layouts: rankLayouts(layouts, i, undefined, (l) => {
+      const interlocked = interlockLayers(l, i);
+      return { ...interlocked, stability: assessStability(interlocked, i) };
+    }),
     candidatesEvaluated: evaluated,
     emptyReason: null,
     truncated: capped || timedOut,

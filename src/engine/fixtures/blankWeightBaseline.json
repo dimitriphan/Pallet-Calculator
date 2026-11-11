@@ -3,7 +3,7 @@
     "layouts": [
       {
         "layout": {
-          "id": "1x1x5|L:10:5x2u/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r",
+          "id": "1x1x5|L:10:5x2u/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t",
           "carton": {
             "counts": {
               "L": 1,
@@ -83,32 +83,33 @@
               "cartonCount": 7,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 13,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 26,
-                  "y": 0,
+                  "x": 3,
+                  "y": 3,
                   "cols": 1,
                   "rows": 3,
                   "rotated": true
+                },
+                {
+                  "x": 24,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
+                },
+                {
+                  "x": 37,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
                 }
               ],
               "extent": {
                 "x": 47,
                 "y": 42
               },
-              "z": 22
+              "z": 22,
+              "turned": true
             },
             {
               "vertical": "W",
@@ -149,32 +150,33 @@
               "cartonCount": 7,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 13,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 26,
-                  "y": 0,
+                  "x": 3,
+                  "y": 3,
                   "cols": 1,
                   "rows": 3,
                   "rotated": true
+                },
+                {
+                  "x": 24,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
+                },
+                {
+                  "x": 37,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
                 }
               ],
               "extent": {
                 "x": 47,
                 "y": 42
               },
-              "z": 40
+              "z": 40,
+              "turned": true
             },
             {
               "vertical": "W",
@@ -215,36 +217,47 @@
               "cartonCount": 7,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 13,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 26,
-                  "y": 0,
+                  "x": 3,
+                  "y": 3,
                   "cols": 1,
                   "rows": 3,
                   "rotated": true
+                },
+                {
+                  "x": 24,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
+                },
+                {
+                  "x": 37,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
                 }
               ],
               "extent": {
                 "x": 47,
                 "y": 42
               },
-              "z": 58
+              "z": 58,
+              "turned": true
             }
           ],
           "totalCartons": 52,
-          "totalProducts": 260
+          "totalProducts": 260,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.5952380952380953
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 100,
@@ -379,7 +392,23 @@
             }
           ],
           "totalCartons": 50,
-          "totalProducts": 250
+          "totalProducts": 250,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.5476190476190477
+              },
+              {
+                "check": "columns",
+                "level": "caution",
+                "value": 5,
+                "layer": 1
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 96.15384615384616,
@@ -395,7 +424,7 @@
       },
       {
         "layout": {
-          "id": "1x2x5|W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r/L:4:2x2u",
+          "id": "1x2x5|W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t/W:7:1x2u,1x2u,1x3r/L:4:2x2u",
           "carton": {
             "counts": {
               "L": 1,
@@ -456,32 +485,33 @@
               "cartonCount": 7,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 13,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 26,
-                  "y": 0,
+                  "x": 3,
+                  "y": 3,
                   "cols": 1,
                   "rows": 3,
                   "rotated": true
+                },
+                {
+                  "x": 24,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
+                },
+                {
+                  "x": 37,
+                  "y": 0,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
                 }
               ],
               "extent": {
                 "x": 47,
                 "y": 42
               },
-              "z": 17
+              "z": 17,
+              "turned": true
             },
             {
               "vertical": "W",
@@ -537,7 +567,17 @@
             }
           ],
           "totalCartons": 25,
-          "totalProducts": 250
+          "totalProducts": 250,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.5238095238095237
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 96.15384615384616,
@@ -553,7 +593,7 @@
       },
       {
         "layout": {
-          "id": "1x1x3|H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u",
+          "id": "1x1x3|H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u:t/H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u:t/H:16:1x3r,1x3r,1x3r,1x3r,1x4u",
           "carton": {
             "counts": {
               "L": 1,
@@ -628,46 +668,47 @@
               "cartonCount": 16,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 9,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 18,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 27,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 36,
-                  "y": 0,
+                  "x": 1,
+                  "y": 6,
                   "cols": 1,
                   "rows": 4,
                   "rotated": false
+                },
+                {
+                  "x": 14,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
+                },
+                {
+                  "x": 23,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
+                },
+                {
+                  "x": 32,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
+                },
+                {
+                  "x": 41,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
                 }
               ],
               "extent": {
                 "x": 49,
                 "y": 39
               },
-              "z": 13
+              "z": 13,
+              "turned": true
             },
             {
               "vertical": "H",
@@ -722,46 +763,47 @@
               "cartonCount": 16,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 9,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 18,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 27,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 3,
-                  "rotated": true
-                },
-                {
-                  "x": 36,
-                  "y": 0,
+                  "x": 1,
+                  "y": 6,
                   "cols": 1,
                   "rows": 4,
                   "rotated": false
+                },
+                {
+                  "x": 14,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
+                },
+                {
+                  "x": 23,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
+                },
+                {
+                  "x": 32,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
+                },
+                {
+                  "x": 41,
+                  "y": 3,
+                  "cols": 1,
+                  "rows": 3,
+                  "rotated": true
                 }
               ],
               "extent": {
                 "x": 49,
                 "y": 39
               },
-              "z": 39
+              "z": 39,
+              "turned": true
             },
             {
               "vertical": "H",
@@ -812,7 +854,17 @@
             }
           ],
           "totalCartons": 80,
-          "totalProducts": 240
+          "totalProducts": 240,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.6666666666666667
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 92.3076923076923,
@@ -828,7 +880,7 @@
       },
       {
         "layout": {
-          "id": "1x2x3|H:8:1x2u,2x3r/H:8:1x2u,2x3r/H:8:1x2u,2x3r/H:8:1x2u,2x3r/H:8:1x2u,2x3r",
+          "id": "1x2x3|H:8:1x2u,2x3r/H:8:1x2u,2x3r:t/H:8:1x2u,2x3r/H:8:1x2u,2x3r:t/H:8:1x2u,2x3r",
           "carton": {
             "counts": {
               "L": 1,
@@ -882,25 +934,26 @@
               "cartonCount": 8,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 13,
-                  "y": 0,
+                  "x": 3,
+                  "y": 3,
                   "cols": 2,
                   "rows": 3,
                   "rotated": true
+                },
+                {
+                  "x": 37,
+                  "y": 8,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
                 }
               ],
               "extent": {
                 "x": 47,
                 "y": 39
               },
-              "z": 13
+              "z": 13,
+              "turned": true
             },
             {
               "vertical": "H",
@@ -934,25 +987,26 @@
               "cartonCount": 8,
               "blocks": [
                 {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 1,
-                  "rows": 2,
-                  "rotated": false
-                },
-                {
-                  "x": 13,
-                  "y": 0,
+                  "x": 3,
+                  "y": 3,
                   "cols": 2,
                   "rows": 3,
                   "rotated": true
+                },
+                {
+                  "x": 37,
+                  "y": 8,
+                  "cols": 1,
+                  "rows": 2,
+                  "rotated": false
                 }
               ],
               "extent": {
                 "x": 47,
                 "y": 39
               },
-              "z": 39
+              "z": 39,
+              "turned": true
             },
             {
               "vertical": "H",
@@ -982,7 +1036,17 @@
             }
           ],
           "totalCartons": 40,
-          "totalProducts": 240
+          "totalProducts": 240,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.6666666666666667
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 92.3076923076923,
@@ -1005,7 +1069,7 @@
     "layouts": [
       {
         "layout": {
-          "id": "1x2x2|H:8:2x4r",
+          "id": "1x2x2|L:4:2x2u/L:4:2x2u",
           "carton": {
             "counts": {
               "L": 1,
@@ -1028,16 +1092,16 @@
           },
           "layers": [
             {
-              "vertical": "H",
-              "height": 20,
-              "cartonCount": 8,
+              "vertical": "L",
+              "height": 10,
+              "cartonCount": 4,
               "blocks": [
                 {
                   "x": 0,
                   "y": 0,
                   "cols": 2,
-                  "rows": 4,
-                  "rotated": true
+                  "rows": 2,
+                  "rotated": false
                 }
               ],
               "extent": {
@@ -1045,10 +1109,33 @@
                 "y": 40
               },
               "z": 0
+            },
+            {
+              "vertical": "L",
+              "height": 10,
+              "cartonCount": 4,
+              "blocks": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "cols": 2,
+                  "rows": 2,
+                  "rotated": false
+                }
+              ],
+              "extent": {
+                "x": 40,
+                "y": 40
+              },
+              "z": 10
             }
           ],
           "totalCartons": 8,
-          "totalProducts": 32
+          "totalProducts": 32,
+          "stability": {
+            "rating": "good",
+            "warnings": []
+          }
         },
         "score": {
           "quantity": 100,
@@ -1060,125 +1147,7 @@
           "total": 100
         },
         "rank": 1,
-        "explanation": "Layout #1 and Layout #2 are equivalent in quantity, score, and carton count; they differ only in carton size or arrangement."
-      },
-      {
-        "layout": {
-          "id": "1x2x2|H:8:4x2u",
-          "carton": {
-            "counts": {
-              "L": 1,
-              "W": 2,
-              "H": 2
-            },
-            "inner": {
-              "L": 10,
-              "W": 20,
-              "H": 20
-            },
-            "outer": {
-              "L": 10,
-              "W": 20,
-              "H": 20
-            },
-            "boxesPerCarton": 4,
-            "utilization": 1,
-            "emptyVolume": 0
-          },
-          "layers": [
-            {
-              "vertical": "H",
-              "height": 20,
-              "cartonCount": 8,
-              "blocks": [
-                {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 4,
-                  "rows": 2,
-                  "rotated": false
-                }
-              ],
-              "extent": {
-                "x": 40,
-                "y": 40
-              },
-              "z": 0
-            }
-          ],
-          "totalCartons": 8,
-          "totalProducts": 32
-        },
-        "score": {
-          "quantity": 100,
-          "utilization": 100,
-          "space": 100,
-          "quantityContribution": 60,
-          "utilizationContribution": 25,
-          "spaceContribution": 15,
-          "total": 100
-        },
-        "rank": 2,
-        "explanation": "Layout #2 ranked above Layout #3 because it uses fewer cartons for the same result."
-      },
-      {
-        "layout": {
-          "id": "1x1x2|H:16:4x4u",
-          "carton": {
-            "counts": {
-              "L": 1,
-              "W": 1,
-              "H": 2
-            },
-            "inner": {
-              "L": 10,
-              "W": 10,
-              "H": 20
-            },
-            "outer": {
-              "L": 10,
-              "W": 10,
-              "H": 20
-            },
-            "boxesPerCarton": 2,
-            "utilization": 1,
-            "emptyVolume": 0
-          },
-          "layers": [
-            {
-              "vertical": "H",
-              "height": 20,
-              "cartonCount": 16,
-              "blocks": [
-                {
-                  "x": 0,
-                  "y": 0,
-                  "cols": 4,
-                  "rows": 4,
-                  "rotated": false
-                }
-              ],
-              "extent": {
-                "x": 40,
-                "y": 40
-              },
-              "z": 0
-            }
-          ],
-          "totalCartons": 16,
-          "totalProducts": 32
-        },
-        "score": {
-          "quantity": 100,
-          "utilization": 100,
-          "space": 100,
-          "quantityContribution": 60,
-          "utilizationContribution": 25,
-          "spaceContribution": 15,
-          "total": 100
-        },
-        "rank": 3,
-        "explanation": "Layout #3 and Layout #4 are equivalent in quantity, score, and carton count; they differ only in carton size or arrangement."
+        "explanation": "Layout #1 ranked above Layout #2 because it uses fewer cartons for the same result."
       },
       {
         "layout": {
@@ -1244,7 +1213,11 @@
             }
           ],
           "totalCartons": 16,
-          "totalProducts": 32
+          "totalProducts": 32,
+          "stability": {
+            "rating": "good",
+            "warnings": []
+          }
         },
         "score": {
           "quantity": 100,
@@ -1255,8 +1228,90 @@
           "spaceContribution": 15,
           "total": 100
         },
-        "rank": 4,
-        "explanation": "Layout #4 ranked above Layout #5 because it uses fewer cartons for the same result."
+        "rank": 2,
+        "explanation": "Layout #2 and Layout #3 are equivalent in quantity, score, and carton count; they differ only in carton size or arrangement."
+      },
+      {
+        "layout": {
+          "id": "1x1x2|L:8:4x2u/L:8:4x2u",
+          "carton": {
+            "counts": {
+              "L": 1,
+              "W": 1,
+              "H": 2
+            },
+            "inner": {
+              "L": 10,
+              "W": 10,
+              "H": 20
+            },
+            "outer": {
+              "L": 10,
+              "W": 10,
+              "H": 20
+            },
+            "boxesPerCarton": 2,
+            "utilization": 1,
+            "emptyVolume": 0
+          },
+          "layers": [
+            {
+              "vertical": "L",
+              "height": 10,
+              "cartonCount": 8,
+              "blocks": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "cols": 4,
+                  "rows": 2,
+                  "rotated": false
+                }
+              ],
+              "extent": {
+                "x": 40,
+                "y": 40
+              },
+              "z": 0
+            },
+            {
+              "vertical": "L",
+              "height": 10,
+              "cartonCount": 8,
+              "blocks": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "cols": 4,
+                  "rows": 2,
+                  "rotated": false
+                }
+              ],
+              "extent": {
+                "x": 40,
+                "y": 40
+              },
+              "z": 10
+            }
+          ],
+          "totalCartons": 16,
+          "totalProducts": 32,
+          "stability": {
+            "rating": "good",
+            "warnings": []
+          }
+        },
+        "score": {
+          "quantity": 100,
+          "utilization": 100,
+          "space": 100,
+          "quantityContribution": 60,
+          "utilizationContribution": 25,
+          "spaceContribution": 15,
+          "total": 100
+        },
+        "rank": 3,
+        "explanation": "Layout #3 ranked above Layout #4 because it uses fewer cartons for the same result."
       },
       {
         "layout": {
@@ -1322,7 +1377,81 @@
             }
           ],
           "totalCartons": 32,
-          "totalProducts": 32
+          "totalProducts": 32,
+          "stability": {
+            "rating": "good",
+            "warnings": []
+          }
+        },
+        "score": {
+          "quantity": 100,
+          "utilization": 100,
+          "space": 100,
+          "quantityContribution": 60,
+          "utilizationContribution": 25,
+          "spaceContribution": 15,
+          "total": 100
+        },
+        "rank": 4,
+        "explanation": "Layout #4 ranked above Layout #5 because it has a better stability rating (Good vs Fair) at the same quantity."
+      },
+      {
+        "layout": {
+          "id": "1x2x2|H:8:2x4r",
+          "carton": {
+            "counts": {
+              "L": 1,
+              "W": 2,
+              "H": 2
+            },
+            "inner": {
+              "L": 10,
+              "W": 20,
+              "H": 20
+            },
+            "outer": {
+              "L": 10,
+              "W": 20,
+              "H": 20
+            },
+            "boxesPerCarton": 4,
+            "utilization": 1,
+            "emptyVolume": 0
+          },
+          "layers": [
+            {
+              "vertical": "H",
+              "height": 20,
+              "cartonCount": 8,
+              "blocks": [
+                {
+                  "x": 0,
+                  "y": 0,
+                  "cols": 2,
+                  "rows": 4,
+                  "rotated": true
+                }
+              ],
+              "extent": {
+                "x": 40,
+                "y": 40
+              },
+              "z": 0
+            }
+          ],
+          "totalCartons": 8,
+          "totalProducts": 32,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "cartonHeight",
+                "level": "caution",
+                "value": 2,
+                "layer": 1
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 100,
@@ -1345,7 +1474,7 @@
     "layouts": [
       {
         "layout": {
-          "id": "1x2x3|H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u",
+          "id": "1x2x3|H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u:t/H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u:t/H:10:3x1r,3x1r,4x1u",
           "carton": {
             "counts": {
               "L": 1,
@@ -1407,31 +1536,32 @@
               "blocks": [
                 {
                   "x": 0,
-                  "y": 0,
-                  "cols": 3,
-                  "rows": 1,
-                  "rotated": true
-                },
-                {
-                  "x": 0,
-                  "y": 13,
-                  "cols": 3,
-                  "rows": 1,
-                  "rotated": true
-                },
-                {
-                  "x": 0,
-                  "y": 26,
+                  "y": 1,
                   "cols": 4,
                   "rows": 1,
                   "rotated": false
+                },
+                {
+                  "x": 1,
+                  "y": 18,
+                  "cols": 3,
+                  "rows": 1,
+                  "rotated": true
+                },
+                {
+                  "x": 1,
+                  "y": 31,
+                  "cols": 3,
+                  "rows": 1,
+                  "rotated": true
                 }
               ],
               "extent": {
                 "x": 52,
                 "y": 43
               },
-              "z": 13
+              "z": 13,
+              "turned": true
             },
             {
               "vertical": "H",
@@ -1473,31 +1603,32 @@
               "blocks": [
                 {
                   "x": 0,
-                  "y": 0,
-                  "cols": 3,
-                  "rows": 1,
-                  "rotated": true
-                },
-                {
-                  "x": 0,
-                  "y": 13,
-                  "cols": 3,
-                  "rows": 1,
-                  "rotated": true
-                },
-                {
-                  "x": 0,
-                  "y": 26,
+                  "y": 1,
                   "cols": 4,
                   "rows": 1,
                   "rotated": false
+                },
+                {
+                  "x": 1,
+                  "y": 18,
+                  "cols": 3,
+                  "rows": 1,
+                  "rotated": true
+                },
+                {
+                  "x": 1,
+                  "y": 31,
+                  "cols": 3,
+                  "rows": 1,
+                  "rotated": true
                 }
               ],
               "extent": {
                 "x": 52,
                 "y": 43
               },
-              "z": 39
+              "z": 39,
+              "turned": true
             },
             {
               "vertical": "H",
@@ -1534,7 +1665,17 @@
             }
           ],
           "totalCartons": 50,
-          "totalProducts": 300
+          "totalProducts": 300,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.5116279069767442
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 100,
@@ -1669,7 +1810,23 @@
             }
           ],
           "totalCartons": 45,
-          "totalProducts": 270
+          "totalProducts": 270,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.6666666666666667
+              },
+              {
+                "check": "columns",
+                "level": "caution",
+                "value": 5,
+                "layer": 1
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 90,
@@ -1804,7 +1961,23 @@
             }
           ],
           "totalCartons": 40,
-          "totalProducts": 240
+          "totalProducts": 240,
+          "stability": {
+            "rating": "fair",
+            "warnings": [
+              {
+                "check": "stackHeight",
+                "level": "caution",
+                "value": 1.911764705882353
+              },
+              {
+                "check": "columns",
+                "level": "caution",
+                "value": 5,
+                "layer": 1
+              }
+            ]
+          }
         },
         "score": {
           "quantity": 80,

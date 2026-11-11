@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RankedLayout } from '../../domain/types';
+import type { RankedLayout, StabilityRating } from '../../domain/types';
 import { explainRanking } from './explain';
 
 /** Hand-built fixture: only rank, products, cartons, utilization and total matter to the explanation. */
@@ -91,6 +91,44 @@ describe('explainRanking', () => {
   it('describes the only layout', () => {
     expect(explainRanking(ranked(1, 52, 80, 80), null, 1)).toBe(
       'Layout #1 is the only distinct layout found.',
+    );
+  });
+
+  it('explains a better stability rating at the same quantity', () => {
+    const rate = (r: RankedLayout, rating: StabilityRating): RankedLayout => ({
+      ...r,
+      layout: { ...r.layout, stability: { rating, warnings: [] } },
+    });
+    expect(
+      explainRanking(rate(ranked(1, 52, 70, 60), 'good'), rate(ranked(2, 52, 80, 85), 'fair'), 5),
+    ).toBe(
+      'Layout #1 ranked above Layout #2 because it has a better stability rating (Good vs Fair) at the same quantity.',
+    );
+    expect(
+      explainRanking(rate(ranked(1, 52, 70, 60), 'fair'), rate(ranked(2, 52, 80, 85), 'poor'), 5),
+    ).toBe(
+      'Layout #1 ranked above Layout #2 because it has a better stability rating (Fair vs Poor) at the same quantity.',
+    );
+  });
+
+  it('says nothing of stability when more products decide, or ratings are equal', () => {
+    const rate = (r: RankedLayout, rating: StabilityRating): RankedLayout => ({
+      ...r,
+      layout: { ...r.layout, stability: { rating, warnings: [] } },
+    });
+    expect(
+      explainRanking(rate(ranked(1, 60, 80, 90), 'poor'), rate(ranked(2, 52, 80, 70), 'good'), 5),
+    ).toBe(
+      'Layout #1 ranked above Layout #2 because it fits 8 additional units while maintaining similar utilization.',
+    );
+    expect(
+      explainRanking(
+        rate(ranked(1, 52, 80, 85.126), 'fair'),
+        rate(ranked(2, 52, 80, 80.1), 'fair'),
+        5,
+      ),
+    ).toBe(
+      'Layout #1 ranked above Layout #2 because it has a higher overall score (85.13 vs 80.10) at the same quantity.',
     );
   });
 });

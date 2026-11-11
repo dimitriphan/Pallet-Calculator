@@ -33,6 +33,20 @@ const layer = z.object({
   z: num,
   // Added in Round 4: absent on straight-cut layers and on results stored before it.
   kind: z.enum(['grid', 'pinwheel']).optional(),
+  // Added in Round 4: only on layers turned half a turn to interlock.
+  turned: z.boolean().optional(),
+});
+
+const stabilityWarning = z.object({
+  check: z.enum(['stackHeight', 'cartonHeight', 'support', 'columns']),
+  level: z.enum(['caution', 'serious']),
+  value: num,
+  layer: num.optional(),
+});
+
+const stability = z.object({
+  rating: z.enum(['good', 'fair', 'poor']),
+  warnings: z.array(stabilityWarning),
 });
 
 const layout = z.object({
@@ -43,6 +57,8 @@ const layout = z.object({
   totalProducts: num,
   // Added in Round 4: only on layouts trimmed to the maximum pallet weight.
   weightTrim: z.object({ layersRemoved: num }).optional(),
+  // Added in Round 4: layouts stored before the stability rating have none (no badge shown).
+  stability: stability.optional(),
 });
 
 const score = z.object({
@@ -146,6 +162,19 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
       roomForCartons: num,
       layersRemoved: num,
       max: num.nullable(),
+    })
+    .nullable()
+    .default(null),
+  // Added in Round 4: analytics saved before the stability rating read as "not rated".
+  stability: stability
+    .extend({
+      measures: z.object({
+        stackHeightRatio: num,
+        cartonHeight: z.object({ ratio: num, layer: num }).nullable(),
+        support: z.object({ share: num, layer: num }).nullable(),
+        columns: z.object({ layers: num, from: num }).nullable(),
+      }),
+      turnedLayers: z.array(num),
     })
     .nullable()
     .default(null),

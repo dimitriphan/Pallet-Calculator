@@ -82,15 +82,50 @@ describe('buildSheetContent, default winner', () => {
       { label: 'Pallet', value: '50.00 × 42.00 in, 5.00 in tall' },
       { label: 'Usable stacking height', value: '67.00 in' },
       { label: 'Finished load', value: '47.00 × 42.00 × 72.00 in including pallet' },
+      { label: 'Stability', value: 'Fair' },
+      {
+        label: 'Stability warning',
+        value: 'Stack is tall for its base (1.6 times its shorter side).',
+      },
+      { label: 'Turned layers', value: 'Turn these layers half a turn (180°): 3, 5, 7' },
+    ]);
+  });
+
+  it('prints no stability rows for a layout stored before ratings', () => {
+    const r = structuredClone(RESULT);
+    for (const { layout } of r.layouts) {
+      delete layout.stability;
+      for (const layer of layout.layers) delete layer.turned;
+    }
+    const old = buildSheetContent({
+      inputs: DEFAULT_INPUTS,
+      result: r,
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    expect(old.palletAndLoad.map((row) => row.label)).toEqual([
+      'Pallet',
+      'Usable stacking height',
+      'Finished load',
     ]);
   });
 
   it('patterns', () => {
+    // Layers 3, 5 and 7 are turned half a turn, so they are drawn as their own pattern.
     expect(s.patterns.map((p) => p.heading)).toEqual([
       'Pattern A: layer 1',
-      'Pattern B: layers 2-7',
+      'Pattern B: layers 2, 4, 6',
+      'Pattern C: layers 3, 5, 7',
     ]);
-    expect(s.patterns.map((p) => p.letter)).toEqual(['A', 'B']);
+    expect(s.patterns.map((p) => p.letter)).toEqual(['A', 'B', 'C']);
+    expect(s.patterns.map((p) => p.note)).toEqual([
+      undefined,
+      undefined,
+      'Pattern B turned half a turn (180°).',
+    ]);
+    expect(s.stacking.map((r) => r.pattern)).toEqual(['A', 'B', 'C', 'B', 'C', 'B', 'C']);
     expect(s.patterns[0]?.facts.map((f) => f.label)).toEqual([
       'Cartons in layer',
       'Carton footprint as placed',
@@ -107,6 +142,7 @@ describe('buildSheetContent, default winner', () => {
   it('drawings are inside the footprint and do not overlap', () => {
     expect(s.patterns[0]?.drawing.cartons.length).toBe(10);
     expect(s.patterns[1]?.drawing.cartons.length).toBe(7);
+    expect(s.patterns[2]?.drawing.cartons.length).toBe(7);
     for (const p of s.patterns) {
       const { footprint, cartons, pallet } = p.drawing;
       expect(footprint).toEqual({ x: 50, y: 42 });
@@ -174,6 +210,9 @@ describe('buildSheetContent, variations', () => {
       'Overhang',
       'Usable stacking height',
       'Finished load',
+      'Stability',
+      'Stability warning',
+      'Turned layers',
     ]);
     expect(s.palletAndLoad[1]?.value).toBe('2.00 in total, 1.00 in each side');
   });
@@ -257,6 +296,9 @@ describe('buildSheetContent in another unit', () => {
         label: 'Finished load',
         value: expect.stringMatching(/^[\d.]+ × [\d.]+ × [\d.]+ cm including pallet$/),
       },
+      { label: 'Stability', value: 'Fair' },
+      { label: 'Stability warning', value: expect.stringMatching(/^Stack is tall for its base/) },
+      { label: 'Turned layers', value: expect.stringMatching(/^Turn these layers half a turn/) },
     ]);
     expect(s.patterns[0]?.facts[1]?.value).toMatch(/^\d+\.\d × \d+\.\d cm/);
     expect(s.patterns[0]?.facts[2]?.value).toMatch(/^\d+\.\d cm$/);
@@ -369,7 +411,32 @@ describe('buildSheetContent with a pinwheel layer', () => {
         expect(overlaps(cartons[i] as SheetRect, cartons[k] as SheetRect)).toBe(false);
   });
 
-  it('adds no note to a straight-cut pattern', () => {
-    for (const p of build().patterns) expect('note' in p).toBe(false);
+  it('adds no note to a straight-cut pattern that is not turned', () => {
+    const plain = build().patterns.filter((p) => p.letter !== 'C');
+    for (const p of plain) expect('note' in p).toBe(false);
+  });
+
+  it('names the pattern a turned pinwheel layer is a turn of, after the pinwheel note', () => {
+    // 48 x 40 pallet, 13.5 x 10.5 x 10 cartons: an asymmetric pinwheel, turned on layers 2, 4.
+    const s = build({
+      ...PINWHEEL_INPUTS,
+      pallet: { length: 48, width: 40, height: 55 },
+      product: { length: 13.5, width: 10.5, height: 10 },
+      maxCarton: { length: 13.5, width: 10.5, height: 10 },
+    });
+    expect(s.patterns.map((p) => [p.heading, p.note])).toEqual([
+      [
+        'Pattern A: layers 1, 3, 5',
+        'Pinwheel layer: build the four blocks around the centre gap as shown in the top view.',
+      ],
+      [
+        'Pattern B: layers 2, 4',
+        'Pinwheel layer: build the four blocks around the centre gap as shown in the top view. Pattern A turned half a turn (180°).',
+      ],
+    ]);
+    expect(s.palletAndLoad.at(-1)).toEqual({
+      label: 'Turned layers',
+      value: 'Turn these layers half a turn (180°): 2, 4',
+    });
   });
 });

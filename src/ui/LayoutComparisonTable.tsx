@@ -18,6 +18,7 @@ import {
   withUnit,
 } from './format';
 import { useUnit } from './useUnit';
+import { StabilityBadge } from './StabilityBadge';
 import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
 
@@ -99,6 +100,9 @@ export function LayoutComparisonTable() {
                 <th scope="col" className={`${th} text-right`}>
                   Layers
                 </th>
+                <th scope="col" className={th}>
+                  Stability
+                </th>
                 <th scope="col" className={`${th} text-right`}>
                   Utilization
                 </th>
@@ -164,6 +168,9 @@ export function LayoutComparisonTable() {
                       ) : (
                         ranked.layout.layers.length
                       )}
+                    </td>
+                    <td className={td}>
+                      <StabilityBadge stability={ranked.layout.stability} short />
                     </td>
                     <td className={`${td} text-right`}>
                       {fmtPct(analytics.totals.utilizationPct)}

@@ -91,6 +91,30 @@ export interface LayerPattern {
 
 export interface Layer extends LayerPattern {
   z: number;
+  /**
+   * Turned half a turn (180°) about the centre of the usable footprint, so it interlocks with
+   * the identical layer below. Its blocks are stored already turned. Absent means not turned.
+   */
+  turned?: boolean;
+}
+
+export type StabilityRating = 'good' | 'fair' | 'poor';
+export type StabilityCheck = 'stackHeight' | 'cartonHeight' | 'support' | 'columns';
+
+/**
+ * One stability check over its caution or serious threshold. `value` is the measured ratio,
+ * share (0..1) or number of layers in columns; `layer` (from 1) names the worst layer.
+ */
+export interface StabilityWarning {
+  check: StabilityCheck;
+  level: 'caution' | 'serious';
+  value: number;
+  layer?: number;
+}
+
+export interface Stability {
+  rating: StabilityRating;
+  warnings: StabilityWarning[];
 }
 
 export interface Layout {
@@ -101,6 +125,8 @@ export interface Layout {
   totalProducts: number;
   /** Set when whole layers were removed from the top to keep under the maximum pallet weight. */
   weightTrim?: { layersRemoved: number };
+  /** Set by the optimizer; absent on layouts stored before Round 4's stability rating. */
+  stability?: Stability;
 }
 
 export interface ScoreBreakdown {

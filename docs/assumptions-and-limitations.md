@@ -41,7 +41,18 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 **Target quantity.** The tool always finds the maximum. If you enter a target, each layout says Target Met (equal), Target Exceeded (more) or Target Not Achievable (fewer), shows the most that is possible, and shows the cartons and layers needed to reach the target when it can be reached.
 
-**Ranking.** Layouts are ordered by total boxes first, then by score, then by fewer cartons. The score is 60% quantity, 25% volume used and 15% space (how few gaps there are inside the load). Quantity is ordered first so that a tidier load can never beat one that carries more boxes. Near-identical layouts (mirror images, or the same carton and arrangement) are shown once. If fewer than five different layouts exist, you see fewer. If nothing fits, the tool says why.
+**Stability rating.** Every layout is rated Good, Fair or Poor from four checks. Each check gives no warning, a caution or a serious warning; a value exactly at a limit gives no warning.
+
+- Stack height (pallet deck not counted) ÷ the shorter side of the bottom layer: caution above 1.5, serious above 2.0.
+- Carton height ÷ the carton's shorter base side, as stacked, for the worst layer: caution above 1.5, serious above 2.5.
+- Share of a layer's carton base resting on cartons of the layer below, for the worst layer: caution under 90%, serious under 70%. Layers are compared as placed, each centred on the pallet.
+- Four or more identical layers stacked in straight columns: caution.
+
+Good means no warnings, Fair cautions only, Poor any serious warning. The warnings are shown as plain sentences, for example "Stack is tall for its base (1.6 times its shorter side)." The limits live in one file (`src/domain/stabilityThresholds.ts`) and can be changed on request. The rating is advice only: crush strength, load on the bottom cartons, wrapping and strapping are not checked.
+
+**Interlocking.** When identical layers sit on each other, every second layer of the run is turned half a turn (180°) about the centre of the pallet, so its seams fall elsewhere, but only when that really moves cartons and every layer still rests at least 90% on the one below. The box count never changes. The card, the Analytics tab and the build sheet say which layers to turn ("Turn these layers half a turn (180°): 2, 4, 6"), and the 3D view and drawings show them turned. A layer that looks the same turned is left alone, and the straight-columns caution stands.
+
+**Ranking.** Layouts are ordered by total boxes first, then by stability rating (Good, then Fair, then Poor), then by score, then by fewer cartons. The rating only decides between layouts with the same number of boxes. The score is 60% quantity, 25% volume used and 15% space (how few gaps there are inside the load). Quantity is ordered first so that a tidier load can never beat one that carries more boxes. Near-identical layouts (mirror images, or the same carton and arrangement) are shown once. If fewer than five different layouts exist, you see fewer. If nothing fits, the tool says why.
 
 ## Basic and Full view
 
@@ -68,7 +79,7 @@ A strict product setting also limits how the carton may be turned on the pallet.
 - **One carton size per layout.** Mixed carton sizes in one load are not supported.
 - **Weight limit by whole layers only.** With a weight per product box and a maximum pallet weight, layers are removed from the top until the whole load (pallet included) is at or under the maximum; the tool then reports "Room for N more cartons by weight" but never places a part layer. The maximum is the only weight check: there is no limit per carton, no crush or load-bearing check, and the weight per carton is shown without judgement.
 - **Weight is optional.** With the weight per product box blank, weight is ignored everywhere: nothing about it is shown, and the CSV, PDF and PNG are unchanged (the JSON export carries the blank weight fields as they are). The empty carton weight defaults to 0 and the pallet to 40 lb. Weights are in pounds with inches and in kilograms with cm or mm. Presets keep the maximum, empty carton and pallet weights; the product box weight stays with the product.
-- **No stability or crush checks.** Tipped cartons and tall columns are allowed without any warning. You must judge whether the load is safe.
+- **The stability rating is advice, not a safety check.** It looks at shape only (stack height, carton proportions, support from the layer below, straight columns). Crush strength and load-bearing are not checked, and a Poor layout is still offered when it carries the most boxes. You must judge whether the load is safe.
 - **Basic view cannot edit** leeway, walls, overhang, rotation, the target quantity or the empty carton and pallet weights. Use Full view.
 - **Layer order.** Layers are ordered with the fullest layer at the bottom, so a narrower layer can sit under a slightly wider one; check overhang between layers when building mixed stacks.
 
@@ -89,8 +100,8 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 - The PNG has three pictures (your 3D view, a top view and a side view) and a caption strip with the numbers. The top and side pictures have no dimension or measurement labels, only the panel titles.
 - **Build sheet (PDF).** Available in both views. You may type a job name of up to 80 characters.
-  - Page 1: title, job name and date, the five production figures, the carton (outer size, inner size, boxes per carton, how boxes sit inside), the pallet and finished load size, and two pictures (the 3D view and the side view). If the result is out of date, a boxed line says so. If a layout other than layout 1 was selected, a line under the date says "Layout N of M selected. Layout 1 fits X boxes."
-  - Next pages: one block per distinct layer pattern with a top-down drawing to scale, and a stacking table from bottom to top. The drawing's edge dimensions are always the pallet's length and width, measured along the solid pallet outline. Each block of cartons is labelled "rows × columns" inside the drawing when it has room (the same values are listed as "Blocks (rows × columns)"). With overhang, a key under the drawing says which outline is which, for example "Solid line: pallet 48.00 × 40.00 in. Dashed line: limit with overhang 50.00 × 42.00 in." A long table continues on further pages. Pages 2 onward carry a running header. Every footer lists the settings used, including "Desired boxes per carton: best fit." when blank or "Desired boxes per carton: N." when set, "Layout N of M" and "Page X of Y".
+  - Page 1: title, job name and date, the five production figures, the carton (outer size, inner size, boxes per carton, how boxes sit inside), the pallet and finished load size, the stability rating with each warning and the layers to turn half a turn, and two pictures (the 3D view and the side view). If the result is out of date, a boxed line says so. If a layout other than layout 1 was selected, a line under the date says "Layout N of M selected. Layout 1 fits X boxes."
+  - Next pages: one block per distinct layer pattern with a top-down drawing to scale (a layer turned half a turn is its own pattern, noted "Pattern B turned half a turn (180°)."), and a stacking table from bottom to top. The drawing's edge dimensions are always the pallet's length and width, measured along the solid pallet outline. Each block of cartons is labelled "rows × columns" inside the drawing when it has room (the same values are listed as "Blocks (rows × columns)"). With overhang, a key under the drawing says which outline is which, for example "Solid line: pallet 48.00 × 40.00 in. Dashed line: limit with overhang 50.00 × 42.00 in." A long table continues on further pages. Pages 2 onward carry a running header. Every footer lists the settings used, including "Desired boxes per carton: best fit." when blank or "Desired boxes per carton: N." when set, "Layout N of M" and "Page X of Y".
   - US Letter, portrait, sizes in the unit chosen in the header, English only, no company name or logo. The only picture besides the drawings is the small mascot at the top right of page 1.
   - The pictures and text are always on a white background, whatever the theme.
   - The layer drawings show carton outlines, not individual product boxes.
@@ -100,7 +111,7 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 ## Planned for a later round (not built yet)
 
-- Advanced optimization (stability preference, interlocked layer patterns).
+- Advanced optimization (weighting the score towards stability).
 - Transparent overlays showing unused space.
 - A target-quantity field in Basic view, company branding on exports, shareable links.
 

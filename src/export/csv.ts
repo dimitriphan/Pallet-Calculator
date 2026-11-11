@@ -3,7 +3,8 @@ import {
   describeLayerOrientations,
   type TargetStatus,
 } from '../engine/analytics/analytics';
-import type { RotationMode } from '../domain/types';
+import type { RotationMode, StabilityRating } from '../domain/types';
+import { describeWarning } from '../engine/analytics/stability';
 import type { Unit } from '../engine/units/units';
 import {
   fmtDecimal,
@@ -11,6 +12,8 @@ import {
   formatLength,
   formatVolume,
   formatWeight,
+  ratioText,
+  shareText,
   unitLabel,
   volumeLabel,
   weightLabel,
@@ -44,6 +47,8 @@ const TARGET: Record<TargetStatus, string> = {
 
 type Row = [string, string | number];
 
+const RATING: Record<StabilityRating, string> = { good: 'Good', fair: 'Fair', poor: 'Poor' };
+
 /**
  * Two sections: Metric,Value rows, a blank line, then the layout comparison table. Lengths and
  * volumes are in `unit` (cm³ for mm), with the unit in each title.
@@ -58,6 +63,9 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   const wt = (v: number) => formatWeight(v, unit);
   const W = (title: string) => withUnit(title, weightLabel(unit));
   const yesNo = (v: boolean) => (v ? 'Yes' : 'No');
+  const ratio = (v: number) => ratioText(v);
+  const share = (v: number) => shareText(v);
+  const st = a.stability;
   const rows: Row[] = [
     ['Exported at', p.exportedAt],
     ['Selected layout', sel.rank],
@@ -105,6 +113,19 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Maximum quantity possible', a.target.maxPossible],
     ['Cartons needed for target', a.target.cartonsNeeded ?? ''],
     ['Layers needed for target', a.target.layersNeeded ?? ''],
+    // Stability: blank for a layout stored before layouts were rated.
+    ['Stability rating', st ? RATING[st.rating] : ''],
+    ['Stability warnings', st ? st.warnings.map(describeWarning).join(' ') : ''],
+    ['Stack height ÷ shorter side of base', st ? ratio(st.measures.stackHeightRatio) : ''],
+    [
+      'Carton height ÷ shorter base side, worst layer',
+      st?.measures.cartonHeight ? ratio(st.measures.cartonHeight.ratio) : '',
+    ],
+    [
+      'Least support from the layer below',
+      st?.measures.support ? share(st.measures.support.share) : '',
+    ],
+    ['Layers turned half a turn (180°)', st ? st.turnedLayers.join(' ') : ''],
     ['Overall score', n(sel.score.total)],
     ['Quantity contribution', n(sel.score.quantityContribution)],
     ['Utilization contribution', n(sel.score.utilizationContribution)],
@@ -134,6 +155,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     'Products',
     'Cartons',
     'Layers',
+    'Stability',
     'Utilization',
     ...(weighed ? [W('Weight')] : []),
     V('Remaining volume'),
@@ -145,6 +167,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     c.products,
     c.cartons,
     c.layers,
+    c.stability ? RATING[c.stability] : '',
     fmtPct(c.utilizationPct),
     ...(weighed ? [c.weight === undefined ? '' : wt(c.weight)] : []),
     vol(c.remainingVolume),

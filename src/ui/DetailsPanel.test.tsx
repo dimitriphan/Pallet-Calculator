@@ -31,6 +31,27 @@ describe('DetailsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('lists the stability rating, its warnings and every check with its value', async () => {
+    await renderApp();
+    const section = screen.getByRole('heading', { name: 'Stability' }).closest('section')!;
+    const s = within(section);
+    const value = (label: string) =>
+      s.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+    expect(value('Rating')).toBe('Stability: Fair');
+    expect(
+      s.getByText('Stack is tall for its base (1.6 times its shorter side).'),
+    ).toBeInTheDocument();
+    // 67 in of stack over the 42 in side of the bottom layer.
+    expect(value('Stack height ÷ shorter side of base')).toBe('1.60');
+    // Layer 1 stands 13 in tall on a 9 in side.
+    expect(value('Carton height ÷ shorter base side, worst layer')).toBe('1.44 (layer 1)');
+    // Layer 2 (two 13 x 42 columns and a 21 x 39 block: 47 x 42, 1911 in²) centred on layer 1
+    // (45 x 42): 1 in overhangs on each side, 42 + 39 in² unsupported: 1830 / 1911 = 95.8%.
+    expect(value('Least support from the layer below')).toBe('95% (layer 2)');
+    expect(value('Most identical layers in straight columns')).toBe('1');
+    expect(value('Layers turned half a turn (180°)')).toBe('3, 5, 7');
+  });
+
   it('shows how the boxes sit inside the carton', async () => {
     await renderApp();
     const carton = screen.getByRole('heading', { name: 'Carton' }).closest('section')!;

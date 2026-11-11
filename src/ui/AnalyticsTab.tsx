@@ -1,10 +1,13 @@
+import type { ReactNode } from 'react';
 import {
   describeBoxCounts,
   describeLayerOrientations,
   type Analytics,
   type LayerOrientation,
 } from '../engine/analytics/analytics';
+import { describeWarning } from '../engine/analytics/stability';
 import { DetailRows } from './DetailRows';
+import { StabilityBadge } from './StabilityBadge';
 import {
   areaText,
   dimsText,
@@ -12,6 +15,8 @@ import {
   fmtPct,
   lengthText,
   pairText,
+  ratioText,
+  shareText,
   volumeText,
   weightText,
   type Unit,
@@ -157,6 +162,65 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           />
         </>
       )}
+      {a.stability && <StabilityRows stability={a.stability} />}
     </div>
+  );
+}
+
+/** The rating, its warnings in words, then what each check measured. */
+function StabilityRows({ stability: s }: { stability: NonNullable<Analytics['stability']> }) {
+  const m = s.measures;
+  const turned = s.turnedLayers;
+  return (
+    <>
+      <div className="root-divider" aria-hidden="true" />
+      <DetailRows
+        title="Stability"
+        rows={[
+          ['Rating', <StabilityBadge stability={s} />],
+          ...(s.warnings.length > 0
+            ? ([
+                [
+                  'Warnings',
+                  s.warnings.map((w) => (
+                    <span key={w.check} className="block text-left">
+                      {describeWarning(w)}
+                    </span>
+                  )),
+                ],
+              ] as [string, ReactNode][])
+            : []),
+          ['Stack height ÷ shorter side of base', ratioText(m.stackHeightRatio)],
+          [
+            'Carton height ÷ shorter base side, worst layer',
+            m.cartonHeight ? (
+              <span className="whitespace-nowrap">{`${ratioText(m.cartonHeight.ratio)} (layer ${fmtCount(m.cartonHeight.layer)})`}</span>
+            ) : (
+              '—'
+            ),
+          ],
+          [
+            'Least support from the layer below',
+            m.support ? (
+              <span className="whitespace-nowrap">{`${shareText(m.support.share)} (layer ${fmtCount(m.support.layer)})`}</span>
+            ) : (
+              '—'
+            ),
+          ],
+          [
+            'Most identical layers in straight columns',
+            <span className="whitespace-nowrap">
+              {m.columns && m.columns.layers > 1
+                ? `${fmtCount(m.columns.layers)} (from layer ${fmtCount(m.columns.from)})`
+                : fmtCount(m.columns?.layers ?? 0)}
+            </span>,
+          ],
+          [
+            'Layers turned half a turn (180°)',
+            turned.length > 0 ? turned.map(fmtCount).join(', ') : 'None',
+          ],
+        ]}
+      />
+    </>
   );
 }

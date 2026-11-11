@@ -71,7 +71,7 @@ describe('buildCsv', () => {
     const blank = lines.indexOf('');
     expect(blank).toBeGreaterThan(0);
     expect(lines[blank + 1]).toBe(
-      '#,Carton (in),Products,Cartons,Layers,Utilization,Remaining volume (in³),Score',
+      '#,Carton (in),Products,Cartons,Layers,Stability,Utilization,Remaining volume (in³),Score',
     );
     expect(lines).toHaveLength(blank + 2 + payload.comparison.length + 1);
     expect(lines.at(-1)).toBe('');
@@ -124,6 +124,50 @@ describe('buildCsv', () => {
   });
 });
 
+describe('buildCsv stability', () => {
+  const d = buildCsv(buildExportPayload(DEFAULT_INPUTS, optimize(DEFAULT_INPUTS), 0, NOW));
+  const out = d.split('\r\n');
+
+  it('writes the rating, the warnings, what the checks measured and the turned layers', () => {
+    expect(out).toContain('Stability rating,Fair');
+    expect(out).toContain(
+      'Stability warnings,Stack is tall for its base (1.6 times its shorter side).',
+    );
+    expect(out).toContain('Stack height ÷ shorter side of base,1.60');
+    expect(out).toContain('"Carton height ÷ shorter base side, worst layer",1.44');
+    expect(out).toContain('Least support from the layer below,95%');
+    expect(out).toContain('Layers turned half a turn (180°),3 5 7');
+    // Just before the score rows.
+    expect(out.findIndex((l) => l.startsWith('Overall score,'))).toBe(
+      out.findIndex((l) => l.startsWith('Layers turned half a turn')) + 1,
+    );
+  });
+
+  it('gives each compared layout its rating', () => {
+    const blank = out.indexOf('');
+    expect(out.slice(blank + 2, -1).map((l) => l.split(',')[5])).toEqual([
+      'Fair',
+      'Fair',
+      'Fair',
+      'Fair',
+      'Fair',
+    ]);
+  });
+
+  it('leaves the stability fields blank for a layout stored before ratings', () => {
+    const r = structuredClone(optimize(DEFAULT_INPUTS));
+    for (const { layout } of r.layouts) {
+      delete layout.stability;
+      for (const layer of layout.layers) delete layer.turned;
+    }
+    const old = buildCsv(buildExportPayload(DEFAULT_INPUTS, r, 0, NOW)).split('\r\n');
+    expect(old).toContain('Stability rating,');
+    expect(old).toContain('Layers turned half a turn (180°),');
+    const blank = old.indexOf('');
+    expect(old[blank + 2]?.split(',')[5]).toBe('');
+  });
+});
+
 describe('buildCsv in another unit', () => {
   const cm = buildCsv(payload, 'cm').split('\r\n');
   const mm = buildCsv(payload, 'mm').split('\r\n');
@@ -146,9 +190,11 @@ describe('buildCsv in another unit', () => {
   it('titles the comparison table with the unit', () => {
     const blank = cm.indexOf('');
     expect(cm[blank + 1]).toBe(
-      '#,Carton (cm),Products,Cartons,Layers,Utilization,Remaining volume (cm³),Score',
+      '#,Carton (cm),Products,Cartons,Layers,Stability,Utilization,Remaining volume (cm³),Score',
     );
-    expect(cm[blank + 2]).toMatch(/^1,50\.8 × 25\.4 × 50\.8,/);
+    // Rank 1 is the 20 x 20 x 10 carton lying on its side (Good); before the stability
+    // tie-break it was the same carton standing 20 in tall on a 10 in side (Fair, 2.0).
+    expect(cm[blank + 2]).toMatch(/^1,50\.8 × 50\.8 × 25\.4,32,8,2,Good,/);
   });
 });
 
@@ -197,9 +243,9 @@ describe('buildCsv with weights', () => {
   it('adds a weight column to the comparison table', () => {
     const blank = out.indexOf('');
     expect(out[blank + 1]).toBe(
-      '#,Carton (in),Products,Cartons,Layers,Utilization,Weight (lb),Remaining volume (in³),Score',
+      '#,Carton (in),Products,Cartons,Layers,Stability,Utilization,Weight (lb),Remaining volume (in³),Score',
     );
-    expect(out[blank + 2]?.split(',')[6]).toBe('274.0');
+    expect(out[blank + 2]?.split(',')[7]).toBe('274.0');
   });
 
   it('writes kg with cm and leaves a blank maximum empty', () => {

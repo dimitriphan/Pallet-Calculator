@@ -117,6 +117,50 @@ describe('Basic mode', () => {
     expect(c.getByText(NOTE)).toBeInTheDocument();
   });
 
+  it('rates the stability under the finished load, with its warnings and turned layers', async () => {
+    await renderBasic();
+    const c = within(card());
+    expect(c.getByText('Stability: Fair')).toBeInTheDocument();
+    expect(
+      c.getByText('Stack is tall for its base (1.6 times its shorter side).'),
+    ).toBeInTheDocument();
+    expect(c.getByText('Turn these layers half a turn (180°): 3, 5, 7')).toBeInTheDocument();
+  });
+
+  it('shows a Good rating without warnings, and a Poor one with its serious warning', async () => {
+    const { stores } = await renderBasic();
+    act(() => stores.inputs.getState().setField('pallet.height', '55'));
+    await flush();
+    let c = within(card());
+    expect(c.getByText('Stability: Good')).toBeInTheDocument();
+    expect(c.queryByText(/Stack is tall/)).not.toBeInTheDocument();
+    expect(c.getByText('Turn these layers half a turn (180°): 3, 5')).toBeInTheDocument();
+    act(() => stores.inputs.getState().setField('pallet.height', '90'));
+    await flush();
+    c = within(card());
+    expect(c.getByText('Stability: Poor')).toBeInTheDocument();
+    expect(
+      c.getByText('Stack is tall for its base (2.02 times its shorter side).'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no rating for a result stored before ratings, and no turn note without turns', async () => {
+    const unrated = (i: Inputs) => {
+      const r = structuredClone(optimize(i));
+      for (const { layout } of r.layouts) {
+        delete layout.stability;
+        for (const layer of layout.layers) delete layer.turned;
+      }
+      return Promise.resolve(r);
+    };
+    await renderBasic(unrated);
+    const c = within(card());
+    expect(c.getByText(DEFAULT_LOAD)).toBeInTheDocument();
+    expect(c.queryByText(/Stability:/)).not.toBeInTheDocument();
+    expect(c.queryByText(/Stack is tall/)).not.toBeInTheDocument();
+    expect(c.queryByText(/half a turn/)).not.toBeInTheDocument();
+  });
+
   it('hides the analytical parts of the screen', async () => {
     const { user } = await renderBasic();
     expect(screen.queryByRole('table', { name: 'Layout comparison' })).not.toBeInTheDocument();

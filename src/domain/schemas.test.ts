@@ -300,6 +300,25 @@ describe('optimizeResultSchema', () => {
     expect(optimizeResultSchema.safeParse(bad).success).toBe(false);
   });
 
+  it('keeps the stability rating and turned layers, and loads results stored without them', () => {
+    const r = optimize(DEFAULT_INPUTS);
+    const winner = r.layouts[0]!.layout;
+    expect(winner.stability?.rating).toBe('fair');
+    expect(winner.layers.some((l) => l.turned)).toBe(true);
+    expect(optimizeResultSchema.parse(structuredClone(r))).toEqual(r);
+    const old = structuredClone(r);
+    for (const { layout } of old.layouts) {
+      delete layout.stability;
+      for (const layer of layout.layers) delete layer.turned;
+    }
+    const parsed = optimizeResultSchema.parse(structuredClone(old));
+    expect(parsed).toEqual(old);
+    expect(parsed.layouts.every((x) => x.layout.stability === undefined)).toBe(true);
+    const bad = structuredClone(r) as unknown as { layouts: { layout: { stability: unknown } }[] };
+    bad.layouts[0]!.layout.stability = { rating: 'excellent', warnings: [] };
+    expect(optimizeResultSchema.safeParse(bad).success).toBe(false);
+  });
+
   it('accepts a Round 1 result without nearestCounts', () => {
     const r = optimize(DEFAULT_INPUTS);
     expect('nearestCounts' in r).toBe(false);
@@ -349,10 +368,31 @@ describe('scenarioSchema', () => {
     expect(parsed.data?.analytics?.weight).toBeNull();
   });
 
+  it('loads a scenario saved before stability ratings, showing no rating', () => {
+    const old = structuredClone(scenario) as unknown as {
+      result: {
+        layouts: { layout: Record<string, unknown> & { layers: Record<string, unknown>[] } }[];
+      };
+      analytics: Record<string, unknown>;
+    };
+    for (const { layout } of old.result.layouts) {
+      delete layout.stability;
+      for (const layer of layout.layers) delete layer.turned;
+    }
+    delete old.analytics.stability;
+    const parsed = scenarioSchema.safeParse(old);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.analytics?.stability).toBeNull();
+    expect(parsed.data?.result.layouts[1]!.layout.stability).toBeUndefined();
+    expect(analytics.stability?.rating).toBe('fair');
+  });
+
   it('keeps a weight-limited scenario as saved', () => {
+    // 300 lb: the winner itself is trimmed (at 450 lb trimmed layouts tie with better-rated
+    // untrimmed ones and no longer make the top five).
     const inputs = {
       ...DEFAULT_INPUTS,
-      weights: { productBox: 2, emptyCarton: 1, pallet: 40, maxPallet: 450 },
+      weights: { productBox: 2, emptyCarton: 1, pallet: 40, maxPallet: 300 },
     };
     const r = optimize(inputs);
     const a = computeAnalytics(r.layouts[0]!.layout, inputs);

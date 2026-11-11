@@ -95,10 +95,35 @@ describe('LayoutComparisonTable', () => {
       'Products',
       'Cartons',
       'Layers',
+      'Stability',
       'Utilization',
       'Remaining volume (in³)',
       'Score',
     ]);
+  });
+
+  it("shows each layout's stability rating as a badge in the Stability column", async () => {
+    const { stores } = await renderApp();
+    const layouts = stores.results.getState().result!.layouts;
+    const word = { good: 'Good', fair: 'Fair', poor: 'Poor' } as const;
+    tableRows().forEach((row, k) => {
+      const cell = within(row).getAllByRole('cell')[5];
+      expect(cell?.textContent).toBe(word[layouts[k]!.layout.stability!.rating]);
+    });
+    expect(within(tableRows()[0] as HTMLElement).getAllByRole('cell')[5]?.textContent).toBe('Fair');
+    // Only the badge: the warning sentences are on the card and in the Analytics tab.
+    expect(screen.getByRole('table').textContent).not.toMatch(/Stack is tall/);
+  });
+
+  it('leaves the Stability cell empty for a stored result without ratings', async () => {
+    const unrated = (i: Inputs) => {
+      const r = structuredClone(optimize(i));
+      for (const { layout } of r.layouts) delete layout.stability;
+      return Promise.resolve(r);
+    };
+    await renderApp(unrated);
+    for (const row of tableRows())
+      expect(within(row).getAllByRole('cell')[5]?.textContent).toBe('');
   });
 
   it('marks a layout with a pinwheel layer "Pinwheel" in the Layers column', async () => {
@@ -115,8 +140,8 @@ describe('LayoutComparisonTable', () => {
       expect(cells[4]?.textContent).toBe(`${layout.layers.length}${pinwheel ? 'Pinwheel' : ''}`);
     });
     expect(within(rows[0] as HTMLElement).getByText('Pinwheel')).toBeInTheDocument();
-    // The headers are unchanged.
-    expect(screen.getAllByRole('columnheader')).toHaveLength(8);
+    // No column was added for it.
+    expect(screen.getAllByRole('columnheader')).toHaveLength(9);
   });
 
   it('shows a stored result whose layers have no kind as before, without "Pinwheel"', async () => {

@@ -45,11 +45,13 @@ const PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAC0lEQVR4nGP4DwYAFPIF+6QNfF4AAAAASUVORK5CYII=';
 
 describe('planPages', () => {
-  it('puts both default patterns and the stacking table on page 2', () => {
+  it('puts the default patterns two per page and the stacking table after them', () => {
+    // Layers 3, 5 and 7 are turned half a turn: their pattern C needs a third block, so
+    // the sheet has three pages where it had two.
     const plan = planPages(defaultSheet());
-    expect(plan.patternsPerPage).toEqual([['A', 'B']]);
-    expect(plan.stackingOnPage).toBe(2);
-    expect(plan.totalPages).toBe(2);
+    expect(plan.patternsPerPage).toEqual([['A', 'B'], ['C']]);
+    expect(plan.stackingOnPage).toBe(3);
+    expect(plan.totalPages).toBe(3);
   });
 
   it('flows five patterns two per page and keeps the stacking table on the page', () => {
@@ -130,14 +132,19 @@ describe('renderBuildSheetPdf', () => {
       'Pallet build sheet',
       'Dock 4',
       '260',
-      'Pattern B: layers 2-7',
+      'Pattern B: layers 2, 4, 6',
+      'Pattern C: layers 3, 5, 7',
+      'Pattern B turned half a turn \\(180°\\).',
+      'Stability',
+      'Fair',
+      'Stack is tall for its base',
       '3D pictures unavailable',
-      'Page 2 of 2',
+      'Page 3 of 3',
       '72.00 in',
     ])
       expect(text).toContain(s);
     expect(text).not.toContain('Out of date');
-    expect(pageObjects(text)).toBe(2);
+    expect(pageObjects(text)).toBe(3);
   });
 
   it('prints the outline key only with overhang', async () => {

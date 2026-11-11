@@ -18,9 +18,9 @@ describe('root dividers', () => {
     expect(dividersIn(inputsPanel())).toHaveLength(5);
   });
 
-  it('separates the four analytics groups', async () => {
+  it('separates the five analytics groups (Stability added in Round 4)', async () => {
     await renderApp();
-    expect(dividersIn(screen.getByRole('tabpanel'))).toHaveLength(3);
+    expect(dividersIn(screen.getByRole('tabpanel'))).toHaveLength(4);
   });
 
   it('separates the three sections of the "What to build" card', async () => {

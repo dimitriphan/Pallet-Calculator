@@ -1,4 +1,7 @@
-import type { RankedLayout } from '../../domain/types';
+import type { RankedLayout, StabilityRating } from '../../domain/types';
+import { ratingOrder } from './score';
+
+const RATING_WORD: Record<StabilityRating, string> = { good: 'Good', fair: 'Fair', poor: 'Poor' };
 
 /** Score differences at or below this count as the same score (matches compareRanked). */
 const SCORE_TIE = 1e-9;
@@ -26,6 +29,11 @@ export function explainRanking(
           ? 'despite lower utilization.'
           : 'while maintaining similar utilization.';
     return `${head} fits ${extra} additional ${extra === 1 ? 'unit' : 'units'} ${tail}`;
+  }
+  const mine = current.layout.stability;
+  const theirs = next.layout.stability;
+  if (mine && theirs && ratingOrder(current.layout) < ratingOrder(next.layout)) {
+    return `${head} has a better stability rating (${RATING_WORD[mine.rating]} vs ${RATING_WORD[theirs.rating]}) at the same quantity.`;
   }
   if (current.score.total - next.score.total > SCORE_TIE) {
     // Two decimals unless they would print the same number for both.

@@ -1,8 +1,10 @@
 import { PALLET_HEIGHT } from '../../domain/constants';
-import type { Dims, Inputs, Layout, ProductAxis } from '../../domain/types';
+import type { Dims, Inputs, Layout, ProductAxis, Stability } from '../../domain/types';
 import { availableVolume, usableFootprint, usableHeight } from '../packing/geometry';
 import { layoutMetrics } from '../packing/metrics';
 import { footprintAxes } from '../packing/stacking';
+import { turnedLayerNumbers } from './stack';
+import { measureStability, type StabilityMeasures } from './stability';
 import { layoutWeight, roomForCartons, type LayoutWeight } from './weight';
 
 export type TargetStatus = 'none' | 'met' | 'exceeded' | 'notAchievable';
@@ -99,6 +101,12 @@ export interface Analytics {
         max: number | null;
       })
     | null;
+  /**
+   * The layout's stability rating and warnings, with what every check measured and the
+   * numbers of the layers turned half a turn (from 1). Null for a
+   * layout stored before the rating existed (it has no rating to show).
+   */
+  stability: (Stability & { measures: StabilityMeasures; turnedLayers: number[] }) | null;
 }
 
 /**
@@ -201,6 +209,9 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       totalBoxes: l.totalProducts,
     },
     weight: weightAnalytics(l, i),
+    stability: l.stability
+      ? { ...l.stability, measures: measureStability(l), turnedLayers: turnedLayerNumbers(l) }
+      : null,
   };
 }
 

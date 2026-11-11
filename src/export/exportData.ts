@@ -1,4 +1,4 @@
-import type { Dims, Inputs, OptimizeResult, RankedLayout } from '../domain/types';
+import type { Dims, Inputs, OptimizeResult, RankedLayout, StabilityRating } from '../domain/types';
 import { cartonDisplayDims, computeAnalytics, type Analytics } from '../engine/analytics/analytics';
 
 /** What every export says when the result shown is older than the current inputs. */
@@ -24,6 +24,8 @@ export interface ExportPayload {
     score: number;
     /** Total weight in pounds; present only when the box weight was set. */
     weight?: number;
+    /** Absent for a layout stored before layouts were rated. */
+    stability?: StabilityRating;
   }[];
 }
 
@@ -56,6 +58,7 @@ export function buildExportPayload(
         remainingVolume: a.totals.remainingVolume,
         score: r.score.total,
         ...(a.weight ? { weight: a.weight.total } : {}),
+        ...(r.layout.stability ? { stability: r.layout.stability.rating } : {}),
       };
     }),
   };

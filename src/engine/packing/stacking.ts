@@ -212,10 +212,17 @@ function blocksSignature(blocks: Block[]): string {
     .join(',');
 }
 
-/** Identity of a layout: carton key, then each layer's vertical axis, count and sorted blocks. */
+/**
+ * Identity of a layout: carton key, then each layer's vertical axis, count and sorted blocks,
+ * and ":t" after a layer turned half a turn (so an interlocked layout never shares the id of
+ * the same layers unturned; unturned layouts keep the ids they always had).
+ */
 export function layoutSignature(l: Layout): string {
   const layers = l.layers
-    .map((layer) => `${layer.vertical}:${layer.cartonCount}:${blocksSignature(layer.blocks)}`)
+    .map(
+      (layer) =>
+        `${layer.vertical}:${layer.cartonCount}:${blocksSignature(layer.blocks)}${layer.turned ? ':t' : ''}`,
+    )
     .join('/');
   return `${cartonKey(l.carton)}|${layers}`;
 }

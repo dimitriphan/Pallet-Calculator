@@ -3,6 +3,7 @@ import { DEFAULT_INPUTS } from '../../domain/constants';
 import type { Inputs, Layout, RankedLayout } from '../../domain/types';
 import { cartonKey, generateCartonCandidates } from '../packing/cartons';
 import { buildLayouts, footprintAxes, layoutSignature } from '../packing/stacking';
+import { assessStability } from '../analytics/stability';
 import { externalSignature, rankLayouts } from './rank';
 import { compareRanked } from './score';
 
@@ -154,5 +155,26 @@ describe('rankLayouts', () => {
     expect(r[0]?.explanation.startsWith('Layout #1 ranked above Layout #2 because')).toBe(true);
     const one = rankLayouts(allLayouts(DEFAULT_INPUTS), DEFAULT_INPUTS, 1);
     expect(one[0]?.explanation).toBe('Layout #1 is the only distinct layout found.');
+  });
+
+  it('rates every layout it ranks, and prefers a better rating at the same products', () => {
+    const layouts = allLayouts(DEFAULT_INPUTS);
+    const r = rankLayouts(layouts, DEFAULT_INPUTS, 30);
+    for (const x of r)
+      expect(x.layout.stability).toEqual(assessStability(x.layout, DEFAULT_INPUTS));
+    expectWellFormed(r);
+    const order = { good: 0, fair: 1, poor: 2 } as const;
+    for (let k = 1; k < r.length; k++) {
+      const [p, q] = [r[k - 1]!.layout, r[k]!.layout];
+      if (p.totalProducts === q.totalProducts) {
+        expect(order[p.stability!.rating]).toBeLessThanOrEqual(order[q.stability!.rating]);
+      }
+    }
+  });
+
+  it('keeps a rating it is given', () => {
+    const [l] = allLayouts(DEFAULT_INPUTS);
+    const given = { ...l!, stability: { rating: 'poor' as const, warnings: [] } };
+    expect(rankLayouts([given], DEFAULT_INPUTS)[0]!.layout.stability).toEqual(given.stability);
   });
 });

@@ -10,6 +10,8 @@ import {
   layerKind,
   stackPatterns,
   stackRuns,
+  turnedLayerNumbers,
+  turnedLayersText,
   type StackRun,
 } from './stack';
 
@@ -63,14 +65,25 @@ describe('stackRuns', () => {
 });
 
 describe('stackPatterns', () => {
-  it('gives letters A and B for the default winner', () => {
+  it('gives letters A, B and C for the default winner, whose layers 3, 5 and 7 are turned', () => {
+    // Before interlocking (Round 4, Task 5) layers 2-7 were all pattern B. Turned half a turn,
+    // layers 3, 5 and 7 put their cartons elsewhere, so they are drawn as their own pattern.
     const p = stackPatterns(winner());
-    expect(p.map((x) => x.letter)).toEqual(['A', 'B']);
+    expect(p.map((x) => x.letter)).toEqual(['A', 'B', 'C']);
     expect(p[0]?.layerNumbers).toEqual([1]);
-    expect(p[1]?.layerNumbers).toEqual([2, 3, 4, 5, 6, 7]);
-    expect(p.map((x) => x.layerIndex)).toEqual([0, 1]);
+    expect(p[1]?.layerNumbers).toEqual([2, 4, 6]);
+    expect(p[2]?.layerNumbers).toEqual([3, 5, 7]);
+    expect(p.map((x) => x.layerIndex)).toEqual([0, 1, 2]);
     expect(p[0]).toMatchObject({ cartonsPerLayer: 10, vertical: 'L' });
     expect(p[1]).toMatchObject({ cartonsPerLayer: 7, vertical: 'W' });
+    expect(p[2]).toMatchObject({ cartonsPerLayer: 7, vertical: 'W' });
+  });
+
+  it('gives letters A and B for the default winner unturned', () => {
+    const base = winner();
+    const p = stackPatterns(restack(base, [0, 1, 1, 1, 1, 1, 1]));
+    expect(p.map((x) => x.letter)).toEqual(['A', 'B']);
+    expect(p[1]?.layerNumbers).toEqual([2, 3, 4, 5, 6, 7]);
   });
 
   it('reuses a pattern letter in A, B, A', () => {
@@ -108,6 +121,35 @@ describe('stackPatterns', () => {
   });
 });
 
+describe('turned layers', () => {
+  it('names the turned layers of the default winner', () => {
+    expect(turnedLayerNumbers(winner())).toEqual([3, 5, 7]);
+    expect(turnedLayersText(winner())).toBe('Turn these layers half a turn (180°): 3, 5, 7');
+  });
+
+  it('says nothing when no layer is turned', () => {
+    const plain = restack(winner(), [0, 1, 1, 1]);
+    expect(turnedLayerNumbers(plain)).toEqual([]);
+    expect(turnedLayersText(plain)).toBeNull();
+  });
+
+  it('keeps a turned layer in the run of the layer it is a turn of', () => {
+    expect(stackRuns(winner()).map((r) => [r.from, r.to])).toEqual([
+      [1, 1],
+      [2, 7],
+    ]);
+  });
+
+  it('does not join a turned layer to a different layer', () => {
+    const base = winner();
+    // Layer 1 (10 cartons) under a turned layer of 7: two runs.
+    expect(stackRuns(restack(base, [0, 2])).map((r) => [r.from, r.to])).toEqual([
+      [1, 1],
+      [2, 2],
+    ]);
+  });
+});
+
 describe('describeLayerList', () => {
   it.each([
     [[1], 'layer 1'],
@@ -139,6 +181,6 @@ describe('pinwheel layers', () => {
     expect(stackPatterns(pinwheel()).map((p) => [p.letter, p.kind, p.layerNumbers])).toEqual([
       ['A', 'pinwheel', [1, 2, 3]],
     ]);
-    expect(stackPatterns(winner()).map((p) => p.kind)).toEqual(['grid', 'grid']);
+    expect(stackPatterns(winner()).map((p) => p.kind)).toEqual(['grid', 'grid', 'grid']);
   });
 });

@@ -1,9 +1,17 @@
 import { useId, useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
-import { describeRun, hasPinwheelLayer, PINWHEEL_NOTE, stackRuns } from '../engine/analytics/stack';
+import {
+  describeRun,
+  hasPinwheelLayer,
+  PINWHEEL_NOTE,
+  stackRuns,
+  turnedLayersText,
+} from '../engine/analytics/stack';
+import { describeWarning } from '../engine/analytics/stability';
 import { dimsText, roomText, weightText, weightTrimText } from './format';
 import { useUnit } from './useUnit';
 import { Mascot } from './Mascot';
+import { StabilityBadge } from './StabilityBadge';
 import { StaleBadge } from './StaleBadge';
 import { useStatusContent } from './StatusMessages';
 import { useResults } from './StoreContext';
@@ -52,6 +60,7 @@ export function WhatToBuildCard() {
     const layout = ranked.layout;
     const p = analytics.pallet;
     const w = analytics.weight;
+    const turned = turnedLayersText(layout);
     const carton: [string, string][] = [
       ['Outer size', dimsText(cartonDisplayDims(layout, 'outer'), unit)],
       ['Inner size', dimsText(cartonDisplayDims(layout, 'inner'), unit)],
@@ -106,6 +115,7 @@ export function WhatToBuildCard() {
           {hasPinwheelLayer(layout) && (
             <p className="text-sm text-gray-700 dark:text-harbor-mist">{PINWHEEL_NOTE}</p>
           )}
+          {turned && <p className="text-sm text-gray-700 dark:text-harbor-mist">{turned}</p>}
         </Part>
         <div className="root-divider" aria-hidden="true" />
         <Part title="Finished load">
@@ -140,6 +150,21 @@ export function WhatToBuildCard() {
                 </p>
               )}
             </>
+          )}
+          {layout.stability && (
+            <div className="space-y-1">
+              <p>
+                <StabilityBadge stability={layout.stability} className="px-2 py-0.5 text-sm" />
+              </p>
+              {layout.stability.warnings.map((warning) => (
+                <p
+                  key={warning.check}
+                  className="text-sm tabular-nums text-gray-700 dark:text-harbor-mist"
+                >
+                  {describeWarning(warning)}
+                </p>
+              ))}
+            </div>
           )}
         </Part>
       </>

@@ -4,13 +4,19 @@
  * the screen uses, taken from the inputs the result was computed from.
  */
 import { PALLET_HEIGHT } from '../domain/constants';
-import type { Inputs, OptimizeResult, ProductAxis } from '../domain/types';
+import type { Inputs, Layout, OptimizeResult, ProductAxis } from '../domain/types';
 import {
   cartonDisplayDims,
   computeAnalytics,
   describeBoxCounts,
 } from '../engine/analytics/analytics';
-import { describeLayerList, PINWHEEL_NOTE, stackPatterns } from '../engine/analytics/stack';
+import {
+  describeLayerList,
+  PINWHEEL_NOTE,
+  stackPatterns,
+  turnedLayersText,
+} from '../engine/analytics/stack';
+import { describeWarning } from '../engine/analytics/stability';
 import { cartonPlacements } from '../engine/packing/positions';
 import type { Unit } from '../engine/units/units';
 import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
@@ -34,7 +40,7 @@ export interface SheetPattern {
   letter: string;
   heading: string;
   facts: SheetRow[];
-  /** How to build the layer; only on a pinwheel pattern. */
+  /** How to build the layer; only on a pinwheel pattern or a pattern turned half a turn. */
   note?: string;
   drawing: {
     footprint: { x: number; y: number };
@@ -121,6 +127,24 @@ export function buildSheetFilename(now: Date): string {
   return `pallet-build-sheet-${date}-${time}.pdf`;
 }
 
+const RATING_WORD = { good: 'Good', fair: 'Fair', poor: 'Poor' } as const;
+
+/**
+ * The stability rating, one row per warning, and which layers to turn half a turn. Nothing for a
+ * layout stored before layouts were rated.
+ */
+function stabilityRows(layout: Layout): SheetRow[] {
+  const rows: SheetRow[] = [];
+  if (layout.stability) {
+    rows.push({ label: 'Stability', value: RATING_WORD[layout.stability.rating] });
+    for (const w of layout.stability.warnings)
+      rows.push({ label: 'Stability warning', value: describeWarning(w) });
+  }
+  const turned = turnedLayersText(layout);
+  if (turned) rows.push({ label: 'Turned layers', value: turned });
+  return rows;
+}
+
 /** Total and per-carton weight, then the trim and the room left when there is a maximum. */
 function weightRows(
   w: NonNullable<ReturnType<typeof computeAnalytics>['weight']>,
@@ -176,7 +200,11 @@ export function buildSheetContent(a: {
     dy: inputs.pallet.width,
   };
 
-  const patterns: SheetPattern[] = stackPatterns(layout).map((p) => {
+  const stack = stackPatterns(layout);
+  const letterOfLayer = new Map<number, string>();
+  for (const p of stack) for (const n of p.layerNumbers) letterOfLayer.set(n, p.letter);
+
+  const patterns: SheetPattern[] = stack.map((p) => {
     const layer = layout.layers[p.layerIndex];
     if (!layer) throw new Error(`No layer at index ${p.layerIndex}`);
     const cartons = placements
@@ -204,6 +232,10 @@ export function buildSheetContent(a: {
         label: `${b.rows} × ${b.cols}`,
       });
     }
+    // A turned layer sits on the layer it is a turn of: name that layer's pattern.
+    const notes: string[] = p.kind === 'pinwheel' ? [PINWHEEL_NOTE] : [];
+    const twin = layer.turned ? letterOfLayer.get(p.layerIndex) : undefined;
+    if (twin) notes.push(`Pattern ${twin} turned half a turn (180°).`);
     const first = cartons[0];
     const mixed = layer.blocks.some((b) => b.rotated) && layer.blocks.some((b) => !b.rotated);
     const footprintText = first
@@ -223,13 +255,9 @@ export function buildSheetContent(a: {
         },
       ],
       drawing: { footprint: { ...footprint }, pallet: { ...palletRect }, cartons, blocks },
-      ...(p.kind === 'pinwheel' ? { note: PINWHEEL_NOTE } : {}),
+      ...(notes.length > 0 ? { note: notes.join(' ') } : {}),
     };
   });
-
-  const letterOfLayer = new Map<number, string>();
-  for (const p of stackPatterns(layout))
-    for (const n of p.layerNumbers) letterOfLayer.set(n, p.letter);
   let top = PALLET_HEIGHT;
   const stacking = layout.layers.map((layer, i) => {
     top += layer.height;
@@ -262,6 +290,7 @@ export function buildSheetContent(a: {
       value: `${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} including pallet`,
     },
     ...(weight ? weightRows(weight, weightOf) : []),
+    ...stabilityRows(layout),
   ];
 
   const palletSize = sizeText(palletRect.dx, palletRect.dy);

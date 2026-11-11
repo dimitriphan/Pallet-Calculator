@@ -335,7 +335,10 @@ describe('optimize', () => {
     }
 
     it('gives the results recorded before weight existed when the weights are blank', () => {
-      // Recorded at 25f2d6d, before weights were part of the inputs.
+      // Recorded at 25f2d6d, before weights were part of the inputs; re-recorded in Round 4
+      // Task 5 with every product count per rank unchanged: layouts now carry a stability
+      // rating, alternate identical layers are turned to interlock, and among equal counts
+      // better-rated layouts rank first (cubes: four Good layouts now precede the Fair one).
       const recorded = baseline as unknown as Record<string, OptimizeResult>;
       expect(DEFAULT_INPUTS.weights).toEqual({
         productBox: null,
@@ -366,7 +369,11 @@ describe('optimize', () => {
       expect(r.layouts[0]!.layout.totalProducts).toBe(bestTrimmedProducts(i));
       // Unlimited, the default winner holds 260 boxes; 450 lb cannot carry that.
       expect(r.layouts[0]!.layout.totalProducts).toBeLessThan(260);
-      expect(r.layouts.some((x) => x.layout.weightTrim)).toBe(true);
+      // Ranks 2-5 hold 180 boxes each. Trimmed 180-box layouts exist (six layers of
+      // 13 x 9 x 21 cartons trimmed by one), but they are rated Fair (straight columns), and
+      // untrimmed 180-box layouts rated Good now rank above them at the same quantity.
+      expect(r.layouts.map((x) => x.layout.totalProducts)).toEqual([192, 180, 180, 180, 180]);
+      expect(r.layouts[1]!.layout.stability?.rating).toBe('good');
       expect(new Set(r.layouts.map((x) => x.layout.id)).size).toBe(r.layouts.length);
     });
 
@@ -499,11 +506,19 @@ describe('optimize', () => {
       expect(computeAnalytics(optimize(free).layouts[0]!.layout, free).target.status).toBe(
         'exceeded',
       );
-      // Under 300 lb the winner is two layers of 6 ten-box cartons at 21 lb: 40 + 12 x 21 = 292 lb.
+      // Under 300 lb the winner is 12 ten-box cartons at 21 lb: 40 + 12 x 21 = 292 lb. Two
+      // layers of 6 standing on their 21 in side (Fair: 21 over 13 is 1.6) tie with three
+      // layers of 4 lying on their length (Good), which win the tie.
       const over = weighed(free, limit);
       const best = optimize(over).layouts[0]!.layout;
       expect(best.totalProducts).toBe(120);
-      expect(best.weightTrim).toEqual({ layersRemoved: 1 });
+      expect(best.stability?.rating).toBe('good');
+      expect(best.layers.map((l) => [l.vertical, l.cartonCount])).toEqual([
+        ['L', 4],
+        ['L', 4],
+        ['L', 4],
+      ]);
+      expect(best.weightTrim).toEqual({ layersRemoved: 2 });
       expect(computeAnalytics(best, over).target).toMatchObject({
         status: 'notAchievable',
         maxPossible: 120,

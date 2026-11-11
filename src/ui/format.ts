@@ -56,6 +56,19 @@ export function fmtPct(n: number, decimals = 2): string {
   return `${formatNumber(n, decimals)}%`;
 }
 
+/** A ratio of two lengths, as in the stability checks: "1.60". */
+export function ratioText(ratio: number): string {
+  return formatNumber(ratio, 2);
+}
+
+/**
+ * A share (0..1) as a whole percentage rounded down, as the stability warnings say it: 0.8999
+ * is "89%", never the "90%" it is under.
+ */
+export function shareText(share: number): string {
+  return `${formatNumber(Math.floor(share * 100 + 1e-9), 0)}%`;
+}
+
 /** A whole count: "500". */
 export function fmtCount(n: number): string {
   return formatNumber(n, 0);

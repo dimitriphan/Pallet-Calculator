@@ -33,6 +33,17 @@ export function hasPinwheelLayer(l: Layout): boolean {
   return l.layers.some((layer) => layerKind(layer) === 'pinwheel');
 }
 
+/** Numbers (from 1) of the layers turned half a turn to interlock, bottom first. */
+export function turnedLayerNumbers(l: Layout): number[] {
+  return l.layers.flatMap((layer, i) => (layer.turned ? [i + 1] : []));
+}
+
+/** "Turn these layers half a turn (180°): 2, 4, 6", or null when no layer is turned. */
+export function turnedLayersText(l: Layout): string | null {
+  const numbers = turnedLayerNumbers(l);
+  return numbers.length > 0 ? `Turn these layers half a turn (180°): ${numbers.join(', ')}` : null;
+}
+
 const AXIS_WORD: Record<ProductAxis, string> = { L: 'length', W: 'width', H: 'height' };
 
 /** 'A'..'Z', then 'AA', 'AB', … */
@@ -91,14 +102,41 @@ export function stackPatterns(l: Layout): StackPattern[] {
   });
 }
 
-/** Consecutive layers sharing a pattern, bottom to top; layer numbers start at 1. */
+function blocksKey(blocks: Block[]): string {
+  return blocks
+    .map((b) => `${b.cols}x${b.rows}${b.rotated ? 'r' : 'u'}`)
+    .sort()
+    .join(',');
+}
+
+/**
+ * Whether `upper` is `lower` turned half a turn (or the other way): one is turned, the other
+ * not, and they hold the same blocks on the same axis. Interlocking turns only identical
+ * layers, so such neighbours are the same layer built two ways round.
+ */
+function turnedPair(lower: Layer, upper: Layer): boolean {
+  return (
+    !!lower.turned !== !!upper.turned &&
+    lower.vertical === upper.vertical &&
+    lower.height === upper.height &&
+    lower.cartonCount === upper.cartonCount &&
+    layerKind(lower) === layerKind(upper) &&
+    blocksKey(lower.blocks) === blocksKey(upper.blocks)
+  );
+}
+
+/**
+ * Consecutive layers sharing a pattern, bottom to top; layer numbers start at 1. A layer turned
+ * half a turn stays in the run of the layer it is a turn of (turnedLayersText says which).
+ */
 export function stackRuns(l: Layout): StackRun[] {
   const { indexOf } = classify(l);
   const runs: StackRun[] = [];
   l.layers.forEach((layer, i) => {
     const letter = patternLetter(indexOf[i] ?? 0);
     const last = runs[runs.length - 1];
-    if (last && last.pattern === letter) {
+    const below = l.layers[i - 1];
+    if (last && (last.pattern === letter || (below && turnedPair(below, layer)))) {
       last.to = i + 1;
       return;
     }
