@@ -35,12 +35,14 @@ Round 4 is **stage 1 of 2**. Stage 2, mixed pallets, has its own spec later
   visible above the helmet in every pose. The eyes and the ring opening are
   not covered.
 - Applied to every pose in `tools/mascot/poses.mjs`: header mark, tab icon,
-  idle, working (3 frames), concerned, pleased, and the print picture's
-  source. Sprites are regenerated with `npm run mascot`; generated files stay
+  idle, working (3 frames), concerned, and the print picture's source.
+  (Poses: header mark, tab icon, idle, working ×3, concerned, print. There is
+  no "pleased" pose.) Sprites are regenerated with `npm run mascot`; generated files stay
   byte-reproducible.
 - Sprites may grow taller. On-screen sizes are unchanged (64 px status,
   96 px empty state, header 2× cropped, 0.55 in on the build sheet); crop
-  boxes are adjusted so nothing is clipped and layout does not shift.
+  boxes are adjusted so nothing is clipped. The header mark is 24 px wide instead of 20 (the brim
+  needs the width), which moves the title 4 px to the right.
 - The tab icon must still read at 16 px; if the full helmet does not, the
   icon shows the helmet shell and leaf tips only.
 - The owner reviews a contact sheet of the new sprites before merge.
@@ -67,8 +69,9 @@ Round 4 is **stage 1 of 2**. Stage 2, mixed pallets, has its own spec later
 - The inputs store keeps, for each numeric field, the text the user typed
   **and the unit it was typed in**. A field is converted to inches only when
   parsed. On a unit switch, each field's text is rewritten from its parsed
-  inch value at the display precision; a field that does not parse is left
-  as typed.
+  inch value; a field that does not parse is left as typed. Text the store
+  itself writes (for example a preset loaded) is the exact inch or pound text
+  and is rounded only when shown in cm or mm.
 - Round-trip rule: switching away and back to the unit a value was typed in
   restores the exact text that was typed, provided the field was not edited
   in between. This prevents drift.
@@ -110,8 +113,13 @@ Round 4 is **stage 1 of 2**. Stage 2, mixed pallets, has its own spec later
   the top until its total is at or under the maximum. Layouts are then
   ranked by the boxes that remain, with the usual rules.
 - If no layer fits under the limit, the layout is discarded. If none
-  survive, the existing "nothing fits" message appears with the reason
-  "One layer is already over the maximum pallet weight".
+  survive, the "nothing fits" message appears with the reason "Nothing fits:
+  one layer is already over the maximum pallet weight." (`OVER_WEIGHT`). When
+  the search was stopped early (very small products) and nothing was found, a
+  second reason, `WEIGHT_SEARCH_LIMITED`, says the search was limited instead
+  of claiming nothing fits.
+- The 8000-candidate carton cap is weight-aware: with a limit, it keeps the
+  cartons that could carry the most boxes within the weight.
 - Whole layers only. After trimming, the tool reports how many more cartons
   the limit would allow: "Room for N more cartons by weight" (N ≥ 1 only),
   on the "What to build" card and the build sheet. It does not place them.
@@ -141,10 +149,13 @@ Round 4 is **stage 1 of 2**. Stage 2, mixed pallets, has its own spec later
 - Pinwheel blocks never overlap; this is checked by a test-only overlap
   verifier that runs over every generated layer in the test suite.
 - The search stays inside the existing time budget (4 s budget, 6 s hard
-  limit); the pinwheel generator has its own work cap and falls back to
-  straight-cut layers when the cap is hit.
-- A layout containing a pinwheel layer shows "Pinwheel" in the comparison
-  table's pattern column and on the build sheet. The 3D view and top-view
+  limit); pinwheel searches share one work allowance for the whole
+  calculation and can stop early, falling back to straight-cut layers.
+  Straight-cut layouts are still offered beside pinwheel ones under a weight
+  limit.
+- A layout containing a pinwheel layer shows a "Pinwheel" badge in the Layers
+  cell of the comparison table (there is no pattern column) and a note on the
+  card and build sheet. The 3D view and top-view
   picture draw it from the same block list as today.
 - With "Keep cartons upright" on, pinwheels still apply (they only turn
   cartons about the vertical axis).
@@ -166,8 +177,8 @@ Each check yields none, a caution, or a serious warning.
 - Good: no warnings. Fair: cautions only. Poor: any serious warning.
 - Warnings are plain sentences, for example "Stack is tall for its base
   (1.8 times its shorter side)". They appear on the card, in the table
-  (a rating column; the sentences themselves are on the card and in the
-  Analytics tab), and on the build sheet.
+  (a rating column; the sentences themselves are on the card in Basic view
+  and in the Analytics tab in Full view), and on the build sheet.
 - Thresholds live in one constants file with a comment for each, so the
   owner can ask for them to be changed.
 - The rating is advice. The documentation says so, and says crush strength
@@ -176,11 +187,13 @@ Each check yields none, a caution, or a serious warning.
 ### 7.2 Effect on the answer
 
 - Ranking order becomes: total boxes, then stability rating (Good before
-  Fair before Poor), then the existing score.
+  Fair before Poor), then the existing score. Interlocking and the rating
+  run inside ranking, per group of equal box counts.
 - **Interlocking at no cost:** when a layout stacks identical layers and
   turning alternate layers by 180° about the load's centre changes where
   the seams fall, alternate layers are turned. Box count is unchanged. The
-  build sheet lists which layers are turned. If the layer is symmetric
+  build sheet lists which layers are turned, and a turned layer gets its own
+  pattern letter and drawing there. If the layer is symmetric
   under that turn, nothing changes and the column caution stands.
 - Badges: Good uses the existing success style, Fair the caution style,
   Poor the error style (Harbor: green, sand, coral within the existing
@@ -203,7 +216,8 @@ Each check yields none, a caution, or a serious warning.
 - The analytics tab already reports unused volume; a line is added
   splitting it into headroom and layer gaps, and the two figures must sum
   to the existing total (tested).
-- Exports include the overlay only if it is switched on at export time.
+- The PNG export includes the overlay only if it is switched on at export
+  time. The PDF build sheet never shows it.
 
 ## 9. Architecture notes
 

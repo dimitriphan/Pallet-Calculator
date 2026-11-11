@@ -43,10 +43,12 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 **Stability rating.** Every layout is rated Good, Fair or Poor from four checks. Each check gives no warning, a caution or a serious warning; a value exactly at a limit gives no warning.
 
-- Stack height (pallet deck not counted) ÷ the shorter side of the bottom layer: caution above 1.5, serious above 2.0.
-- Carton height ÷ the carton's shorter base side, as stacked, for the worst layer: caution above 1.5, serious above 2.5.
-- Share of a layer's carton base resting on cartons of the layer below, for the worst layer: caution under 90%, serious under 70%. Layers are compared as placed, each centred on the pallet.
-- Four or more identical layers stacked in straight columns: caution.
+| Check | Caution | Serious |
+| --- | --- | --- |
+| Stack height (pallet deck not counted) ÷ shorter side of the bottom layer | above 1.5 | above 2.0 |
+| Carton height ÷ the carton's shorter base side, as stacked, worst layer | above 1.5 | above 2.5 |
+| Share of a layer's carton base resting on cartons of the layer below, worst layer (layers compared as placed, each centred on the pallet) | under 90% | under 70% |
+| Four or more identical layers stacked in straight columns | caution | none |
 
 Good means no warnings, Fair cautions only, Poor any serious warning. The warnings are shown as plain sentences, for example "Stack is tall for its base (1.6 times its shorter side)." The limits live in one file (`src/domain/stabilityThresholds.ts`) and can be changed on request. The rating is advice only: crush strength, load on the bottom cartons, wrapping and strapping are not checked.
 
@@ -74,12 +76,14 @@ Good means no warnings, Fair cautions only, Poor any serious warning. The warnin
 
 ## Limitations
 
-- **Guillotine layers only.** Each layer is built by straight cuts from edge to edge. Pinwheel (interlocked) layers can sometimes fit one or two more cartons per layer. The tool does not find them.
+- **Layers are straight-cut or pinwheel.** A layer is built either by straight cuts from edge to edge or as a four-block pinwheel, whichever holds more cartons (straight cuts win a tie, being easier to build). Other patterns are not tried. The pinwheel search shares one work allowance across the whole calculation and can stop early; the result is then marked as limited.
 - **Flat layers.** A load is a stack of flat layers. A carton never straddles two layers.
-- **One carton size per layout.** Mixed carton sizes in one load are not supported.
-- **Weight limit by whole layers only.** With a weight per product box and a maximum pallet weight, layers are removed from the top until the whole load (pallet included) is at or under the maximum; the tool then reports "Room for N more cartons by weight" but never places a part layer. The maximum is the only weight check: there is no limit per carton, no crush or load-bearing check, and the weight per carton is shown without judgement.
+- **One carton size per layout.** Mixed carton sizes in one load are not supported. Mixed pallets (several products on one pallet) are stage 2 and are not built.
+- **Weight: whole layers only.** With a weight per product box and a maximum pallet weight, layers are removed from the top until the whole load (pallet included) is at or under the maximum. "Room for N more cartons by weight" is advice: the tool never places a part layer. Straight-cut layouts are still offered under a weight limit, so a limit never gives fewer boxes than a simple layout would. The maximum is the only weight check: there is no limit per carton, no crush or load-bearing check, and the weight per carton is shown without judgement.
 - **Weight is optional.** With the weight per product box blank, weight is ignored everywhere: nothing about it is shown, and the CSV, PDF and PNG are unchanged (the JSON export carries the blank weight fields as they are). The empty carton weight defaults to 0 and the pallet to 40 lb. Weights are in pounds with inches and in kilograms with cm or mm. Presets keep the maximum, empty carton and pallet weights; the product box weight stays with the product.
-- **The stability rating is advice, not a safety check.** It looks at shape only (stack height, carton proportions, support from the layer below, straight columns). Crush strength and load-bearing are not checked, and a Poor layout is still offered when it carries the most boxes. You must judge whether the load is safe.
+- **The stability rating is advice, not a safety check.** It looks at shape only, using the thresholds in the "Stability rating" table above (stack height, carton proportions, support from the layer below, straight columns). Crush strength and load-bearing are not checked, and a Poor layout is still offered when it carries the most boxes. A full-height load on a standard pallet usually rates Fair, because the stack is more than 1.5 times as tall as its base is wide. You must judge whether the load is safe.
+- **Unused-space overlay is a picture.** It shows headroom and per-layer gaps (gaps under 0.25 inch are not drawn). It is not part of any calculation.
+- **Very small products can hit the search limit.** With a maximum weight and a very small product, the search may be stopped before it can prove that nothing fits. The tool then says the search was limited rather than that nothing fits.
 - **Basic view cannot edit** leeway, walls, overhang, rotation, the target quantity or the empty carton and pallet weights. Use Full view.
 - **Layer order.** Layers are ordered with the fullest layer at the bottom, so a narrower layer can sit under a slightly wider one; check overhang between layers when building mixed stacks.
 
@@ -107,12 +111,12 @@ Good means no warnings, Fair cautions only, Poor any serious warning. The warnin
   - The layer drawings show carton outlines, not individual product boxes.
   - Letters outside the basic Latin alphabet in a job name (for example Chinese or Cyrillic) print as "?".
   - If the 3D view is unavailable, the sheet is made without the two pictures and says "3D pictures unavailable".
-- PNG and PDF are always light, whatever the theme. The PNG has no mascot.
+- PNG and PDF are always light, whatever the theme. The PNG has no mascot. The PNG shows the unused-space overlay only when "Unused space" is ticked at export time; the PDF build sheet never shows it.
 
 ## Planned for a later round (not built yet)
 
+- Mixed pallets (stage 2).
 - Advanced optimization (weighting the score towards stability).
-- Transparent overlays showing unused space.
 - A target-quantity field in Basic view, company branding on exports, shareable links.
 
 The "Advanced Optimization" section is shown but switched off, and has no effect on any result.

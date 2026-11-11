@@ -32,6 +32,26 @@ The typefaces come with the site. Nothing is fetched from another website. The m
 
 To change a pixel of the mascot, edit `tools/mascot/poses.mjs`, then run `npm run mascot`. This rebuilds the pictures in `src/assets/mascot/`.
 
+### Units
+
+The **Units** control in the header shows every length in inches, centimetres or millimetres (weights follow: pounds with inches, kilograms with centimetres or millimetres). It only changes what you see. Your load, the result and your saved data stay exactly the same, nothing is recalculated, and switching back to the unit you typed in brings back exactly what you typed. On screens narrower than about 1280 pixels the word "Units" (and "Preset", "Theme") is hidden to save room; the controls still work and are still named for screen readers.
+
+### Weight
+
+Type the **weight per product box** and, if you have one, the **maximum pallet weight** (the whole load, pallet included). With a maximum set, the tool removes whole layers from the top until the load is under the limit, and says "Limited by weight" with the number of layers removed. If there is room for more cartons than that, it says "Room for N more cartons by weight". That is advice only: the tool never builds a part layer for you. If even one layer is too heavy, it says "Nothing fits: one layer is already over the maximum pallet weight." Leave the box weight blank and weight is ignored everywhere.
+
+### Pinwheel layers
+
+Some products fit better when the cartons in a layer are turned in four blocks around the middle (a pinwheel). The tool now tries this as well as straight rows and keeps the pinwheel when it holds more cartons. Such layouts show a **Pinwheel** badge in the comparison table and a note on the "What to build" card. If the search gets very large it can stop early, and the tool says so.
+
+### Stability
+
+Every layout is rated **Good**, **Fair** or **Poor** from its shape: how tall the stack is for its base, how tall the cartons are for their base, how well each layer rests on the one below, and whether many identical layers sit in straight columns. The reasons appear in plain words on the card. When two layouts hold the same number of boxes, the steadier one is listed first, and the card may tell you to turn some layers half a turn (180°) so the seams do not line up. The rating is advice about shape only. It does not check crush strength. A tall full-height load on a standard pallet usually rates Fair.
+
+### Unused space
+
+Tick **Unused space** in the 3D toolbar to see the empty space in red: the gap above the load and the gaps inside each layer. The PNG export includes it only when the box is ticked. The PDF build sheet never shows it.
+
 ### Boxes per carton
 
 Type a whole number, such as 6, and the tool only considers cartons that hold exactly 6 boxes. If no such carton fits inside your maximum carton size, the tool says so and names the nearest counts that do fit, for example "Counts that do fit: 6 and 8."

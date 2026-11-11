@@ -14,6 +14,16 @@ async function fillDims(page: Page, legend: string, labels: string[], values: st
   }
 }
 
+/** Collects console and page errors, so a test can end by asserting there were none. */
+function watchProblems(page: Page): string[] {
+  const problems: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') problems.push(`console: ${m.text()}`);
+  });
+  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  return problems;
+}
+
 async function chooseExport(page: Page, item: 'Build sheet (PDF)' | 'JSON' | 'CSV' | 'PNG') {
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
@@ -281,4 +291,132 @@ test('the header fits one 48 px row in Full view at 1100 x 600', async ({ page }
   await expect(banner.getByText('Modified')).toBeVisible();
   await expect(banner.getByRole('button', { name: 'Save to preset' })).toBeVisible();
   await expectOneRow('modified preset');
+
+  // Millimetres make the numbers longer; the header must still fit, in both themes.
+  await page.getByLabel('Units', { exact: true }).selectOption('mm');
+  await expectOneRow('modified preset, mm');
+});
+
+test('switching units converts the fields, not the result', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  const summary = page.getByRole('region', { name: 'Production summary' });
+  const total = summary
+    .locator('div', { has: page.getByText('Total boxes per pallet', { exact: true }) })
+    .locator('dd');
+  const length = group(page, 'Product box').getByLabel('Length', { exact: true });
+  const units = page.getByLabel('Units', { exact: true });
+
+  await length.fill('12');
+  await expect(total).toHaveText(/^\d+$/);
+  const before = await total.innerText();
+
+  await units.selectOption('mm');
+  await expect(length).toHaveValue('305');
+  await expect(total).toHaveText(before);
+  // A unit switch must never mark the result out of date, not even briefly.
+  await expect(page.getByText('Out of date')).toHaveCount(0);
+
+  await units.selectOption('in');
+  await expect(length).toHaveValue('12');
+  await expect(total).toHaveText(before);
+  await expect(page.getByText('Out of date')).toHaveCount(0);
+
+  expect(problems).toEqual([]);
+});
+
+test('a weight limit trims layers and the total stays under it', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  const card = page.getByRole('heading', { name: 'What to build' });
+  await expect(card).toBeVisible();
+
+  // The default load is far heavier than this, so layers must come off.
+  await page.getByLabel('Weight per product box', { exact: true }).fill('1');
+  await page.getByLabel('Maximum pallet weight', { exact: true }).fill('150');
+  await expect(page.getByText(/^Limited by weight/).first()).toBeVisible();
+
+  const totalWeight = page
+    .locator('dt', { hasText: /^Total weight$/ })
+    .locator('xpath=following-sibling::dd[1]');
+  await expect(totalWeight).toHaveText(/\d/);
+  const shown = await totalWeight.innerText();
+  const value = Number(shown.replace(/[^0-9.]/g, ''));
+  expect(value).toBeGreaterThan(0);
+  expect(value).toBeLessThanOrEqual(150);
+
+  expect(problems).toEqual([]);
+});
+
+test('a maximum weight below one layer says nothing fits', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  await page.getByLabel('Weight per product box', { exact: true }).fill('100');
+  await page.getByLabel('Maximum pallet weight', { exact: true }).fill('50');
+  await expect(
+    page.getByText('Nothing fits: one layer is already over the maximum pallet weight.'),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'What to build' })).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
+test('a pinwheel layout beats straight cuts and is badged in the table', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+
+  await fillDims(page, 'Pallet limitation', ['Length', 'Width', 'Height'], ['48', '40', '60']);
+  await fillDims(page, 'Product box', ['Length', 'Width', 'Height'], ['16.5', '10.5', '18']);
+  await fillDims(
+    page,
+    'Maximum carton',
+    ['Max length', 'Max width', 'Max height'],
+    ['16.5', '10.5', '18'],
+  );
+  await page.getByLabel('Box leeway', { exact: true }).fill('0');
+  await page.getByLabel('Carton wall thickness', { exact: true }).fill('0');
+
+  const summary = page.getByRole('region', { name: 'Production summary' });
+  await expect(
+    summary
+      .locator('div', { has: page.getByText('Total boxes per pallet', { exact: true }) })
+      .locator('dd'),
+  ).toHaveText('30');
+  const first = page.getByRole('table', { name: 'Layout comparison' }).locator('tbody tr').first();
+  await expect(first).toContainText('Pinwheel');
+
+  expect(problems).toEqual([]);
+});
+
+test('every layout carries a stability rating', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'What to build' })).toBeVisible();
+  await expect(page.getByText(/^Stability: (Good|Fair|Poor)$/).first()).toBeVisible();
+});
+
+test('the unused-space overlay can be switched on and exported', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  await expect(page.getByTestId('scene-slot').locator('canvas')).toBeVisible();
+
+  const overlay = page.getByLabel('Unused space', { exact: true });
+  await overlay.check();
+  await expect(overlay).toBeChecked();
+
+  const png = await chooseExport(page, 'PNG');
+  const bytes = await readFile(await png.path());
+  expect(bytes.length).toBeGreaterThan(1000);
+  expect([...bytes.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+
+  expect(problems).toEqual([]);
+});
+
+test('the header mascot still loads and is hidden from assistive technology', async ({ page }) => {
+  await page.goto('/');
+  const image = page.getByRole('banner').locator('img');
+  await expect(image).toHaveCount(1);
+  await expect(image).toHaveAttribute('aria-hidden', 'true');
+  await expect
+    .poll(() => image.evaluate((el) => (el as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
 });
