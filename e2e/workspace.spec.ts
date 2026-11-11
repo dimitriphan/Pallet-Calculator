@@ -311,16 +311,37 @@ test('switching units converts the fields, not the result', async ({ page }) => 
   await expect(total).toHaveText(/^\d+$/);
   const before = await total.innerText();
 
+  /**
+   * A unit switch must never mark the result out of date, not even briefly: sampled every
+   * 50 ms for 800 ms (well past the 300 ms recalculation debounce), the badge never shows and
+   * the total never changes. Any bad sample is kept, so a badge that comes and goes fails.
+   */
+  const staysCurrent = async (when: string) => {
+    const until = Date.now() + 800;
+    let bad: string | null = null;
+    await expect
+      .poll(
+        async () => {
+          if (bad === null) {
+            const badges = await page.getByText('Out of date').count();
+            const shown = await total.innerText();
+            if (badges > 0) bad = `Out of date shown ${when}`;
+            else if (shown !== before) bad = `total ${shown} instead of ${before} ${when}`;
+          }
+          return bad ?? (Date.now() >= until ? 'held' : 'sampling');
+        },
+        { intervals: [50], timeout: 3000 },
+      )
+      .toBe('held');
+  };
+
   await units.selectOption('mm');
   await expect(length).toHaveValue('305');
-  await expect(total).toHaveText(before);
-  // A unit switch must never mark the result out of date, not even briefly.
-  await expect(page.getByText('Out of date')).toHaveCount(0);
+  await staysCurrent('after switching to mm');
 
   await units.selectOption('in');
   await expect(length).toHaveValue('12');
-  await expect(total).toHaveText(before);
-  await expect(page.getByText('Out of date')).toHaveCount(0);
+  await staysCurrent('after switching back to in');
 
   expect(problems).toEqual([]);
 });

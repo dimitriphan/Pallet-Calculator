@@ -40,9 +40,13 @@ const FORBIDDEN: [string, RegExp][] = [
   ['unit as suffix prop', new RegExp(`suffix\\s*=\\s*['"{]*${UNIT}['"]`)],
   // "5-inch", "5 inches".
   ['spelled-out inches', /\binch(?:es)?\b/],
-  // The formatters come from format.ts; engine/units gives display code only its types.
-  ['value import from engine/units', /^import (?!type )[^;]*from '[./]*engine\/units\/units'/],
 ];
+
+/**
+ * The formatters come from format.ts; engine/units gives display code only its types. Matched
+ * over the whole file, since prettier wraps a long import over several lines.
+ */
+const VALUE_IMPORT = /^import (?!type )[^;]*?from '[./]*engine\/units\/units'/m;
 
 describe('display formatting guard', () => {
   it('scans the interface, 3D view and export sources', () => {
@@ -65,7 +69,6 @@ describe('display formatting guard', () => {
     ['unit as suffix prop', "suffix = 'in',"],
     ['unit as suffix prop', 'suffix="mm"'],
     ['spelled-out inches', 'A 5-inch pallet'],
-    ['value import from engine/units', "import { formatNumber } from '../engine/units/units';"],
   ])('the %s pattern catches %s', (name, sample) => {
     const pattern = FORBIDDEN.find(([n]) => n === name)?.[1];
     expect(pattern?.test(sample)).toBe(true);
@@ -81,6 +84,26 @@ describe('display formatting guard', () => {
     "import type { Unit } from '../engine/units/units';",
   ])('does not flag ordinary code or prose: %s', (sample) => {
     expect(FORBIDDEN.filter(([, p]) => p.test(sample)).map(([n]) => n)).toEqual([]);
+  });
+
+  it.each([
+    "import { formatNumber } from '../engine/units/units';",
+    // As prettier wraps a long import.
+    "import type { Dims } from '../domain/types';\nimport {\n  formatNumber,\n  fromInches,\n} from '../engine/units/units';\n",
+  ])('the value import pattern catches %j', (sample) => {
+    expect(VALUE_IMPORT.test(sample)).toBe(true);
+  });
+
+  it.each([
+    "import type { Unit } from '../engine/units/units';",
+    "import type {\n  Unit,\n  WeightUnit,\n} from '../engine/units/units';\n",
+    "import { dimsText } from './format';\nimport type { Unit } from '../engine/units/units';\n",
+  ])('the value import pattern leaves type imports alone: %j', (sample) => {
+    expect(VALUE_IMPORT.test(sample)).toBe(false);
+  });
+
+  it('no file imports values from engine/units outside format.ts', () => {
+    expect(scanned.filter(([, text]) => VALUE_IMPORT.test(code(text))).map(([p]) => p)).toEqual([]);
   });
 
   it.each(FORBIDDEN)('no file has a %s outside format.ts', (_name, pattern) => {
