@@ -362,6 +362,36 @@ describe('PresetMenu weights', () => {
     expect(screen.getByText('Modified')).toBeInTheDocument();
   });
 
+  it('saves a pallet preset with a maximum while the box weight is blank', async () => {
+    const { user, stores } = await renderApp();
+    await user.type(weight('Maximum pallet weight'), '1500');
+    await flush();
+    // The inputs ask for a box weight, but a preset never stores it.
+    expect(stores.inputs.getState().parsed.ok).toBe(false);
+    const saveAsNew = screen.getByRole('button', { name: 'Save as new' });
+    expect(saveAsNew).toBeEnabled();
+    await user.click(saveAsNew);
+    const dialog = screen.getByRole('dialog', { name: 'Save as new preset' });
+    await user.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Max only');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    const saved = stores.presets.getState().presets.find((p) => p.name === 'Max only')!;
+    expect(saved.weights).toEqual({ maxPallet: 1500, emptyCarton: 0, pallet: 40 });
+    expect(stores.presets.getState().activePresetId).toBe(saved.id);
+    // Save to preset too, after a change.
+    await user.clear(weight('Maximum pallet weight'));
+    await user.type(weight('Maximum pallet weight'), '1400');
+    await flush();
+    const saveTo = screen.getByRole('button', { name: 'Save to preset' });
+    expect(saveTo).toBeEnabled();
+    await user.click(saveTo);
+    expect(
+      stores.presets.getState().presets.find((p) => p.id === saved.id)!.weights.maxPallet,
+    ).toBe(1400);
+    // Still disabled for a field a preset does store.
+    await setLeeway(user, 'abc');
+    expect(screen.getByRole('button', { name: 'Save as new' })).toBeDisabled();
+  });
+
   it('edits a preset’s weights without a box weight field', async () => {
     const { user, stores } = await renderApp();
     const dialog = await openManage(user);

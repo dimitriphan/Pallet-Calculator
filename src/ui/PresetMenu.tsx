@@ -15,19 +15,19 @@ const NO_PRESET = '';
 const PLACEHOLDER_BOX_WEIGHT = writtenOrigin(1);
 
 /**
- * Whether the draft's preset-covered fields (everything but the product and its box weight)
- * parse and equal the preset's. The product and box weight are swapped for valid stand-ins so
- * a product being edited, or a blank box weight under a preset's maximum, does not matter.
+ * The draft parsed with a valid stand-in for the box weight, which a preset never stores: a
+ * blank box weight under a maximum pallet weight then does not block saving or matching.
+ * With `anyProduct`, the product is swapped for valid stand-ins too.
  */
-function coveredFieldsMatch(
+function parseForPreset(
   { draft, origins, unit }: Pick<InputsState, 'draft' | 'origins' | 'unit'>,
-  preset: Preset,
-): boolean {
+  anyProduct: boolean,
+) {
   const placeholder = defaultDraft(unit);
-  const parsed = parseInUnit(
+  return parseInUnit(
     {
       ...draft,
-      product: placeholder.draft.product,
+      ...(anyProduct ? { product: placeholder.draft.product } : {}),
       weights: {
         ...draft.weights,
         productBox: originText('weight', PLACEHOLDER_BOX_WEIGHT, unit),
@@ -35,13 +35,29 @@ function coveredFieldsMatch(
     },
     {
       ...origins,
-      'product.length': placeholder.origins['product.length'],
-      'product.width': placeholder.origins['product.width'],
-      'product.height': placeholder.origins['product.height'],
+      ...(anyProduct
+        ? {
+            'product.length': placeholder.origins['product.length'],
+            'product.width': placeholder.origins['product.width'],
+            'product.height': placeholder.origins['product.height'],
+          }
+        : {}),
       'weights.productBox': PLACEHOLDER_BOX_WEIGHT,
     },
     unit,
   );
+}
+
+/**
+ * Whether the draft's preset-covered fields (everything but the product and its box weight)
+ * parse and equal the preset's. The product and box weight are swapped for valid stand-ins so
+ * a product being edited, or a blank box weight under a preset's maximum, does not matter.
+ */
+function coveredFieldsMatch(
+  state: Pick<InputsState, 'draft' | 'origins' | 'unit'>,
+  preset: Preset,
+): boolean {
+  const parsed = parseForPreset(state, true);
   return parsed.ok && inputsMatchPreset(parsed.inputs, preset);
 }
 
@@ -56,7 +72,8 @@ export function PresetMenu() {
   const draft = useInputs((s) => s.draft);
   const origins = useInputs((s) => s.origins);
   const unit = useInputs((s) => s.unit);
-  const parsed = useInputs((s) => s.parsed);
+  // What a save stores: the inputs, with a stand-in for the box weight no preset keeps.
+  const forSave = parseForPreset({ draft, origins, unit }, false);
   const full = usePrefs((s) => s.viewMode) === 'full';
   const [managing, setManaging] = useState(false);
   const [naming, setNaming] = useState(false);
@@ -77,13 +94,13 @@ export function PresetMenu() {
   };
 
   const saveToPreset = () => {
-    if (!active || !parsed.ok) return;
-    presetsStore.getState().update(active.id, presetFieldsOf(parsed.inputs));
+    if (!active || !forSave.ok) return;
+    presetsStore.getState().update(active.id, presetFieldsOf(forSave.inputs));
   };
 
   const saveAsNew = (name: string) => {
-    if (!parsed.ok) return;
-    const created = presetsStore.getState().create(name, parsed.inputs);
+    if (!forSave.ok) return;
+    const created = presetsStore.getState().create(name, forSave.inputs);
     presetsStore.getState().setActive(created.id);
     setNaming(false);
   };
@@ -117,14 +134,14 @@ export function PresetMenu() {
         </span>
       )}
       {full && modified && (
-        <button type="button" disabled={!parsed.ok} onClick={saveToPreset} className={BUTTON}>
+        <button type="button" disabled={!forSave.ok} onClick={saveToPreset} className={BUTTON}>
           Save to preset
         </button>
       )}
       {full && (modified || !active) && (
         <button
           type="button"
-          disabled={!parsed.ok}
+          disabled={!forSave.ok}
           onClick={() => setNaming(true)}
           className={BUTTON}
         >

@@ -430,6 +430,82 @@ describe('inputsStore units', () => {
       expect(store.getState().draft.wallThickness).toBe('0.125');
     });
 
+    it('a preset saved in cm and kg shows at most 4 decimals in inches and keeps every value', () => {
+      // Typed in cm and kg: 120 cm is 47.244094488188976 in, 800 kg is 1763.69809744 lb.
+      const typed = fresh();
+      typed.getState().setUnit('cm');
+      for (const [path, text] of Object.entries({
+        'pallet.length': '120',
+        'pallet.width': '100',
+        'pallet.height': '180',
+        'maxCarton.length': '60',
+        leeway: '0.7',
+        wallThickness: '0.3',
+        overhang: '1.5',
+        'weights.productBox': '2.3',
+        'weights.maxPallet': '800',
+        'weights.emptyCarton': '0.4',
+        'weights.pallet': '21.7',
+      }))
+        typed.getState().setField(path, text);
+      const parsed = typed.getState().parsed;
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) return;
+      const saved = parsed.inputs;
+      expect(saved.pallet.length).toBe(120 / 2.54);
+      expect(String(saved.weights.maxPallet)).toBe('1763.69809744');
+
+      // Loaded in inches as a whole (a scenario).
+      const store = fresh();
+      store.getState().replaceInputs(saved);
+      const d = store.getState().draft;
+      const texts = [
+        d.pallet.length,
+        d.pallet.width,
+        d.pallet.height,
+        d.maxCarton.length,
+        d.leeway,
+        d.wallThickness,
+        d.overhang,
+        d.weights.productBox,
+        d.weights.maxPallet,
+        d.weights.emptyCarton,
+        d.weights.pallet,
+      ];
+      for (const t of texts) expect(t).toMatch(/^\d+(\.\d{1,4})?$/);
+      expect(d.pallet.length).toBe('47.2441');
+      expect(d.weights.maxPallet).toBe('1763.6981');
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: saved });
+      // Applied as a preset too (no product weight in a preset).
+      const viaPreset = fresh();
+      viaPreset.getState().applyPreset(presetFieldsOf(saved));
+      expect(viaPreset.getState().draft.pallet.length).toBe('47.2441');
+      expect(viaPreset.getState().draft.weights.maxPallet).toBe('1763.6981');
+      // A maximum needs a box weight to parse; the preset keeps the product's (blank).
+      viaPreset.getState().setField('weights.productBox', '1');
+      const p = viaPreset.getState().parsed;
+      expect(p.ok && p.inputs.pallet).toEqual(saved.pallet);
+      expect(p.ok && p.inputs.weights.maxPallet).toBe(saved.weights.maxPallet);
+      // Switching to cm shows the typed values again, and back to inches the short text.
+      store.getState().setUnit('cm');
+      expect(store.getState().draft.pallet.length).toBe('120');
+      expect(store.getState().draft.weights.maxPallet).toBe('800');
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: saved });
+      store.getState().setUnit('in');
+      expect(store.getState().draft.pallet.length).toBe('47.2441');
+      expect(store.getState().parsed).toEqual({ ok: true, inputs: saved });
+    });
+
+    it('a value typed in cm comes back as typed after inches', () => {
+      const store = fresh();
+      store.getState().setUnit('cm');
+      store.getState().setField('pallet.length', '120.35');
+      store.getState().setUnit('in');
+      expect(store.getState().draft.pallet.length).toBe('47.38');
+      store.getState().setUnit('cm');
+      expect(store.getState().draft.pallet.length).toBe('120.35');
+    });
+
     it('retyping the shown inch text keeps the value', () => {
       const store = fresh();
       store.getState().replaceInputs(FINE);

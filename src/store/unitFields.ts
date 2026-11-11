@@ -97,13 +97,24 @@ export function typedOrigin(kind: FieldKind, text: string, unit: Unit): FieldOri
  */
 const CANONICAL_UNIT: Unit = 'in';
 
+/** Most decimals a stored value is written with in the canonical unit. */
+const WRITTEN_DECIMALS = 4;
+
 /**
- * Origin of a stored canonical value (inputs, presets, scenarios, defaults): the exact value as
- * text in the canonical unit, as `draftFromInputs` writes it. Shown in another unit it is
- * rounded; shown in inches it is exactly what was stored ("0.125", never "0.13").
+ * Origin of a stored canonical value (inputs, presets, scenarios, defaults): the value as text
+ * in the canonical unit, exact when it has at most 4 decimals ("0.125", "0.0625", never
+ * "0.13"), else rounded to 4 ("47.2441" for a value saved as 120 cm). The canonical value
+ * stays exact, so the text parses back to it while it is untouched. Shown in another unit it
+ * is rounded to that unit's precision.
  */
 export function writtenOrigin(canonical: number): FieldOrigin {
-  return { text: String(canonical), unit: CANONICAL_UNIT, canonical };
+  const exact = String(canonical);
+  // Not plain digits (an exponent such as 1e-7): rounded like any long value.
+  const plain = /^-?\d+(?:\.(\d+))?$/.exec(exact);
+  const decimals = plain ? (plain[1]?.length ?? 0) : Infinity;
+  const text =
+    decimals <= WRITTEN_DECIMALS ? exact : String(Number(canonical.toFixed(WRITTEN_DECIMALS)));
+  return { text, unit: CANONICAL_UNIT, canonical };
 }
 
 /** The text the store would show for an origin in `unit`. */

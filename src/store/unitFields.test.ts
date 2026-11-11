@@ -11,6 +11,20 @@ describe('unitFields', () => {
     });
   });
 
+  it('writes a value with more than 4 decimals rounded to 4, keeping the exact value', () => {
+    expect(writtenOrigin(0.0625).text).toBe('0.0625');
+    expect(writtenOrigin(48).text).toBe('48');
+    expect(writtenOrigin(120 / 2.54)).toEqual({
+      text: '47.2441',
+      unit: 'in',
+      canonical: 47.24409448818898,
+    });
+    expect(writtenOrigin(1763.69809744).text).toBe('1763.6981');
+    expect(writtenOrigin(1e-7).text).toBe('0');
+    // Shown in its own unit the short text stands for the exact value; elsewhere it converts.
+    expect(originText('length', writtenOrigin(120 / 2.54), 'cm')).toBe('120');
+  });
+
   it('shows a written origin exactly in inches and rounded elsewhere', () => {
     const o = writtenOrigin(48.125);
     expect(originText('length', o, 'in')).toBe('48.125');
