@@ -31,6 +31,23 @@ describe('DetailsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('splits the remaining volume into headroom and gaps beside cartons, in the unit', async () => {
+    const { user } = await renderApp();
+    const results = () =>
+      screen.getByRole('heading', { name: 'Final results' }).closest('section')!;
+    const value = (label: string) =>
+      within(results()).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
+    // The default winner reaches the 67 in limit: 140,700 - 52 x 2,457 = 12,936 in³ is all
+    // beside the cartons.
+    expect(value('Remaining volume')).toBe('12936.00 in³');
+    expect(value('Headroom above the load')).toBe('0.00 in³');
+    expect(value('Gaps beside cartons')).toBe('12936.00 in³');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Units' }), 'cm');
+    await flush();
+    expect(value('Headroom above the load')).toBe('0.0 cm³');
+    expect(value('Gaps beside cartons')).toBe(`${formatNumber(12936 * 2.54 ** 3, 1)} cm³`);
+  });
+
   it('lists the stability rating, its warnings and every check with its value', async () => {
     await renderApp();
     const section = screen.getByRole('heading', { name: 'Stability' }).closest('section')!;

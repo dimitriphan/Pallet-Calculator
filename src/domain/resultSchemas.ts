@@ -96,9 +96,11 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
 });
 
 /** Analytics as stored, where fields added after the first release may be missing. */
-export type StoredAnalytics = Omit<Analytics, 'carton'> & {
+export type StoredAnalytics = Omit<Analytics, 'carton' | 'totals'> & {
   carton: Omit<Analytics['carton'], 'counts' | 'layerOrientations'> &
     Partial<Pick<Analytics['carton'], 'counts' | 'layerOrientations'>>;
+  totals: Omit<Analytics['totals'], 'headroomVolume' | 'layerGapVolume'> &
+    Partial<Pick<Analytics['totals'], 'headroomVolume' | 'layerGapVolume'>>;
 };
 
 export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
@@ -137,6 +139,10 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
     volumeAvailable: num,
     utilizationPct: num,
     remainingVolume: num,
+    // Added in Round 4: optional so older saved scenarios still load (the scenario schema
+    // recomputes analytics when they are missing).
+    headroomVolume: num.optional(),
+    layerGapVolume: num.optional(),
   }),
   target: z.object({
     status: z.enum(['none', 'met', 'exceeded', 'notAchievable']),

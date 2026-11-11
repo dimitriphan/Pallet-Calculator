@@ -354,6 +354,18 @@ describe('scenarioSchema', () => {
     expect(parsed.data?.analytics).toEqual(analytics);
   });
 
+  it('loads a scenario saved before the unused-space split and recomputes it', () => {
+    const old = structuredClone(scenario) as unknown as {
+      analytics: { totals: Record<string, unknown> };
+    };
+    delete old.analytics.totals.headroomVolume;
+    delete old.analytics.totals.layerGapVolume;
+    const parsed = scenarioSchema.safeParse(old);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.analytics).toEqual(analytics);
+    expect(analytics.totals.headroomVolume).toBe(4200);
+  });
+
   it('loads a scenario saved before weights with the default weights and no weight analytics', () => {
     const old = structuredClone(scenario) as unknown as {
       inputs: Record<string, unknown>;

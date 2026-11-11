@@ -120,7 +120,8 @@ export function ExportMenu() {
   const sheetPictures = (): SheetPictures | null => {
     try {
       if (!captureViews) return null;
-      const { current, side } = captureViews();
+      // The builders' pictures never show the unused-space overlay, even when it is on.
+      const { current, side } = captureViews({ leaveOutUnusedSpace: true });
       return { current, side };
     } catch {
       return null;

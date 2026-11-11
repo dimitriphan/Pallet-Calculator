@@ -14,11 +14,20 @@ import { sceneTheme } from './sceneTheme';
  */
 export const HIDE_IN_ORTHO_CAPTURE = 'hideInOrthoCapture';
 
-/** Runs `render` with every flagged object under `root` hidden, then restores their visibility. */
-export function withHiddenForOrthoCapture<T>(root: Object3D, render: () => T): T {
+/**
+ * userData key for objects left out of the build sheet's pictures, which are for the people
+ * building the pallet: the unused-space overlay.
+ */
+export const HIDE_IN_BUILD_SHEET = 'hideInBuildSheet';
+
+/**
+ * Runs `render` with every object under `root` flagged with userData `key` hidden, then
+ * restores their visibility.
+ */
+export function withHidden<T>(root: Object3D, key: string, render: () => T): T {
   const hidden: Object3D[] = [];
   root.traverse((o) => {
-    if (o.userData[HIDE_IN_ORTHO_CAPTURE] === true && o.visible) hidden.push(o);
+    if (o.userData[key] === true && o.visible) hidden.push(o);
   });
   for (const o of hidden) o.visible = false;
   try {
@@ -26,6 +35,11 @@ export function withHiddenForOrthoCapture<T>(root: Object3D, render: () => T): T
   } finally {
     for (const o of hidden) o.visible = true;
   }
+}
+
+/** Runs `render` with the objects left out of the top and side captures hidden. */
+export function withHiddenForOrthoCapture<T>(root: Object3D, render: () => T): T {
+  return withHidden(root, HIDE_IN_ORTHO_CAPTURE, render);
 }
 
 /**

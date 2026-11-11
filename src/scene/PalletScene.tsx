@@ -19,6 +19,7 @@ import { SceneToolbar } from './SceneToolbar';
 import { selectionBounds, withMeasurements } from './sceneGeometry';
 import { sceneTheme } from './sceneTheme';
 import { SelectionOutline } from './SelectionOutline';
+import { UnusedSpace } from './UnusedSpace';
 import { useSceneData } from './useSceneData';
 import { WEBGL_UNAVAILABLE } from './webgl';
 
@@ -98,6 +99,9 @@ function SceneContents() {
             select({ kind: 'product', cartonIndex, productIndex })
           }
         />
+      )}
+      {layout && inputs && s.unusedSpace && (
+        <UnusedSpace layout={layout} inputs={inputs} colors={theme.fixed} />
       )}
       {layout && inputs && s.showLabels && cartons[0] && (
         <Labels layout={layout} inputs={inputs} first={cartons[0]} theme={theme} unit={unit} />

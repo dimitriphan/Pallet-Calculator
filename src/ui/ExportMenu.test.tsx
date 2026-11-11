@@ -98,6 +98,8 @@ describe('ExportMenu', () => {
       expect.objectContaining({ exportedAt: expect.any(String) }),
       'in',
     );
+    // The PNG shows the unused space whenever it is switched on.
+    expect(capture).toHaveBeenCalledWith();
     expect(mocks.downloadBlob.mock.calls[0]?.[1]).toMatch(/\.png$/);
     expect(useNoticesStore.getState().notices).toEqual([]);
   });
@@ -220,6 +222,8 @@ describe('ExportMenu, build sheet', () => {
     expect(sheet.jobName).toBe('Dock 4');
     expect(sheet.summary.at(-1)?.value).toBe('260');
     expect(pictures).toEqual({ current: 'c', side: 's' });
+    // The build sheet's pictures never show the unused space, for the builders' sake.
+    expect(capture).toHaveBeenCalledWith({ leaveOutUnusedSpace: true });
     expect(mocks.renderBuildSheetPdf.mock.calls[0]?.[2]).toEqual(MASCOT);
     expect(mocks.downloadBlob).toHaveBeenCalledTimes(1);
     expect(mocks.downloadBlob.mock.calls[0]?.[1]).toMatch(/^pallet-build-sheet-\d{8}-\d{6}\.pdf$/);

@@ -138,6 +138,8 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Volume available', volume(a.totals.volumeAvailable)],
           ['Utilization', pct(a.totals.utilizationPct)],
           ['Remaining volume', volume(a.totals.remainingVolume)],
+          ['Headroom above the load', volume(a.totals.headroomVolume)],
+          ['Gaps beside cartons', volume(a.totals.layerGapVolume)],
           ...target,
         ]}
       />

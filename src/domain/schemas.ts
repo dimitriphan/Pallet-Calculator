@@ -127,11 +127,16 @@ export const scenarioSchema: z.ZodType<Scenario> = z
   })
   .transform((s): Scenario => {
     const a = s.analytics;
-    if (a === null || (a.carton.counts && a.carton.layerOrientations)) {
-      return { ...s, analytics: a as Analytics | null };
-    }
-    // Saved before the carton arrangement was part of the analytics: recompute from the
-    // saved layout, which is the same pure calculation that produced the rest.
+    const complete =
+      a !== null &&
+      a.carton.counts !== undefined &&
+      a.carton.layerOrientations !== undefined &&
+      a.totals.headroomVolume !== undefined &&
+      a.totals.layerGapVolume !== undefined;
+    if (a === null || complete) return { ...s, analytics: a as Analytics | null };
+    // Saved before the carton arrangement or the unused-space split was part of the
+    // analytics: recompute from the saved layout, the same pure calculation that produced
+    // the rest.
     const layout = s.result.layouts[s.selectedIndex]?.layout;
     return { ...s, analytics: layout ? computeAnalytics(layout, s.inputs) : null };
   });

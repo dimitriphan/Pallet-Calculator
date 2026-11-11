@@ -16,6 +16,7 @@ describe('sceneStore', () => {
       showWireframe: false,
       showMeasurements: false,
       forceProducts: false,
+      unusedSpace: false,
       selection: null,
       cameraCommand: null,
       captureViews: null,
@@ -59,6 +60,16 @@ describe('sceneStore', () => {
     store.getState().setSelection({ kind: 'pallet' });
     store.getState().resetForLayout();
     expect(store.getState()).toMatchObject({ forceProducts: false, selection: null });
+  });
+
+  it('toggles the unused space and keeps it for a new layout', () => {
+    const store = createSceneStore();
+    store.getState().toggle('unusedSpace');
+    expect(store.getState().unusedSpace).toBe(true);
+    store.getState().resetForLayout();
+    expect(store.getState().unusedSpace).toBe(true);
+    store.getState().toggle('unusedSpace');
+    expect(store.getState().unusedSpace).toBe(false);
   });
 
   it('the app resets "Show anyway" whenever the results store resets the selection', () => {

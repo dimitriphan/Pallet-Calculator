@@ -15,7 +15,8 @@ export type ToggleKey =
   | 'showGrid'
   | 'showWireframe'
   | 'showMeasurements'
-  | 'forceProducts';
+  | 'forceProducts'
+  | 'unusedSpace';
 
 export interface SceneState {
   showProducts: boolean;
@@ -26,10 +27,21 @@ export interface SceneState {
   showWireframe: boolean;
   showMeasurements: boolean;
   forceProducts: boolean;
+  /** Draw the headroom and the gaps beside the cartons; kept across layouts. */
+  unusedSpace: boolean;
   selection: Selection;
   cameraCommand: { type: 'reset' | 'focus'; nonce: number } | null;
-  /** Set by the 3D canvas's capture bridge; null until the canvas is mounted. */
-  captureViews: null | (() => { current: string; top: string; side: string });
+  /**
+   * Set by the 3D canvas's capture bridge; null until the canvas is mounted. The unused space
+   * shows in the pictures when it is switched on, unless `leaveOutUnusedSpace` is set.
+   */
+  captureViews:
+    | null
+    | ((options?: { leaveOutUnusedSpace?: boolean }) => {
+        current: string;
+        top: string;
+        side: string;
+      });
   setCaptureViews(fn: SceneState['captureViews']): void;
   toggle(key: ToggleKey): void;
   setSelection(s: Selection): void;
@@ -51,6 +63,7 @@ export function createSceneStore(): StoreApi<SceneState> {
       showWireframe: false,
       showMeasurements: false,
       forceProducts: false,
+      unusedSpace: false,
       selection: null,
       cameraCommand: null,
       captureViews: null,

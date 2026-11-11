@@ -5,6 +5,7 @@ import { layoutMetrics } from '../packing/metrics';
 import { footprintAxes } from '../packing/stacking';
 import { turnedLayerNumbers } from './stack';
 import { measureStability, type StabilityMeasures } from './stability';
+import { unusedSpace } from './unusedSpace';
 import { layoutWeight, roomForCartons, type LayoutWeight } from './weight';
 
 export type TargetStatus = 'none' | 'met' | 'exceeded' | 'notAchievable';
@@ -76,6 +77,10 @@ export interface Analytics {
     volumeAvailable: number;
     utilizationPct: number;
     remainingVolume: number;
+    /** The part of the remaining volume above the top of the stack. */
+    headroomVolume: number;
+    /** The part of the remaining volume beside the cartons, layer by layer. */
+    layerGapVolume: number;
   };
   target: {
     status: TargetStatus;
@@ -162,6 +167,7 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
   const height = usableHeight(i);
   const available = availableVolume(i);
   const utilizationPct = available > 0 ? (m.cartonVolume / available) * 100 : 0;
+  const unused = unusedSpace(l, i);
 
   return {
     product: {
@@ -199,6 +205,8 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       volumeAvailable: available,
       utilizationPct,
       remainingVolume: available - m.cartonVolume,
+      headroomVolume: unused.headroomVolume,
+      layerGapVolume: unused.gapVolume,
     },
     target: targetAnalytics(l, i),
     summary: {

@@ -6,7 +6,9 @@ import {
   CAPTURE_COLOR,
   CAPTURE_UNIFORM_COLORS,
   captureGridColors,
+  HIDE_IN_BUILD_SHEET,
   HIDE_IN_ORTHO_CAPTURE,
+  withHidden,
   withHiddenForOrthoCapture,
 } from './captureVisibility';
 
@@ -45,6 +47,23 @@ describe('withHiddenForOrthoCapture', () => {
       }),
     ).toThrow('lost context');
     expect(outline.visible).toBe(true);
+  });
+});
+
+describe('withHidden', () => {
+  it('hides only the objects flagged with the given key', () => {
+    const root = new Group();
+    const overlay = new Group();
+    overlay.userData[HIDE_IN_BUILD_SHEET] = true;
+    const measurement = new Group();
+    measurement.userData[HIDE_IN_ORTHO_CAPTURE] = true;
+    root.add(overlay, measurement);
+    const seen = withHidden(root, HIDE_IN_BUILD_SHEET, () => [
+      overlay.visible,
+      measurement.visible,
+    ]);
+    expect(seen).toEqual([false, true]);
+    expect(overlay.visible).toBe(true);
   });
 });
 

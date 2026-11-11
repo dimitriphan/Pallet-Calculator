@@ -20,7 +20,7 @@ export interface PlacedCarton extends PlacedBox {
 }
 
 /** Offset that centres the layer's blocks (by their bounding box) in the usable footprint. */
-function layerOffset(
+export function layerOffset(
   layer: Layer,
   a: number,
   b: number,
