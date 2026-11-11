@@ -4,6 +4,7 @@ import type { Inputs, Layout, WeightInputs } from '../../domain/types';
 import { optimize } from '../optimize';
 import { layoutSignature } from '../packing/stacking';
 import { layoutWeight, roomForCartons, trimToWeight } from './weight';
+import { maxCartonsByWeight, weightBound, withinMax } from '../packing/weightLimit';
 
 /**
  * The default example's winner: 52 cartons of 1 x 1 x 5 boxes (13 x 9 x 21 outer), stacked
@@ -137,5 +138,30 @@ describe('roomForCartons', () => {
     expect(
       roomForCartons(layout, { ...exact, weights: { ...exact.weights, maxPallet: 634 } }),
     ).toBe(2);
+  });
+});
+
+describe('maxCartonsByWeight and weightBound', () => {
+  const at = (maxPallet: number | null) => ({
+    ...weighed,
+    weights: { ...weighed.weights, maxPallet },
+  });
+
+  it('counts the full 11 lb cartons that fit with the 40 lb pallet', () => {
+    expect(maxCartonsByWeight(layout.carton, at(612))).toBe(52); // 40 + 52 x 11 = 612
+    expect(maxCartonsByWeight(layout.carton, at(611))).toBe(51);
+    expect(maxCartonsByWeight(layout.carton, at(51))).toBe(1);
+    expect(maxCartonsByWeight(layout.carton, at(50))).toBe(0);
+    expect(weightBound(layout.carton, at(612))).toBe(52 * 5);
+  });
+
+  it('is unlimited without a maximum or a box weight', () => {
+    expect(maxCartonsByWeight(layout.carton, at(null))).toBe(Infinity);
+    expect(weightBound(layout.carton, withWeights({ maxPallet: 100 }))).toBe(Infinity);
+  });
+
+  it('allows a total over the maximum only by the rounding tolerance', () => {
+    expect(withinMax(400.00000000000006, 400)).toBe(true);
+    expect(withinMax(400.001, 400)).toBe(false);
   });
 });

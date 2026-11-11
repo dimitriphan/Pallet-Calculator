@@ -64,7 +64,13 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   layouts: z.array(rankedLayout),
   candidatesEvaluated: num,
   emptyReason: z
-    .enum(['NO_CARTON_FITS', 'CARTON_EXCEEDS_PALLET', 'NO_CARTON_WITH_COUNT', 'OVER_WEIGHT'])
+    .enum([
+      'NO_CARTON_FITS',
+      'CARTON_EXCEEDS_PALLET',
+      'NO_CARTON_WITH_COUNT',
+      'OVER_WEIGHT',
+      'WEIGHT_SEARCH_LIMITED',
+    ])
     .nullable(),
   truncated: z.boolean(),
   // Added in Round 2: optional, so results saved before it still load.

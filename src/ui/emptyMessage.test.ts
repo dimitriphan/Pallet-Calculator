@@ -34,6 +34,16 @@ describe('emptyMessage', () => {
     expect(emptyMessage(optimize(heavy), heavy)).toBe(msg);
   });
 
+  it('explains WEIGHT_SEARCH_LIMITED without saying nothing fits', () => {
+    const text = emptyMessage(
+      empty({ emptyReason: 'WEIGHT_SEARCH_LIMITED', truncated: true }),
+      DEFAULT_INPUTS,
+    );
+    expect(text).toBe(
+      'No layout under the maximum pallet weight was found before the search was limited. A smaller carton may still fit: try entering the desired boxes per carton.',
+    );
+  });
+
   it('explains CARTON_EXCEEDS_PALLET', () => {
     expect(emptyMessage(empty({ emptyReason: 'CARTON_EXCEEDS_PALLET' }), DEFAULT_INPUTS)).toBe(
       'No layout fits: the smallest possible carton is larger than the usable pallet space.',

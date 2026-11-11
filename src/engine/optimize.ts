@@ -1,4 +1,4 @@
-import type { CartonCandidate, Inputs, Layout, OptimizeResult } from '../domain/types';
+import type { Inputs, Layout, OptimizeResult } from '../domain/types';
 import {
   anyCartonFits,
   generateCartonCandidatesWithInfo,
@@ -9,6 +9,7 @@ import { buildLayouts, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { rankLayouts } from './ranking/rank';
 import { trimToWeight } from './analytics/weight';
+import { maxCartonsByWeight, weightBound, weightLimited, withinMax } from './packing/weightLimit';
 
 export const TIME_BUDGET_MS = 4000;
 
@@ -62,9 +63,11 @@ export function optimize(
   const layouts: Layout[] = [];
   // With a weight limit, layouts that trim to the same layers are kept once, by id. Without
   // one, nothing is trimmed and buildLayouts already gives distinct layouts.
-  const limited = i.weights.productBox !== null && i.weights.maxPallet !== null;
+  const limited = weightLimited(i);
   const indexById = new Map<string, number>();
+  // Layouts built and cartons skipped that the weight limit then ruled out entirely.
   let built = 0;
+  let tooHeavy = 0;
   const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
   let evaluated = 0;
   // Stop at the budget once there is something to show, or at the hard limit regardless.
@@ -81,6 +84,11 @@ export function optimize(
     if (best.length >= KEEP_BEST && bound < (best[KEEP_BEST - 1] as number)) break;
     if (evaluated > 0 && overBudget()) break;
     evaluated++;
+    // The pallet and one full carton already over the maximum: no layer of it can fit.
+    if (maxCartonsByWeight(c, i) === 0) {
+      tooHeavy++;
+      continue;
+    }
     // The same check runs between this carton's layer searches.
     for (const full of buildLayouts(c, i, cache, overBudget)) {
       built++;
@@ -99,7 +107,8 @@ export function optimize(
   }
 
   if (layouts.length === 0) {
-    const reason = built > 0 ? 'OVER_WEIGHT' : 'CARTON_EXCEEDS_PALLET';
+    const reason =
+      built + tooHeavy === 0 ? 'CARTON_EXCEEDS_PALLET' : overWeightReason(i, capped || timedOut);
     return { ...empty(reason), candidatesEvaluated: evaluated };
   }
   return {
@@ -128,16 +137,15 @@ function noCandidates(
 }
 
 /**
- * Most products a carton could give under the weight limit: the cartons whose weight on the
- * pallet stays at or under the maximum, times boxes per carton. Infinity without a limit.
+ * Why nothing was left once the weight limit removed every layout. OVER_WEIGHT only when that
+ * is certain: the search covered every carton, or even one box in one carton on the pallet is
+ * over the maximum. A capped or stopped search may have missed a lighter carton.
  */
-function weightBound(c: CartonCandidate, i: Inputs): number {
-  const { productBox: box, maxPallet: max, emptyCarton, pallet } = i.weights;
-  if (box === null || max === null) return Infinity;
-  const perCarton = emptyCarton + c.boxesPerCarton * box;
-  if (!(perCarton > 0)) return Infinity;
-  // Generous by one carton, so rounding can never make the bound too low.
-  return c.boxesPerCarton * (Math.max(0, Math.floor((max - pallet) / perCarton)) + 1);
+function overWeightReason(i: Inputs, searchLimited: boolean): OptimizeResult['emptyReason'] {
+  const { productBox, maxPallet, emptyCarton, pallet } = i.weights;
+  const lightest = pallet + emptyCarton + (productBox ?? 0);
+  const proven = maxPallet !== null && !withinMax(lightest, maxPallet);
+  return !searchLimited || proven ? 'OVER_WEIGHT' : 'WEIGHT_SEARCH_LIMITED';
 }
 
 /**

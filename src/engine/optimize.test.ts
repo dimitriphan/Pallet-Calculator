@@ -402,6 +402,82 @@ describe('optimize', () => {
       expect(r.candidatesEvaluated).toBeGreaterThan(0);
     });
 
+    describe('a very small product, whose carton list is capped', () => {
+      // 0.5 in cubes at 0.1 lb on a 40 lb pallet. The search never times out (clock fixed).
+      const tiny = (maxPallet: number) =>
+        weighed(
+          { ...DEFAULT_INPUTS, product: { length: 0.5, width: 0.5, height: 0.5 } },
+          { productBox: 0.1, maxPallet },
+        );
+      const ROUNDING = 1 + 1e-9; // "never over" holds up to the weight tolerance
+
+      it('finds a layout under 400 lb with at least the 3584 boxes of 4-box cartons', () => {
+        const i = tiny(400);
+        const r = optimize(i, { now: () => 0 });
+        expect(r.emptyReason).toBeNull();
+        const best = r.layouts[0]!.layout;
+        expect(layoutWeight(best, i)!.total).toBeLessThanOrEqual(400 * ROUNDING);
+        // With exactly 4 boxes per carton the optimizer finds 3584 boxes at 398.4 lb.
+        const four = optimize({ ...i, boxesPerCarton: 4 }).layouts[0]!.layout;
+        expect(four.totalProducts).toBe(3584);
+        expect(best.totalProducts).toBeGreaterThanOrEqual(3584);
+      });
+
+      it('reaches the 9600 boxes 1000 lb allows', () => {
+        const i = tiny(1000);
+        const best = optimize(i, { now: () => 0 }).layouts[0]!.layout;
+        expect(layoutWeight(best, i)!.total).toBeLessThanOrEqual(1000 * ROUNDING);
+        // (1000 - 40) / 0.1 = 9600 boxes at most.
+        expect(best.totalProducts).toBe(9600);
+      });
+    });
+
+    it('says the search was limited, not that nothing fits, when it stopped early', () => {
+      // One box in one carton (40 + 50 = 90 lb) is under 100 lb, so a lighter layout is not
+      // ruled out; the clock passes the hard limit after the first carton.
+      let t = 0;
+      const r = optimize(weighed(DEFAULT_INPUTS, { productBox: 50, maxPallet: 100 }), {
+        now: () => (t += HARD_LIMIT_MS),
+      });
+      expect(r).toMatchObject({
+        layouts: [],
+        emptyReason: 'WEIGHT_SEARCH_LIMITED',
+        truncated: true,
+        candidatesEvaluated: 1,
+      });
+    });
+
+    it('reports OVER_WEIGHT even when stopped early once one box on the pallet is over', () => {
+      let t = 0;
+      const r = optimize(weighed(DEFAULT_INPUTS, { productBox: 70, maxPallet: 100 }), {
+        now: () => (t += HARD_LIMIT_MS),
+      });
+      expect(r).toMatchObject({ layouts: [], emptyReason: 'OVER_WEIGHT', truncated: true });
+    });
+
+    it('skips cartons too heavy for one carton on the pallet, without waiting', () => {
+      // 40 lb pallet + any carton of 70 lb boxes > 100 lb: every carton is skipped at once.
+      const heavy = weighed(DEFAULT_INPUTS, { productBox: 70, maxPallet: 100 });
+      const r = optimize(heavy, { now: () => 0 });
+      expect(r).toMatchObject({ layouts: [], emptyReason: 'OVER_WEIGHT', truncated: false });
+      expect(r.candidatesEvaluated).toBe(generateCartonCandidates(heavy).length);
+      const t0 = performance.now();
+      const tinyHeavy = optimize(
+        weighed(
+          { ...DEFAULT_INPUTS, product: { length: 0.5, width: 0.5, height: 0.5 } },
+          { productBox: 70, maxPallet: 100 },
+        ),
+      );
+      expect(performance.now() - t0).toBeLessThan(HARD_LIMIT_MS / 2);
+      expect(tinyHeavy).toMatchObject({ layouts: [], emptyReason: 'OVER_WEIGHT' });
+      // Skipping changes no answer: under 1000 lb with 30 lb boxes, cartons of more than 32
+      // boxes are skipped, and the winner is still the best of every carton trimmed alone.
+      const some = weighed(DEFAULT_INPUTS, { productBox: 30, maxPallet: 1000 });
+      const best = optimize(some).layouts[0]!.layout;
+      expect(best.totalProducts).toBeGreaterThan(0);
+      expect(best.totalProducts).toBe(bestTrimmedProducts(some));
+    });
+
     it('keeps the other empty reasons ahead of OVER_WEIGHT', () => {
       const r = optimize(
         weighed(

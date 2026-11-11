@@ -116,7 +116,12 @@ export interface RankedLayout {
 }
 
 export type EmptyReason =
-  'NO_CARTON_FITS' | 'CARTON_EXCEEDS_PALLET' | 'NO_CARTON_WITH_COUNT' | 'OVER_WEIGHT';
+  | 'NO_CARTON_FITS'
+  | 'CARTON_EXCEEDS_PALLET'
+  | 'NO_CARTON_WITH_COUNT'
+  | 'OVER_WEIGHT'
+  /** Nothing under the maximum weight was found, but the search was capped or stopped. */
+  | 'WEIGHT_SEARCH_LIMITED';
 
 export interface OptimizeResult {
   layouts: RankedLayout[];

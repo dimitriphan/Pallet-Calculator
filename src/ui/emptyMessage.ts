@@ -6,6 +6,8 @@ const FIXED = {
   CARTON_EXCEEDS_PALLET:
     'No layout fits: the smallest possible carton is larger than the usable pallet space.',
   OVER_WEIGHT: 'Nothing fits: one layer is already over the maximum pallet weight.',
+  WEIGHT_SEARCH_LIMITED:
+    'No layout under the maximum pallet weight was found before the search was limited. A smaller carton may still fit: try entering the desired boxes per carton.',
 } as const;
 
 /** Why there are no layouts, or null when there are some. `inputs` are the ones the result came from. */

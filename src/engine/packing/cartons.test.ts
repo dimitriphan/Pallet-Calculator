@@ -109,6 +109,34 @@ describe('generateCartonCandidatesWithInfo', () => {
     expect([...got].sort()).toEqual(expected.sort());
   });
 
+  it('under a weight limit, keeps the cartons that could fit most within it when capping', () => {
+    // 0.5 in cubes at 0.1 lb, pallet 40 lb, maximum 400 lb: at most 3600 boxes. Capping by
+    // boxes per carton alone keeps only cartons of 4200 boxes or more, each over the maximum.
+    const tiny = { ...DEFAULT_INPUTS, product: { length: 0.5, width: 0.5, height: 0.5 } };
+    const plain = generateCartonCandidatesWithInfo(tiny);
+    expect(plain.truncated).toBe(true);
+    expect(Math.min(...plain.candidates.map((c) => c.boxesPerCarton))).toBeGreaterThan(3600);
+    const limited = generateCartonCandidatesWithInfo({
+      ...tiny,
+      weights: { productBox: 0.1, emptyCarton: 0, maxPallet: 400, pallet: 40 },
+    });
+    expect(limited.truncated).toBe(true);
+    expect(limited.candidates).toHaveLength(MAX_CARTON_CANDIDATES);
+    expect(limited.candidates.some((c) => c.boxesPerCarton === 4)).toBe(true);
+    // Still in candidate order: boxes per carton descending.
+    for (let k = 1; k < limited.candidates.length; k++) {
+      expect(limited.candidates[k - 1]!.boxesPerCarton).toBeGreaterThanOrEqual(
+        limited.candidates[k]!.boxesPerCarton,
+      );
+    }
+    // A box weight without a maximum, or a maximum without a box weight, changes nothing.
+    for (const weights of [
+      { productBox: 0.1, emptyCarton: 0, maxPallet: null, pallet: 40 },
+      { productBox: null, emptyCarton: 0, maxPallet: 400, pallet: 40 },
+    ])
+      expect(generateCartonCandidatesWithInfo({ ...tiny, weights })).toEqual(plain);
+  });
+
   it('caps a very small product quickly and reports truncation', () => {
     expect(MAX_CARTON_CANDIDATES).toBe(8000);
     const t0 = performance.now();

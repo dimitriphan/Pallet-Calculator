@@ -1,6 +1,7 @@
 import { PALLET_HEIGHT } from '../../domain/constants';
 import type { Inputs, Layer, Layout } from '../../domain/types';
 import { withLayers } from '../packing/stacking';
+import { WEIGHT_TOLERANCE, withinMax } from '../packing/weightLimit';
 
 /** Weights in pounds; heights in inches above the floor. */
 export interface LayoutWeight {
@@ -14,19 +15,12 @@ export interface LayoutWeight {
   centreOfMassHeight: number;
 }
 
-/** Totals within this fraction of the maximum count as at the maximum (unit rounding). */
-const WEIGHT_TOLERANCE = 1e-9;
-
 function perCartonWeight(l: Layout, i: Inputs, productBox: number): number {
   return i.weights.emptyCarton + l.carton.boxesPerCarton * productBox;
 }
 
 function totalWeight(l: Layout, i: Inputs, productBox: number): number {
   return i.weights.pallet + l.totalCartons * perCartonWeight(l, i, productBox);
-}
-
-function withinMax(total: number, max: number): boolean {
-  return total <= max + Math.abs(max) * WEIGHT_TOLERANCE;
 }
 
 /**
