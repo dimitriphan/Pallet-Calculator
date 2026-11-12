@@ -1,6 +1,12 @@
 import { useId, useState } from 'react';
 import { DEFAULT_INPUTS } from '../domain/constants';
-import type { MinStability, OrientationCode, Preset, RotationMode } from '../domain/types';
+import type {
+  LayerPatternPref,
+  MinStability,
+  OrientationCode,
+  Preset,
+  RotationMode,
+} from '../domain/types';
 import { presetToInputs } from '../store/presetsStore';
 import {
   draftInUnit,
@@ -12,6 +18,7 @@ import {
 } from '../store/unitFields';
 import { DimsFieldset } from './DimsFieldset';
 import { useUnit } from './useUnit';
+import { LayerPatternFields } from './LayerPatternControl';
 import { MinStabilityFields } from './MinStabilityControl';
 import { BUTTON, PRIMARY_BUTTON } from './ModalDialog';
 import { NumberField } from './NumberField';
@@ -76,6 +83,8 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
   const setKeepUpright = (keepCartonsUpright: boolean) =>
     setDraft((d) => ({ ...d, keepCartonsUpright }));
   const setMinStability = (minStability: MinStability) => setDraft((d) => ({ ...d, minStability }));
+  const setLayerPattern = (layerPattern: LayerPatternPref) =>
+    setDraft((d) => ({ ...d, layerPattern }));
 
   const save = () => {
     if (!parsed.ok || nameError) return;
@@ -195,6 +204,7 @@ export function PresetEditForm({ preset, onSave, onCancel }: PresetEditFormProps
         setKeepCartonsUpright={setKeepUpright}
       />
       <MinStabilityFields value={draft.minStability} onChange={setMinStability} />
+      <LayerPatternFields value={draft.layerPattern} onChange={setLayerPattern} />
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={BUTTON}>
           Cancel

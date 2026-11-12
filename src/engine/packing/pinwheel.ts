@@ -19,9 +19,28 @@ export const MAX_PINWHEEL_WORK = 2_000_000;
  */
 export const PINWHEEL_WORK_PER_OPTIMIZE = 500_000;
 
+/**
+ * Further pinwheel work one optimize() call may spend under the layer pattern settings Prefer
+ * pinwheel and Pinwheel only, on the pinwheels Auto does not look for (those that tie the
+ * straight-cut count, and under Pinwheel only those that hold fewer). Auto's own searches keep
+ * PINWHEEL_WORK_PER_OPTIMIZE, so they find exactly what they find under Auto. When this is
+ * spent the result is marked limited.
+ *
+ * Measured (Round 5): the optimizer fixtures and 150 random realistic cases spend at most about
+ * 200,000 units and products of an inch or two up to 1.5 million, which adds up to 0.15 s.
+ * Only cartons laid a thousand or more to a layer spend it all, which adds 0.2 to 0.6 s to
+ * searches of 0.05 to 3.3 s; the time budget still ends a search that would run past it.
+ */
+export const PINWHEEL_EXTRA_WORK_PER_OPTIMIZE = 4_000_000;
+
 /** Work units a series of pinwheel searches may still spend between them; searches take from it. */
 export interface PinwheelAllowance {
   remaining: number;
+  /**
+   * Set once a search sharing the allowance was cut short (or not run because nothing
+   * remained), so a pinwheel may have been missed. Never set to false.
+   */
+  capped?: boolean;
 }
 
 export interface PinwheelOptions {
@@ -31,7 +50,17 @@ export interface PinwheelOptions {
   shouldStop?: () => boolean;
   /** Shared work allowance: the search spends no more than what remains, and takes what it uses. */
   allowance?: PinwheelAllowance;
+  /**
+   * Only true pinwheels are wanted: once pushed together, no straight line right across the
+   * layer may pass between the blocks (such a layer is a straight-cut layer under another
+   * name). A pinwheel that holds more than straight cuts can is always one; this matters for
+   * those that tie or hold fewer.
+   */
+  strict?: boolean;
 }
+
+/** Work units one check for a straight cut through a candidate pinwheel counts as. */
+const STRICT_CHECK_WORK = 16;
 
 /** How many work units pass between two shouldStop checks. */
 export const PINWHEEL_STOP_CHECK = 4096;
@@ -121,6 +150,8 @@ class PinwheelSearch {
     /** Only pinwheels of more than this many cartons are worth keeping. */
     private readonly beat: number,
     private readonly shouldStop?: () => boolean,
+    /** Keep only pinwheels with no straight cut right across (see PinwheelOptions.strict). */
+    private readonly strict = false,
   ) {
     this.work = spent;
     this.nextStopCheck = spent + PINWHEEL_STOP_CHECK;
@@ -245,24 +276,29 @@ class PinwheelSearch {
     return rows;
   }
 
-  private consider(sizes: readonly number[]): void {
+  /** Keeps the pinwheel when it is the best so far; false when a strict search turns it down. */
+  private consider(sizes: readonly number[]): boolean {
     let count = 0;
     for (let k = 0; k < 4; k++) count += (sizes[2 * k] as number) * (sizes[2 * k + 1] as number);
-    if (count <= this.floor()) return;
-    this.best = {
-      count,
-      blocks: [B1, B2, B3, B4].map((c, k) => {
-        const cols = sizes[2 * k] as number;
-        const rows = sizes[2 * k + 1] as number;
-        return {
-          x: this.x0(c, cols * this.dx(c)),
-          y: this.y0(c, rows * this.dy(c)),
-          cols,
-          rows,
-          rotated: c.rotated,
-        };
-      }),
-    };
+    if (count <= this.floor()) return true;
+    const blocks = [B1, B2, B3, B4].map((c, k) => {
+      const cols = sizes[2 * k] as number;
+      const rows = sizes[2 * k + 1] as number;
+      return {
+        x: this.x0(c, cols * this.dx(c)),
+        y: this.y0(c, rows * this.dy(c)),
+        cols,
+        rows,
+        rotated: c.rotated,
+      };
+    });
+    if (this.strict) {
+      // The check is counted as work, like the loop iterations.
+      this.work += STRICT_CHECK_WORK;
+      if (hasThroughCut(compact(blocks, this.a, this.b), this.a, this.b)) return false;
+    }
+    this.best = { count, blocks };
+    return true;
   }
 
   /** B4, the last block: most rows then most columns, and most columns then most rows. */
@@ -271,13 +307,17 @@ class PinwheelSearch {
     const colsA = rowsFirst > 0 ? this.largestCols(B4, rowsFirst, 3) : 0;
     const colsFirst = this.largestCols(B4, 1, 3);
     const rowsB = colsFirst > 0 ? this.largestRows(B4, colsFirst, 3) : 0;
-    const [c4, r4] =
-      colsA * rowsFirst >= colsFirst * rowsB ? [colsA, rowsFirst] : [colsFirst, rowsB];
-    if (c4 > 0 && r4 > 0) this.consider([c1, r1, c2, r2, c3, r3, c4, r4]);
+    const rowsWins = colsA * rowsFirst >= colsFirst * rowsB;
+    const [c4, r4] = rowsWins ? [colsA, rowsFirst] : [colsFirst, rowsB];
+    if (c4 > 0 && r4 > 0 && !this.consider([c1, r1, c2, r2, c3, r3, c4, r4])) {
+      // A strict search turned the larger block down: the other shape may still do.
+      const [c4b, r4b] = rowsWins ? [colsFirst, rowsB] : [colsA, rowsFirst];
+      if (c4b > 0 && r4b > 0) this.consider([c1, r1, c2, r2, c3, r3, c4b, r4b]);
+    }
   }
 
   run(): void {
-    const { rectX, rectY, a, b } = this;
+    const { rectX, rectY, a, b, strict } = this;
     // Each block shares an edge with the next one round, so it must leave room for at least
     // one carton of it: B1 for B2 (b wide) beside it and B4 (a tall) above it, B2 for B3.
     const maxC1 = fitsCount(rectX - b, a);
@@ -303,29 +343,43 @@ class PinwheelSearch {
         const [w1, h1] = [p[2] as number, p[3] as number];
         const left = remainder(rectY - h1, a) * Math.min(w1, b);
         if (!this.canBeat(left)) continue;
-        for (let r2 = 1; r2 <= maxR2; r2++) {
+        r2Loop: for (let r2 = 1; r2 <= maxR2; r2++) {
           if (!this.tick()) return;
-          const c2 = this.largestCols(B2, r2, 1);
+          const c2Most = this.largestCols(B2, r2, 1);
           // A taller block only meets more of the placed ones: no wider one can follow.
-          if (c2 === 0) break;
-          this.place(1, B2, c2, r2);
-          const [w2, h2] = [p[6] as number, p[7] as number];
-          const bottom = Math.max(0, rectX - w1 - w2) * Math.min(h1, h2);
-          // As r2 grows, B2 gets taller (min(h1, h2) cannot shrink) and c2 cannot grow (see
-          // above), so B2 is never wider and the gap beside B1 never narrower: the bottom
-          // strip never shrinks, and once it rules out beating floor() every taller B2 does too.
-          if (!this.canBeat(left + bottom)) break;
-          for (let r3 = 1; r3 <= maxR3; r3++) {
-            if (!this.tick()) return;
-            const c3 = this.largestCols(B3, r3, 2);
-            if (c3 === 0) break;
-            this.place(2, B3, c3, r3);
-            const [w3, h3] = [p[10] as number, p[11] as number];
-            const right = Math.max(0, rectY - h2 - h3) * Math.min(w2, w3);
-            const top = remainder(rectX - w3, b) * Math.min(h3, a);
-            if (!this.canBeat(left + bottom + right + top)) continue;
-            this.placeLast(c1, r1, c2, r2, c3, r3);
-            if (this.done()) return;
+          if (c2Most === 0) break;
+          // The widest B2 and B3 hold the most cartons, and the plain search tries only those.
+          // A strict search also tries every narrower one: the widest often leave a straight
+          // cut where a narrower block lets the four lock round the centre.
+          for (let c2 = c2Most; c2 >= (strict ? 1 : c2Most); c2--) {
+            if (c2 < c2Most && !this.tick()) return;
+            this.place(1, B2, c2, r2);
+            const [w2, h2] = [p[6] as number, p[7] as number];
+            const bottom = Math.max(0, rectX - w1 - w2) * Math.min(h1, h2);
+            if (!this.canBeat(left + bottom)) {
+              // As r2 grows, B2 gets taller (min(h1, h2) cannot shrink) and the widest B2
+              // cannot grow (see above), so it is never wider and the gap beside B1 never
+              // narrower: the bottom strip never shrinks, and once it rules out beating
+              // floor() for the widest B2, every taller B2 does too. A narrower B2 only
+              // widens the strip.
+              if (c2 === c2Most) break r2Loop;
+              break;
+            }
+            for (let r3 = 1; r3 <= maxR3; r3++) {
+              if (!this.tick()) return;
+              const c3Most = this.largestCols(B3, r3, 2);
+              if (c3Most === 0) break;
+              for (let c3 = c3Most; c3 >= (strict ? 1 : c3Most); c3--) {
+                if (c3 < c3Most && !this.tick()) return;
+                this.place(2, B3, c3, r3);
+                const [w3, h3] = [p[10] as number, p[11] as number];
+                const right = Math.max(0, rectY - h2 - h3) * Math.min(w2, w3);
+                const top = remainder(rectX - w3, b) * Math.min(h3, a);
+                if (!this.canBeat(left + bottom + right + top)) continue;
+                this.placeLast(c1, r1, c2, r2, c3, r3);
+                if (this.done()) return;
+              }
+            }
           }
         }
       }
@@ -381,6 +435,32 @@ function compact(blocks: Block[], a: number, b: number): Block[] {
 }
 
 /**
+ * Whether some straight line right across the layer (along x or along y, strictly inside the
+ * blocks' bounding box) passes between the blocks, through none of them. Such a layer is two
+ * groups of blocks side by side, which straight cuts build as well: its blocks do not lock
+ * round a centre.
+ */
+export function hasThroughCut(blocks: readonly Block[], a: number, b: number): boolean {
+  // Per axis: where each block starts and ends along it.
+  const along = (axis: 'x' | 'y') =>
+    blocks.map((blk) => {
+      const size = (axis === 'x') === blk.rotated ? b : a;
+      const start = blk[axis];
+      return { start, end: start + (axis === 'x' ? blk.cols : blk.rows) * size };
+    });
+  for (const spans of [along('x'), along('y')]) {
+    const lo = Math.min(...spans.map((s) => s.start));
+    const hi = Math.max(...spans.map((s) => s.end));
+    for (const { end: c } of spans) {
+      // A line along a block's far edge, inside the layer, that no block lies across.
+      if (c <= lo + EPS || c >= hi - EPS) continue;
+      if (spans.every((s) => c <= s.start + EPS || c >= s.end - EPS)) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Best four-block pinwheel of a×b cartons in a rectX×rectY rectangle, or null if none has 4
  * non-empty blocks (or none has more than `opts.beat` cartons).
  */
@@ -400,7 +480,8 @@ export function pinwheelLayer(
   // The corner order fixes which way the pinwheel turns, and the greedy block sizes are not
   // symmetric: search with B1 unturned, then with B1 turned (the footprint given the other way
   // round, blocks turned back), sharing one work cap. The second must beat the first.
-  const first = new PinwheelSearch(rectX, rectY, a, b, 0, maxWork, beat, opts.shouldStop);
+  const strict = opts.strict === true;
+  const first = new PinwheelSearch(rectX, rectY, a, b, 0, maxWork, beat, opts.shouldStop, strict);
   first.run();
   const second = new PinwheelSearch(
     rectX,
@@ -411,11 +492,13 @@ export function pinwheelLayer(
     maxWork,
     Math.max(beat, first.best?.count ?? 0),
     opts.shouldStop,
+    strict,
   );
   if (!first.capped && !first.reachedBound()) second.run();
   if (opts.allowance)
     opts.allowance.remaining = Math.max(0, opts.allowance.remaining - second.work);
   const capped = first.capped || second.capped;
+  if (opts.allowance && capped) opts.allowance.capped = true;
   const best = second.best
     ? {
         count: second.best.count,

@@ -21,4 +21,5 @@ export const DEFAULT_INPUTS: Inputs = {
   keepCartonsUpright: false,
   weights: { productBox: null, maxPallet: null, emptyCarton: 0, pallet: 40 },
   minStability: 'auto',
+  layerPattern: 'auto',
 };

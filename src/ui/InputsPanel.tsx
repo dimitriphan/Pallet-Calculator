@@ -2,6 +2,7 @@ import { PALLET_HEIGHT } from '../domain/constants';
 import { inputFieldValue } from '../store/inputsStore';
 import { AdvancedSection } from './AdvancedSection';
 import { DimsFieldset } from './DimsFieldset';
+import { LayerPatternControl } from './LayerPatternControl';
 import { MinStabilityControl } from './MinStabilityControl';
 import { NumberField } from './NumberField';
 import { RotationControl } from './RotationControl';
@@ -146,6 +147,7 @@ export function InputsPanel() {
       <RotationControl />
       <div className="root-divider" aria-hidden="true" />
       <MinStabilityControl />
+      <LayerPatternControl />
       <AdvancedSection />
     </form>
   );

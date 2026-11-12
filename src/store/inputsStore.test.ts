@@ -120,6 +120,42 @@ describe('inputsStore', () => {
     expect(s.parsed).toEqual({ ok: true, inputs: { ...DEFAULT_INPUTS, leeway: 2 } });
   });
 
+  it('sets the layer pattern, parses it, remembers it and takes it from presets', () => {
+    const storage = new FakeStorage();
+    const store = createInputsStore(storage);
+    expect(store.getState().draft.layerPattern).toBe('auto');
+    store.getState().setLayerPattern('pinwheelOnly');
+    expect(store.getState().parsed).toEqual({
+      ok: true,
+      inputs: { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' },
+    });
+    expect(createInputsStore(storage).getState().draft.layerPattern).toBe('pinwheelOnly');
+    store.getState().applyPreset({
+      ...presetFieldsOf(DEFAULT_INPUTS),
+      layerPattern: 'preferPinwheel',
+    });
+    expect(store.getState().draft.layerPattern).toBe('preferPinwheel');
+    store.getState().replaceInputs({ ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' });
+    expect(store.getState().draft.layerPattern).toBe('pinwheelOnly');
+    store.getState().reset();
+    expect(store.getState().draft.layerPattern).toBe('auto');
+  });
+
+  it('restores a draft remembered before the layer pattern setting as Auto', () => {
+    const storage = new FakeStorage();
+    const old = draftFromInputs({ ...DEFAULT_INPUTS, leeway: 2 }) as unknown as Record<
+      string,
+      unknown
+    >;
+    delete old.layerPattern;
+    expect('layerPattern' in old).toBe(false);
+    storage.setItem(STORAGE_KEYS.inputs, JSON.stringify(old));
+    const s = createInputsStore(storage).getState();
+    expect(s.draft.leeway).toBe('2');
+    expect(s.draft.layerPattern).toBe('auto');
+    expect(s.parsed).toEqual({ ok: true, inputs: { ...DEFAULT_INPUTS, leeway: 2 } });
+  });
+
   it('restores a remembered Round 1 draft without boxesPerCarton and reads it as blank', () => {
     const storage = new FakeStorage();
     const round1 = draftFromInputs({ ...DEFAULT_INPUTS, leeway: 2 }) as unknown as Record<
@@ -178,6 +214,7 @@ describe('inputsStore', () => {
       keepCartonsUpright: DEFAULT_INPUTS.keepCartonsUpright,
       weights: { maxPallet: null, emptyCarton: 0, pallet: 40 },
       minStability: 'auto',
+      layerPattern: 'auto',
     };
     store.getState().applyPreset(fields);
     const s = store.getState();

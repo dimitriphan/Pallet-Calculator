@@ -127,6 +127,26 @@ describe('inputsSchema', () => {
     });
   });
 
+  it('reads inputs stored before the layer pattern setting as Auto, and keeps a stored one', () => {
+    const old: Record<string, unknown> = { ...DEFAULT_INPUTS };
+    delete old.layerPattern;
+    expect('layerPattern' in old).toBe(false);
+    expect(inputsSchema.parse(old)).toEqual(DEFAULT_INPUTS);
+    expect(inputsSchema.parse(old).layerPattern).toBe('auto');
+    for (const p of ['auto', 'preferPinwheel', 'pinwheelOnly'] as const)
+      expect(inputsSchema.parse({ ...DEFAULT_INPUTS, layerPattern: p }).layerPattern).toBe(p);
+    expect(inputsSchema.safeParse({ ...DEFAULT_INPUTS, layerPattern: 'grid' }).success).toBe(false);
+  });
+
+  it('drafts and parses the layer pattern setting', () => {
+    const draft = draftFromInputs({ ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' });
+    expect(draft.layerPattern).toBe('pinwheelOnly');
+    expect(parseDraft(draft)).toEqual({
+      ok: true,
+      inputs: { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' },
+    });
+  });
+
   it('rejects a boxesPerCarton that is not a whole number of 1 or more', () => {
     for (const bad of [0, 2.5, -1, '6'])
       expect(inputsSchema.safeParse({ ...DEFAULT_INPUTS, boxesPerCarton: bad }).success).toBe(
@@ -151,6 +171,7 @@ describe('presetSchema', () => {
     keepCartonsUpright: false,
     weights: { maxPallet: null, emptyCarton: 0, pallet: 40 },
     minStability: 'auto',
+    layerPattern: 'auto',
     advanced: {},
   };
 
@@ -170,6 +191,16 @@ describe('presetSchema', () => {
     expect(presetSchema.parse(old)).toEqual(preset);
     expect(presetSchema.parse({ ...preset, minStability: 'fair' }).minStability).toBe('fair');
     expect(presetSchema.safeParse({ ...preset, minStability: 'best' }).success).toBe(false);
+  });
+
+  it('reads a preset stored before the layer pattern setting as Auto, and keeps a stored one', () => {
+    const old: Record<string, unknown> = { ...preset };
+    delete old.layerPattern;
+    expect(presetSchema.parse(old)).toEqual(preset);
+    expect(presetSchema.parse({ ...preset, layerPattern: 'preferPinwheel' }).layerPattern).toBe(
+      'preferPinwheel',
+    );
+    expect(presetSchema.safeParse({ ...preset, layerPattern: 'none' }).success).toBe(false);
   });
 });
 
@@ -360,6 +391,22 @@ describe('optimizeResultSchema', () => {
     expect(optimizeResultSchema.parse(structuredClone(below))).toEqual(below);
   });
 
+  it('keeps what a layer pattern setting adds to a result', () => {
+    const fallback = optimize({
+      ...DEFAULT_INPUTS,
+      // No two of these carton sides fit side by side both ways on the 50 x 42 pallet.
+      product: { length: 30, width: 25, height: 20 },
+      maxCarton: { length: 31, width: 26, height: 21 },
+      layerPattern: 'pinwheelOnly',
+    });
+    expect(fallback.patternFallback).toBe(true);
+    expect(optimizeResultSchema.parse(structuredClone(fallback))).toEqual(fallback);
+    const only = optimize({ ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' });
+    expect(only.autoBestProducts).toBe(260);
+    expect('patternFallback' in only).toBe(false);
+    expect(optimizeResultSchema.parse(structuredClone(only))).toEqual(only);
+  });
+
   it('accepts a Round 1 result without nearestCounts', () => {
     const r = optimize(DEFAULT_INPUTS);
     expect('nearestCounts' in r).toBe(false);
@@ -478,6 +525,25 @@ describe('scenarioSchema', () => {
     expect(parsed.inputs.minStability).toBe('good');
     expect(parsed.result.autoBestProducts).toBe(260);
     expect(parsed).toEqual(saved);
+  });
+
+  it('loads a scenario saved before the layer pattern setting as Auto, and keeps a saved one', () => {
+    const old = structuredClone(scenario) as unknown as { inputs: Record<string, unknown> };
+    delete old.inputs.layerPattern;
+    expect('layerPattern' in old.inputs).toBe(false);
+    const parsed = scenarioSchema.safeParse(old);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.inputs.layerPattern).toBe('auto');
+    expect(parsed.data?.inputs).toEqual(DEFAULT_INPUTS);
+    const inputs = { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' as const };
+    const only = optimize(inputs);
+    const saved = {
+      ...scenario,
+      inputs,
+      result: only,
+      analytics: computeAnalytics(only.layouts[1]!.layout, inputs),
+    };
+    expect(scenarioSchema.parse(structuredClone(saved))).toEqual(saved);
   });
 
   it('loads a Round 1 scenario without boxesPerCarton, reading it as null', () => {

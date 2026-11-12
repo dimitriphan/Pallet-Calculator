@@ -44,7 +44,8 @@ function sameInputs(a: Inputs, b: Inputs): boolean {
     a.weights.maxPallet === b.weights.maxPallet &&
     a.weights.emptyCarton === b.weights.emptyCarton &&
     a.weights.pallet === b.weights.pallet &&
-    a.minStability === b.minStability
+    a.minStability === b.minStability &&
+    a.layerPattern === b.layerPattern
   );
 }
 

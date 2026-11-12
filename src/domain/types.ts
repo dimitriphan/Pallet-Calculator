@@ -14,6 +14,12 @@ export type RotationMode = 'full' | 'upright' | 'noSide' | 'custom';
  * or Good only.
  */
 export type MinStability = 'auto' | 'fair' | 'good';
+/**
+ * Which layer patterns are wanted: 'auto' uses a pinwheel only where it holds more cartons
+ * than straight cuts; 'preferPinwheel' also ranks pinwheel layouts first among equal box
+ * counts; 'pinwheelOnly' leaves straight-cut layouts out.
+ */
+export type LayerPatternPref = 'auto' | 'preferPinwheel' | 'pinwheelOnly';
 
 /** Weights in pounds. Blank box weight means weight is ignored everywhere. */
 export interface WeightInputs {
@@ -37,6 +43,7 @@ export interface Inputs {
   keepCartonsUpright: boolean;
   weights: WeightInputs;
   minStability: MinStability;
+  layerPattern: LayerPatternPref;
 }
 
 /** Same shape as Inputs but every numeric field is the raw text the user typed. */
@@ -54,6 +61,7 @@ export interface InputsDraft {
   keepCartonsUpright: boolean;
   weights: Record<keyof WeightInputs, string>; // '' = blank
   minStability: MinStability;
+  layerPattern: LayerPatternPref;
 }
 
 /**
@@ -174,10 +182,16 @@ export interface OptimizeResult {
    */
   belowMinimum?: boolean;
   /**
-   * Only with a minimum stability: the most products of any layout before the minimum was
-   * applied (what Auto would put first), when that is more than the first layout here holds.
+   * Only with a minimum stability or a layer pattern other than Auto: the most products of any
+   * layout before the settings were applied (what Auto would put first), when that is more
+   * than the first layout here holds.
    */
   autoBestProducts?: number;
+  /**
+   * Only with layer pattern 'pinwheelOnly': no pinwheel layout was found, and `layouts` are
+   * the straight-cut layouts Auto gives instead. Never set to false.
+   */
+  patternFallback?: boolean;
 }
 
 export interface Preset {
@@ -196,6 +210,7 @@ export interface Preset {
   /** The product box weight stays with the product, so a preset never holds it. */
   weights: Omit<WeightInputs, 'productBox'>;
   minStability: MinStability;
+  layerPattern: LayerPatternPref;
   advanced: Record<string, unknown>; // reserved for the later Advanced Optimization release
 }
 

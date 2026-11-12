@@ -35,15 +35,24 @@ describe('default settings give the results recorded before Round 5', () => {
   });
 
   it.each(cases.filter((c) => c.name in baseline))(
-    '$name: minimum stability Auto, and inputs without the setting',
+    '$name: minimum stability and layer pattern Auto, and inputs without the settings',
     ({ name, inputs }) => {
-      const auto = optimize({ ...inputs, minStability: 'auto' });
+      const auto = optimize({ ...inputs, minStability: 'auto', layerPattern: 'auto' });
       expect(auto.truncated).toBe(false);
       expect(digest(auto)).toEqual(baseline[name]);
       expect(auto).not.toHaveProperty('belowMinimum');
       expect(auto).not.toHaveProperty('autoBestProducts');
-      // Inputs from before the setting existed (a worker message, a stored result's inputs).
+      expect(auto).not.toHaveProperty('patternFallback');
+      // Inputs from before the settings existed (a worker message, a stored result's inputs),
+      // and inputs with one setting but not the other.
+      expect('minStability' in inputs || 'layerPattern' in inputs).toBe(false);
       expect(digest(optimize(inputs as Inputs))).toEqual(baseline[name]);
+      expect(digest(optimize({ ...inputs, minStability: 'auto' } as Inputs))).toEqual(
+        baseline[name],
+      );
+      expect(digest(optimize({ ...inputs, layerPattern: 'auto' } as Inputs))).toEqual(
+        baseline[name],
+      );
     },
   );
 });

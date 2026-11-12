@@ -2,14 +2,14 @@
  * Test support for "the default settings give exactly what the optimizer gave before Round 5".
  * A fixed list of inputs (the named optimizer fixtures and a seeded random run) and a digest
  * of a result. The digests in fixtures/autoBaseline.json were recorded at da0f83c, before the
- * minimum stability setting existed. Not used by application code.
+ * minimum stability and layer pattern settings existed. Not used by application code.
  */
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs, OptimizeResult, RotationMode } from '../domain/types';
 import { PINWHEEL_INPUTS } from './packing/testSupport';
 
 /** Inputs as they were before Round 5: none of the settings added since. */
-export type LegacyInputs = Omit<Inputs, 'minStability'>;
+export type LegacyInputs = Omit<Inputs, 'minStability' | 'layerPattern'>;
 
 export interface BaselineCase {
   name: string;
@@ -24,8 +24,9 @@ export interface BaselineRecord {
 }
 
 function legacy(i: Inputs | LegacyInputs): LegacyInputs {
-  const { minStability: _unused, ...rest } = i as Inputs;
-  void _unused;
+  const { minStability: _minStability, layerPattern: _layerPattern, ...rest } = i as Inputs;
+  void _minStability;
+  void _layerPattern;
   return rest;
 }
 

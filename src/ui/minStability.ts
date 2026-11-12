@@ -30,8 +30,8 @@ export function belowMinimumText(minimum: Exclude<MinStability, 'auto'>): string
 }
 
 /**
- * "Auto would give 15 more boxes.": what the minimum costs against the first layout listed, or
- * null when it costs nothing.
+ * "Auto would give 15 more boxes.": what the minimum stability or the layer pattern setting
+ * costs against the first layout listed, or null when it costs nothing.
  */
 export function autoMoreText(result: {
   layouts: { layout: { totalProducts: number } }[];

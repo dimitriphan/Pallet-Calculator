@@ -19,6 +19,7 @@ import {
   weightLabel,
   withUnit,
 } from '../ui/format';
+import { LAYER_PATTERN_LABEL } from '../ui/layerPattern';
 import { MIN_STABILITY_LABEL } from '../ui/minStability';
 import type { ExportPayload } from './exportData';
 
@@ -89,6 +90,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Custom orientations', i.rotationMode === 'custom' ? i.customOrientations.join(' ') : ''],
     ['Keep cartons upright', yesNo(i.keepCartonsUpright)],
     ['Minimum stability', MIN_STABILITY_LABEL[i.minStability]],
+    ['Layer pattern', LAYER_PATTERN_LABEL[i.layerPattern]],
     [L('Usable stacking height'), len(a.pallet.usableHeight)],
     [L('Carton inner length'), len(a.carton.inner.length)],
     [L('Carton inner width'), len(a.carton.inner.width)],

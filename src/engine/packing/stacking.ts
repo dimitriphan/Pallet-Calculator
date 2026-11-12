@@ -5,6 +5,7 @@ import type {
   Layer,
   LayerPattern,
   LayerPatternKind,
+  LayerPatternPref,
   Layout,
   ProductAxis,
 } from '../../domain/types';
@@ -19,11 +20,26 @@ import { fitsCount, fitsWithin } from './tolerance';
  * Best layer patterns keyed by footprint `${a}|${b}`. The layer search depends only on the
  * footprint sizes and the usable area, so one cache serves every candidate of one set of inputs.
  * When a pinwheel is best, the straight-cut layer is kept beside it under `${a}|${b}|straight`.
+ * Under the layer pattern settings Prefer pinwheel and Pinwheel only, the pinwheel wanted for
+ * the footprint (or null) is kept under `${a}|${b}|pinwheel`; one cache serves one setting.
  */
 export type LayerCache = Map<string, LayerPattern | null>;
 
 function straightKey(key: string): string {
   return `${key}|straight`;
+}
+
+function pinwheelKey(key: string): string {
+  return `${key}|pinwheel`;
+}
+
+/**
+ * A layer pattern setting other than Auto, with the work its further pinwheel searches may
+ * spend between them (see PINWHEEL_EXTRA_WORK_PER_OPTIMIZE; unlimited when absent).
+ */
+export interface PinwheelPreference {
+  pref: Exclude<LayerPatternPref, 'auto'>;
+  allowance?: PinwheelAllowance;
 }
 
 /** Footprint axes for a vertical axis: the other two product axes in L, W, H order. */
@@ -202,6 +218,52 @@ export function straightCutLayer(
 }
 
 /**
+ * The pinwheel layer wanted for the carton standing on `vertical` under a layer pattern
+ * setting, or null when there is none:
+ * - the best layer itself when that is a pinwheel (it holds more than straight cuts);
+ * - Prefer pinwheel: otherwise a true pinwheel of at least as many cartons as the straight-cut
+ *   layer. Call after bestLayer for the same carton and axis, which gives that count;
+ * - Pinwheel only: otherwise the true pinwheel of the most cartons, however few.
+ * "True" is PinwheelOptions.strict: no straight line right across misses every carton. The
+ * search spends from `pattern.allowance`, not from the allowance bestLayer uses, so the best
+ * layers stay exactly those found under Auto.
+ */
+export function preferredPinwheel(
+  c: CartonCandidate,
+  vertical: ProductAxis,
+  i: Inputs,
+  cache: LayerCache,
+  pattern: PinwheelPreference,
+  shouldStop?: () => boolean,
+): LayerPattern | null {
+  const [a, b] = footprintSizes(c, vertical);
+  const key = `${a}|${b}`;
+  const height = c.outer[vertical];
+  let found = cache.get(pinwheelKey(key));
+  if (found === undefined) {
+    const best = cache.get(key);
+    found = null;
+    if (best?.kind === 'pinwheel') {
+      found = best;
+    } else if (pattern.pref === 'preferPinwheel' && !best) {
+      // No layer at all (or bestLayer was not asked): nothing to tie.
+    } else if (!isSquare(a, b)) {
+      const { allowance } = pattern;
+      if (allowance !== undefined && allowance.remaining <= 0) {
+        allowance.capped = true;
+      } else if (!shouldStop?.()) {
+        const { x, y } = usableFootprint(i);
+        const beat = pattern.pref === 'preferPinwheel' && best ? best.cartonCount - 1 : 0;
+        const pinwheel = pinwheelLayer(x, y, a, b, { beat, shouldStop, allowance, strict: true });
+        if (pinwheel) found = toPattern(pinwheel, vertical, height, a, b, 'pinwheel');
+      }
+    }
+    cache.set(pinwheelKey(key), found);
+  }
+  return found === null ? null : { ...found, vertical, height };
+}
+
+/**
  * The plain single-grid layers (unrotated, then rotated) that hold at least one carton.
  * On a square footprint the rotated grid is the unrotated one turned, so it is omitted.
  */
@@ -355,13 +417,14 @@ function layoutsFromTypes(
   i: Inputs,
   types: LayerPattern[],
   shouldStop?: () => boolean,
+  plainGrids = true,
 ): Layout[] {
   const h = usableHeight(i);
   const candidates: Layout[] = [];
   // 1. single-type stacks of the best layer
   for (const t of types) candidates.push(makeLayout(c, repeat(t, fitsCount(h, t.height))));
   // 2. single-type stacks of each plain grid that differs from the best layer
-  for (const t of types) {
+  for (const t of plainGrids ? types : []) {
     const bestSig = blocksSignature(t.blocks);
     for (const p of plainLayers(c, t.vertical, i)) {
       if (p.cartonCount < t.cartonCount || blocksSignature(p.blocks) !== bestSig) {
@@ -394,6 +457,10 @@ function layoutsFromTypes(
  * existed is still offered: staff may prefer a simpler build that is a box or two short, and
  * under a weight limit a layer with more cartons can be too heavy where the straight-cut
  * layer is not. `allowance` is passed on to bestLayer.
+ *
+ * `pattern` is the layer pattern setting when it is not Auto. Prefer pinwheel adds, ahead of
+ * the layouts above, those built with a pinwheel on every axis that has one tying the
+ * straight-cut count. Pinwheel only builds from pinwheel layers alone and nothing else.
  */
 export function buildLayouts(
   c: CartonCandidate,
@@ -401,22 +468,57 @@ export function buildLayouts(
   cache: LayerCache,
   shouldStop?: () => boolean,
   allowance?: PinwheelAllowance,
+  pattern?: PinwheelPreference,
 ): Layout[] {
+  if (pattern?.pref === 'pinwheelOnly')
+    return pinwheelOnlyLayouts(c, i, cache, pattern, shouldStop);
   const types: LayerPattern[] = [];
   const straight: LayerPattern[] = [];
+  // Prefer pinwheel: a pinwheel that ties the straight-cut count takes the layer's place.
+  const preferred: LayerPattern[] = [];
   for (const [k, v] of usableVerticalAxes(c, i).entries()) {
     if (k > 0 && shouldStop?.()) break;
     const layer = bestLayer(c, v, i, cache, shouldStop, allowance);
     if (!layer) continue;
     types.push(layer);
     straight.push(layer.kind === 'pinwheel' ? straightCutLayer(c, v, i, cache) : layer);
+    if (pattern) preferred.push(preferredPinwheel(c, v, i, cache, pattern, shouldStop) ?? layer);
   }
 
-  const candidates = layoutsFromTypes(c, i, types, shouldStop);
+  // Under Prefer pinwheel the layouts of the tying pinwheels come first; every layout Auto
+  // builds follows, so nothing Auto offers is lost and the straight-cut alternative stays.
+  const candidates: Layout[] = [];
+  if (preferred.some((t, k) => t.kind !== types[k]?.kind)) {
+    candidates.push(...layoutsFromTypes(c, i, preferred, shouldStop));
+  }
+  candidates.push(...layoutsFromTypes(c, i, types, shouldStop));
   if (straight.some((t, k) => t !== types[k])) {
     candidates.push(...layoutsFromTypes(c, i, straight, shouldStop));
   }
+  return distinct(candidates);
+}
 
+/**
+ * Pinwheel only: the layouts of one carton built from its pinwheel layers alone (one per
+ * vertical axis that has one), with no plain grid and no straight-cut alternative.
+ */
+function pinwheelOnlyLayouts(
+  c: CartonCandidate,
+  i: Inputs,
+  cache: LayerCache,
+  pattern: PinwheelPreference,
+  shouldStop?: () => boolean,
+): Layout[] {
+  const types: LayerPattern[] = [];
+  for (const [k, v] of usableVerticalAxes(c, i).entries()) {
+    if (k > 0 && shouldStop?.()) break;
+    const layer = preferredPinwheel(c, v, i, cache, pattern, shouldStop);
+    if (layer) types.push(layer);
+  }
+  return types.length === 0 ? [] : distinct(layoutsFromTypes(c, i, types, shouldStop, false));
+}
+
+function distinct(candidates: Layout[]): Layout[] {
   const seen = new Set<string>();
   return candidates.filter((l) => {
     if (seen.has(l.id)) return false;

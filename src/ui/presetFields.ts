@@ -19,5 +19,6 @@ export function presetFieldsOf(i: Inputs): PresetFields {
       pallet: i.weights.pallet,
     },
     minStability: i.minStability,
+    layerPattern: i.layerPattern,
   };
 }

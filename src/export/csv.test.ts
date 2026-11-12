@@ -56,6 +56,7 @@ describe('buildCsv', () => {
     expect(idx('Pallet length (in)')).toBeLessThan(idx('Product length (in)'));
     expect(idx('Keep cartons upright')).toBeLessThan(idx('Usable stacking height (in)'));
     expect(idx('Minimum stability')).toBe(idx('Keep cartons upright') + 1);
+    expect(idx('Layer pattern')).toBe(idx('Minimum stability') + 1);
     expect(idx('Boxes per carton')).toBeLessThan(idx('Load length (in)'));
     expect(idx('Utilization (%)')).toBeLessThan(idx('Target status'));
     expect(labels.at(-1)).toBe('Space contribution');
@@ -67,6 +68,14 @@ describe('buildCsv', () => {
     const good = buildCsv(buildExportPayload(inputs, optimize(inputs), 0, NOW)).split('\r\n');
     expect(good).toContain('Minimum stability,Good only');
     expect(good).toContain('Total boxes per pallet,245');
+  });
+
+  it('names the layer pattern setting the result was worked out with', () => {
+    expect(lines).toContain('Layer pattern,Auto');
+    const inputs: Inputs = { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' };
+    const only = buildCsv(buildExportPayload(inputs, optimize(inputs), 0, NOW)).split('\r\n');
+    expect(only).toContain('Layer pattern,Pinwheel only');
+    expect(only).toContain('Total boxes per pallet,230');
   });
 
   it('writes counts as integers and other numbers with two decimals', () => {

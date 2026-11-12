@@ -99,6 +99,23 @@ describe('scenarios store', () => {
     expect(reloaded.store.getState().scenarios).toEqual([s]);
   });
 
+  it('loads a scenario stored before the layer pattern setting as Auto, and keeps a stored one', () => {
+    const storage = new FakeStorage();
+    const s = setup(storage).store.getState().save('Old', DEFAULT_INPUTS, result, 1);
+    const old = structuredClone(s) as unknown as { inputs: Record<string, unknown> };
+    delete old.inputs.layerPattern;
+    storage.setItem(STORAGE_KEYS.scenarios, JSON.stringify({ version: 1, items: [old] }));
+    const reloaded = setup(storage);
+    expect(reloaded.notices).toEqual([]);
+    expect(reloaded.store.getState().scenarios).toEqual([s]);
+    expect(reloaded.store.getState().scenarios[0]!.inputs.layerPattern).toBe('auto');
+
+    const inputs = { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' as const };
+    const kept = setup(storage).store.getState().save('Pinwheels', inputs, optimize(inputs), 0);
+    expect(kept.result.autoBestProducts).toBe(260);
+    expect(setup(storage).store.getState().scenarios).toContainEqual(kept);
+  });
+
   it('keeps state and reports when storage is full', () => {
     const storage = new FakeStorage();
     storage.failWrites = true;

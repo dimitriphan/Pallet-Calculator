@@ -3,6 +3,7 @@ import { downloadBlob } from '../export/download';
 import type { Preset } from '../domain/types';
 import { BUTTON, ModalDialog, PRIMARY_BUTTON } from './ModalDialog';
 import { dimsText, lengthText } from './format';
+import { LAYER_PATTERN_LABEL } from './layerPattern';
 import { MIN_STABILITY_LABEL } from './minStability';
 import { useUnit } from './useUnit';
 import { PresetEditForm } from './PresetEditForm';
@@ -92,6 +93,8 @@ export function PresetDialog({ onClose }: { onClose(): void }) {
                       Pallet {dimsText(p.pallet, unit)} · leeway {lengthText(p.leeway, unit)}
                       {p.minStability !== 'auto' &&
                         ` · minimum stability ${MIN_STABILITY_LABEL[p.minStability]}`}
+                      {p.layerPattern !== 'auto' &&
+                        ` · layer pattern ${LAYER_PATTERN_LABEL[p.layerPattern]}`}
                     </p>
                   </div>
                   {pending(p) ? (

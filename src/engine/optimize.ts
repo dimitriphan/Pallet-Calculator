@@ -1,12 +1,27 @@
-import type { Inputs, Layout, MinStability, OptimizeResult } from '../domain/types';
+import type {
+  Inputs,
+  LayerPatternPref,
+  Layout,
+  MinStability,
+  OptimizeResult,
+} from '../domain/types';
 import {
   anyCartonFits,
   generateCartonCandidatesWithInfo,
   nearestAchievableCounts,
 } from './packing/cartons';
 import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
-import { PINWHEEL_WORK_PER_OPTIMIZE, type PinwheelAllowance } from './packing/pinwheel';
-import { buildLayouts, cartonFitsPallet, type LayerCache } from './packing/stacking';
+import {
+  PINWHEEL_EXTRA_WORK_PER_OPTIMIZE,
+  PINWHEEL_WORK_PER_OPTIMIZE,
+  type PinwheelAllowance,
+} from './packing/pinwheel';
+import {
+  buildLayouts,
+  cartonFitsPallet,
+  type LayerCache,
+  type PinwheelPreference,
+} from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { rankLayouts, rankWithMinimum } from './ranking/rank';
 import { trimToWeight } from './analytics/weight';
@@ -71,7 +86,20 @@ export function optimize(
   const cache: LayerCache = new Map();
   // Shared by every pinwheel search of this call (deterministic: counted, not timed).
   const pinwheelWork: PinwheelAllowance = { remaining: PINWHEEL_WORK_PER_OPTIMIZE };
+  // Inputs from before the setting existed have no layer pattern: Auto.
+  const pref: LayerPatternPref = (i as Partial<Inputs>).layerPattern ?? 'auto';
+  const only = pref === 'pinwheelOnly';
+  // What the pinwheels Auto does not look for may cost (counted too, so just as repeatable).
+  const extraWork: PinwheelAllowance = { remaining: PINWHEEL_EXTRA_WORK_PER_OPTIMIZE };
+  const pattern: PinwheelPreference | undefined =
+    pref === 'auto' ? undefined : { pref, allowance: extraWork };
   const layouts: Layout[] = [];
+  // Pinwheel only: the layouts listed, built beside the ones Auto builds. Auto's own are still
+  // built, exactly as under Auto, to say what Auto would give and to show when no pinwheel
+  // exists.
+  const pinwheelLayouts: Layout[] = [];
+  const pinwheelIndexById = new Map<string, number>();
+  const bestPinwheel: number[] = [];
   // With a weight limit, layouts that trim to the same layers are kept once, by id. Without
   // one, nothing is trimmed and buildLayouts already gives distinct layouts.
   const limited = weightLimited(i);
@@ -82,6 +110,21 @@ export function optimize(
   let tooHeavy = 0;
   const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
   let evaluated = 0;
+  let autoEvaluated = 0; // cartons Auto would have evaluated (all of them unless Pinwheel only)
+  const keep = (full: Layout, into: Layout[], index: Map<string, number>, counts: number[]) => {
+    // Trimmed to the weight limit before anything counts it: the keep-best list
+    // (and so every later skip) and the ranking only ever see what can really be loaded.
+    const l = trimToWeight(full, i);
+    if (l === null) return;
+    if (limited) {
+      if (!isNewOrFewerRemoved(l, into, index)) return;
+      index.set(l.id, into.length);
+    }
+    into.push(l);
+    insertDescending(counts, l.totalProducts);
+  };
+  const cannotReach = (counts: number[], bound: number) =>
+    counts.length >= KEEP_BEST && bound < (counts[KEEP_BEST - 1] as number);
   // Stop at the budget once there is something to show, or at the hard limit regardless.
   // The first carton's first layer search always runs.
   const overBudget = () => {
@@ -93,27 +136,36 @@ export function optimize(
   };
   for (const { c, bound } of ordered) {
     // Bounds are descending, so once one falls short every later one does too.
-    if (best.length >= KEEP_BEST && bound < (best[KEEP_BEST - 1] as number)) break;
+    const autoDone = cannotReach(best, bound);
+    // Pinwheel only goes on past where Auto stops, until no carton can reach the pinwheel
+    // layouts already kept: a carton Auto has no use for may still hold the best pinwheel.
+    if (autoDone && (!only || cannotReach(bestPinwheel, bound))) break;
     if (evaluated > 0 && overBudget()) break;
     evaluated++;
+    if (!autoDone) autoEvaluated++;
     // The pallet and one full carton already over the maximum: no layer of it can fit.
     if (maxCartonsByWeight(c, i) === 0) {
-      if (cartonFitsPallet(c, i)) tooHeavy++;
+      if (!autoDone && cartonFitsPallet(c, i)) tooHeavy++;
       continue;
     }
     // The same check runs between this carton's layer searches.
-    for (const full of buildLayouts(c, i, cache, overBudget, pinwheelWork)) {
-      built++;
-      // Trimmed to the weight limit before anything counts it: the keep-best list above
-      // (and so every later skip) and the ranking only ever see what can really be loaded.
-      const l = trimToWeight(full, i);
-      if (l === null) continue;
-      if (limited) {
-        if (!isNewOrFewerRemoved(l, layouts, indexById)) continue;
-        indexById.set(l.id, layouts.length);
+    if (!autoDone) {
+      for (const full of buildLayouts(
+        c,
+        i,
+        cache,
+        overBudget,
+        pinwheelWork,
+        only ? undefined : pattern,
+      )) {
+        built++;
+        keep(full, layouts, indexById, best);
       }
-      layouts.push(l);
-      insertDescending(best, l.totalProducts);
+    }
+    if (only && pattern) {
+      for (const full of buildLayouts(c, i, cache, overBudget, undefined, pattern)) {
+        keep(full, pinwheelLayouts, pinwheelIndexById, bestPinwheel);
+      }
     }
     if (timedOut) break;
   }
@@ -130,32 +182,49 @@ export function optimize(
     const interlocked = interlockLayers(l, i);
     return { ...interlocked, stability: assessStability(interlocked, i) };
   };
+  // Pinwheel only lists its own layouts; with none, the layouts Auto gives, marked as such.
+  const patternFallback = only && pinwheelLayouts.length === 0;
+  const listed = only && !patternFallback ? pinwheelLayouts : layouts;
+  // The allowance of the further pinwheel searches ran out: a pinwheel may have been missed.
+  const searchLimited = capped || timedOut || (pattern !== undefined && extraWork.capped === true);
+  // What Auto would put first, to compare with the first layout listed.
+  let autoBest = best[0];
+  let truncated = searchLimited;
+  let ranked: OptimizeResult['layouts'];
+  let belowMinimum = false;
   // Inputs from before the setting existed have no minimum: Auto.
   const minimum: MinStability = (i as Partial<Inputs>).minStability ?? 'auto';
   if (minimum === 'auto') {
-    return {
-      layouts: rankLayouts(layouts, i, undefined, prepare),
-      candidatesEvaluated: evaluated,
-      emptyReason: null,
-      truncated: capped || timedOut,
+    ranked = rankLayouts(listed, i, undefined, prepare);
+  } else {
+    // Layouts below the minimum are left out, so the ranking rates further down the list.
+    // It works on the layouts the layer pattern setting left: the minimum applies after it.
+    const walkStart = now();
+    const shouldStop = () => {
+      const t = now();
+      return t - start >= budgetMs && t - walkStart >= MIN_RATING_WALK_MS;
     };
+    const ranking = rankWithMinimum(listed, i, minimum, { prepare, shouldStop });
+    ranked = ranking.layouts;
+    truncated ||= ranking.truncated;
+    belowMinimum = ranking.belowMinimum;
+    if (ranking.autoBestProducts !== undefined) {
+      autoBest = Math.max(autoBest ?? 0, ranking.autoBestProducts);
+    }
   }
-  // Layouts below the minimum are left out, so the ranking rates further down the list.
-  const walkStart = now();
-  const shouldStop = () => {
-    const t = now();
-    return t - start >= budgetMs && t - walkStart >= MIN_RATING_WALK_MS;
-  };
-  const ranking = rankWithMinimum(layouts, i, minimum, { prepare, shouldStop });
+  const shown = ranked[0]?.layout.totalProducts;
+  const settingsApplied = minimum !== 'auto' || only;
+  const costs =
+    settingsApplied && autoBest !== undefined && shown !== undefined && shown < autoBest;
   return {
-    layouts: ranking.layouts,
-    candidatesEvaluated: evaluated,
+    layouts: ranked,
+    // The fallback is the Auto result: it counts the cartons Auto evaluates.
+    candidatesEvaluated: patternFallback ? autoEvaluated : evaluated,
     emptyReason: null,
-    truncated: capped || timedOut || ranking.truncated,
-    ...(ranking.belowMinimum ? { belowMinimum: true } : {}),
-    ...(ranking.autoBestProducts !== undefined
-      ? { autoBestProducts: ranking.autoBestProducts }
-      : {}),
+    truncated,
+    ...(belowMinimum ? { belowMinimum: true } : {}),
+    ...(costs ? { autoBestProducts: autoBest } : {}),
+    ...(patternFallback ? { patternFallback: true } : {}),
   };
 }
 

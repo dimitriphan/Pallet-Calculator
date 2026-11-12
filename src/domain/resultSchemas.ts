@@ -96,6 +96,8 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   // Added in Round 5: only on results worked out with a minimum stability.
   belowMinimum: z.boolean().optional(),
   autoBestProducts: num.optional(),
+  // Added in Round 5: only when Pinwheel only found no pinwheel and shows the Auto result.
+  patternFallback: z.boolean().optional(),
 });
 
 /** Analytics as stored, where fields added after the first release may be missing. */

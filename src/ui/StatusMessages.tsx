@@ -1,4 +1,5 @@
 import { emptyMessage } from './emptyMessage';
+import { patternFallbackText } from './layerPattern';
 import { belowMinimumText } from './minStability';
 import { Mascot } from './Mascot';
 import { SproutProgress } from './SproutProgress';
@@ -53,6 +54,15 @@ export function useStatusContent(): {
     lines.push({
       key: 'belowMinimum',
       text: belowMinimumText(inputs.minStability),
+      tone: 'text-amber-800 dark:text-harbor-sand',
+    });
+  // Pinwheel only found no pinwheel: the layouts shown are the straight-cut ones Auto gives.
+  const fallback =
+    result && inputs?.layerPattern === 'pinwheelOnly' ? patternFallbackText(result) : null;
+  if (fallback)
+    lines.push({
+      key: 'patternFallback',
+      text: fallback,
       tone: 'text-amber-800 dark:text-harbor-sand',
     });
 

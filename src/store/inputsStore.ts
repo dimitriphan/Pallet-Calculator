@@ -6,6 +6,7 @@ import type { ParseResult } from '../domain/schemas';
 import type {
   Inputs,
   InputsDraft,
+  LayerPatternPref,
   MinStability,
   OrientationCode,
   PresetFields,
@@ -46,6 +47,7 @@ export interface InputsState {
   toggleOrientation(c: OrientationCode): void;
   setKeepCartonsUpright(v: boolean): void;
   setMinStability(m: MinStability): void;
+  setLayerPattern(p: LayerPatternPref): void;
   replaceInputs(i: Inputs): void;
   /**
    * Writes the fields a preset covers (everything but the product and its box weight) and
@@ -92,6 +94,8 @@ const draftShapeSchema = z.object({
     .optional(),
   // Added in Round 5: a draft remembered before the minimum stability reads as Auto.
   minStability: z.enum(['auto', 'fair', 'good']).default('auto'),
+  // Added in Round 5: a draft remembered before the layer pattern setting reads as Auto.
+  layerPattern: z.enum(['auto', 'preferPinwheel', 'pinwheelOnly']).default('auto'),
 });
 // Added in Round 4: a draft remembered before units existed is in inches, with no origins.
 const storedSchema = draftShapeSchema.extend({
@@ -236,6 +240,7 @@ export function createInputsStore(
       setKeepCartonsUpright: (keepCartonsUpright) =>
         apply({ draft: { ...get().draft, keepCartonsUpright } }),
       setMinStability: (minStability) => apply({ draft: { ...get().draft, minStability } }),
+      setLayerPattern: (layerPattern) => apply({ draft: { ...get().draft, layerPattern } }),
       replaceInputs: (i) => write(i, false),
       applyPreset: (fields) =>
         write(

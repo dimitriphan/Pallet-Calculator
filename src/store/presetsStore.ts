@@ -41,6 +41,7 @@ function covered(p: Preset | Inputs) {
     p.weights.emptyCarton,
     p.weights.pallet,
     p.minStability,
+    p.layerPattern,
   ];
 }
 
@@ -63,6 +64,7 @@ export function presetToInputs(p: Preset, current: Inputs): Inputs {
     keepCartonsUpright: p.keepCartonsUpright,
     weights: { ...p.weights, productBox: current.weights.productBox },
     minStability: p.minStability,
+    layerPattern: p.layerPattern,
   };
 }
 
@@ -168,6 +170,7 @@ function presetFromInputs(i: Inputs): Omit<Preset, 'id' | 'name'> {
       pallet: i.weights.pallet,
     },
     minStability: i.minStability,
+    layerPattern: i.layerPattern,
     advanced: {},
   };
 }

@@ -74,6 +74,8 @@ const inputsShape = {
   weights: weights.default(defaultWeights),
   // Added in Round 5: data saved before it has no minimum and reads as Auto.
   minStability: z.enum(['auto', 'fair', 'good']).default('auto'),
+  // Added in Round 5: data saved before it has no layer pattern setting and reads as Auto.
+  layerPattern: z.enum(['auto', 'preferPinwheel', 'pinwheelOnly']).default('auto'),
 };
 
 export const inputsSchema: z.ZodType<Inputs> = z
@@ -110,6 +112,7 @@ export const presetSchema: z.ZodType<Preset> = z
     // Added in Round 4; the product box weight stays with the product, not the preset.
     weights: presetWeights.default(defaultPresetWeights),
     minStability: inputsShape.minStability,
+    layerPattern: inputsShape.layerPattern,
     advanced: z.record(z.string(), z.unknown()),
   })
   .refine((v) => v.rotationMode !== 'custom' || v.customOrientations.length > 0, {
@@ -169,6 +172,7 @@ export function draftFromInputs(inputs: Inputs): InputsDraft {
       pallet: String(inputs.weights.pallet),
     },
     minStability: inputs.minStability,
+    layerPattern: inputs.layerPattern,
   };
 }
 
@@ -255,6 +259,7 @@ export function parseDraft(
       pallet: num('weights.pallet', draft.weights.pallet),
     },
     minStability: draft.minStability,
+    layerPattern: draft.layerPattern,
   };
 
   const result = inputsSchema.safeParse(candidate);

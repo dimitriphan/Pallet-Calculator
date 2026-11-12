@@ -9,7 +9,7 @@ import type {
 import { assessStability } from '../analytics/stability';
 import { footprintAxes } from '../packing/stacking';
 import { explainRanking } from './explain';
-import { compareRanked, RATING_ORDER, scoreLayout } from './score';
+import { comparatorFor, prefersPinwheel, RATING_ORDER, scoreLayout } from './score';
 
 /** Layouts kept per physical carton before the overflow is used. */
 const PER_CARTON = 2;
@@ -85,8 +85,10 @@ function byProducts(layouts: Layout[]): { groups: Map<number, Layout[]>; order: 
  * order: drops layouts that look the same from outside (a 90° turned twin included), keeps at
  * most two per physical carton (topping up from the extras if fewer than `limit` remain), then
  * ranks and explains the selection. A group is only asked for while the list is not full.
+ * The inputs give the ranking order (pinwheel layouts first under Prefer pinwheel).
  */
-function select(groups: Iterable<Scored[]>, limit: number): RankedLayout[] {
+function select(groups: Iterable<Scored[]>, limit: number, i: Inputs): RankedLayout[] {
+  const compare = comparatorFor(i);
   const taken = new Set<string>();
   const perCarton = new Map<string, number>();
   const selected: Scored[] = [];
@@ -118,11 +120,11 @@ function select(groups: Iterable<Scored[]>, limit: number): RankedLayout[] {
     selected.push(s);
   }
   // Overflow entries may outrank later picks; keep the list in ranking order.
-  selected.sort(compareRanked);
+  selected.sort(compare);
 
   const ranked: RankedLayout[] = selected.map((s, k) => ({ ...s, rank: k + 1, explanation: '' }));
   ranked.forEach((r, k) => {
-    r.explanation = explainRanking(r, ranked[k + 1] ?? null, ranked.length);
+    r.explanation = explainRanking(r, ranked[k + 1] ?? null, ranked.length, prefersPinwheel(i));
   });
   return ranked;
 }
@@ -155,10 +157,10 @@ export function rankLayouts(
       yield (groups.get(products) as Layout[])
         .map(rated)
         .map((layout) => ({ layout, score: scoreLayout(layout, i, maxProducts) }))
-        .sort(compareRanked);
+        .sort(comparatorFor(i));
     }
   }
-  return select(scoredGroups(), limit);
+  return select(scoredGroups(), limit, i);
 }
 
 /** A minimum stability that leaves layouts out: every setting but Auto. */
@@ -229,12 +231,12 @@ export function rankWithMinimum(
         found = true;
         yield qualifying
           .map((layout) => ({ layout, score: scoreLayout(layout, i, maxProducts) }))
-          .sort(compareRanked);
+          .sort(comparatorFor(i));
       }
       if (truncated) return;
     }
   }
-  let ranked = select(qualifyingGroups(), limit);
+  let ranked = select(qualifyingGroups(), limit, i);
 
   const belowMinimum = seen.length > 0 && !found;
   if (belowMinimum) {
