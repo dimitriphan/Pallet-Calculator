@@ -1,11 +1,11 @@
 import { PALLET_HEIGHT } from '../../domain/constants';
-import type { Dims, Inputs, Layout, ProductAxis, Stability } from '../../domain/types';
+import type { Dims, Inputs, Layer, Layout, ProductAxis, Stability } from '../../domain/types';
 import { availableVolume, usableFootprint, usableHeight } from '../packing/geometry';
 import { layoutMetrics } from '../packing/metrics';
 import { footprintAxes } from '../packing/stacking';
 import { turnedLayerNumbers } from './stack';
 import { measureStability, type StabilityMeasures } from './stability';
-import { unusedSpace } from './unusedSpace';
+import { layerFreeRects, unusedSpace } from './unusedSpace';
 import { layoutWeight, roomForCartons, type LayoutWeight } from './weight';
 
 export type TargetStatus = 'none' | 'met' | 'exceeded' | 'notAchievable';
@@ -171,6 +171,18 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
   const available = availableVolume(i);
   const utilizationPct = available > 0 ? (m.cartonVolume / available) * 100 : 0;
   const unused = unusedSpace(l, i);
+  // A layout placed by hand may have cartons outside the usable footprint (or, flagged, above
+  // the height limit). What is left is then measured inside the envelope, where it can never
+  // be negative: the free parts of the footprint and the unused space, not a subtraction.
+  const manual = l.layers.some((layer) => layer.kind === 'manual');
+  const remainingVolume = manual
+    ? unused.headroomVolume + unused.gapVolume
+    : available - m.cartonVolume;
+  const envelopePct = manual && available > 0 ? (1 - remainingVolume / available) * 100 : null;
+  const fullest = manual ? fullestLayer(l) : undefined;
+  const remainingFootprintArea = fullest
+    ? layerFreeRects(fullest, l, footprint).reduce((s, r) => s + r.w * r.h, 0)
+    : footprint.x * footprint.y - m.fullestLayerUsedArea;
 
   return {
     product: {
@@ -195,9 +207,9 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       cartonsPerLayerMin: min,
       cartonsPerLayerMax: max,
       totalLoadHeight: m.loadExtent.z + PALLET_HEIGHT,
-      volumeUtilizationPct: utilizationPct,
-      remainingHeight: height - m.loadExtent.z,
-      remainingFootprintArea: footprint.x * footprint.y - m.fullestLayerUsedArea,
+      volumeUtilizationPct: envelopePct ?? utilizationPct,
+      remainingHeight: manual ? Math.max(0, height - m.loadExtent.z) : height - m.loadExtent.z,
+      remainingFootprintArea,
       loadLength: m.loadExtent.x,
       loadWidth: m.loadExtent.y,
     },
@@ -206,8 +218,8 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       cartons: l.totalCartons,
       volumeUsed: m.cartonVolume,
       volumeAvailable: available,
-      utilizationPct,
-      remainingVolume: available - m.cartonVolume,
+      utilizationPct: envelopePct ?? utilizationPct,
+      remainingVolume,
       headroomVolume: unused.headroomVolume,
       layerGapVolume: unused.gapVolume,
     },
@@ -224,6 +236,15 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       ? { ...l.stability, measures: measureStability(l), turnedLayers: turnedLayerNumbers(l) }
       : null,
   };
+}
+
+/** The layer with the most cartons, the first of them on a tie (as layoutMetrics picks it). */
+function fullestLayer(l: Layout): Layer | undefined {
+  let fullest: Layer | undefined;
+  for (const layer of l.layers) {
+    if (!fullest || layer.cartonCount > fullest.cartonCount) fullest = layer;
+  }
+  return fullest;
 }
 
 function weightAnalytics(l: Layout, i: Inputs): Analytics['weight'] {

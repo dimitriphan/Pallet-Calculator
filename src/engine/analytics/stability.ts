@@ -44,8 +44,13 @@ function footprintOf(layer: Layer, c: CartonCandidate): [number, number] {
   return [c.outer[fa], c.outer[fb]];
 }
 
-/** Moves a layer's frame so its bounding box is centred on the origin (as placed). */
+/**
+ * Moves a layer's frame so its bounding box is centred on the origin (as placed). A layer
+ * placed by hand stays in the usable footprint's frame, where its cartons really are: every
+ * layer of a manual layout is manual, so its layers still share one frame.
+ */
 function centring(layer: Layer, a: number, b: number): { x: number; y: number } {
+  if (layer.kind === 'manual') return { x: 0, y: 0 };
   const { min, size } = blocksBounds(layer.blocks, a, b);
   return { x: -min.x - size.x / 2, y: -min.y - size.y / 2 };
 }
@@ -80,6 +85,16 @@ function sameFootprint(p: Layer, q: Layer, c: CartonCandidate): boolean {
  */
 export function supportShare(upper: Layer, lower: Layer, l: Layout): number {
   if (upper.blocks === lower.blocks && sameFootprint(upper, lower, l.carton)) return 1;
+  // A layer placed by hand has one block per carton, and a stack of them alternates between
+  // two block lists: each pair is worked out once.
+  const manual = upper.kind === 'manual' && lower.kind === 'manual';
+  const sizes = manual
+    ? [...footprintOf(upper, l.carton), ...footprintOf(lower, l.carton)].join('|')
+    : '';
+  if (manual) {
+    const hit = manualShares.get(upper.blocks)?.get(lower.blocks);
+    if (hit && hit.sizes === sizes) return hit.share;
+  }
   const ups = blockRects(upper, l.carton);
   const downs = blockRects(lower, l.carton);
   let area = 0;
@@ -88,8 +103,20 @@ export function supportShare(upper: Layer, lower: Layer, l: Layout): number {
     area += u.w * u.h;
     for (const d of downs) covered += overlapArea(u, d);
   }
-  return area > 0 ? Math.min(1, covered / area) : 1;
+  const share = area > 0 ? Math.min(1, covered / area) : 1;
+  if (manual) {
+    let byLower = manualShares.get(upper.blocks);
+    if (!byLower) manualShares.set(upper.blocks, (byLower = new WeakMap()));
+    byLower.set(lower.blocks, { sizes, share });
+  }
+  return share;
 }
+
+/** Support shares of pairs of hand-placed block lists, with the carton footprints they hold for. */
+const manualShares = new WeakMap<
+  readonly Block[],
+  WeakMap<readonly Block[], { sizes: string; share: number }>
+>();
 
 /** Rounded to a millionth of an inch, so equal positions give equal integers. */
 const units = (v: number) => Math.round(v * 1e6);

@@ -415,13 +415,25 @@ function drawLayerDrawing(
   const availW = DRAW_W - labelW - 0.04;
   const availH = DRAW_H - below - (key ? KEY_H : 0);
   const { footprint, pallet, cartons } = drawing;
-  const s = Math.min(availW / footprint.x, availH / footprint.y);
-  const w = footprint.x * s;
-  const h = footprint.y * s;
-  const ox = x + labelW + (availW - w) / 2;
-  const oy = y + (availH - h) / 2;
+  // The drawing is scaled to hold the footprint and any carton outside it (a layer placed by
+  // hand may overhang); with every carton inside, that is the footprint itself.
+  const { bounds } = drawing;
+  const s = Math.min(availW / bounds.dx, availH / bounds.dy);
+  const w = bounds.dx * s;
+  const h = bounds.dy * s;
+  // (ox, oy) is the page position of the footprint's own origin.
+  const left = x + labelW + (availW - w) / 2;
+  const topY = y + (availH - h) / 2;
+  const ox = left - bounds.x * s;
+  const oy = topY - bounds.y * s;
+  const outside =
+    Math.abs(bounds.x) > EPS ||
+    Math.abs(bounds.y) > EPS ||
+    Math.abs(bounds.dx - footprint.x) > EPS ||
+    Math.abs(bounds.dy - footprint.y) > EPS;
 
   const differs =
+    outside ||
     Math.abs(footprint.x - pallet.dx) > EPS ||
     Math.abs(footprint.y - pallet.dy) > EPS ||
     Math.abs(pallet.x) > EPS ||
@@ -430,7 +442,7 @@ function drawLayerDrawing(
     doc.setDrawColor(...BLACK);
     doc.setLineWidth(0.01);
     doc.setLineDashPattern([0.06, 0.04], 0);
-    doc.rect(ox, oy, w, h, 'S');
+    doc.rect(ox, oy, footprint.x * s, footprint.y * s, 'S');
     doc.setLineDashPattern([], 0);
   }
 
@@ -452,11 +464,11 @@ function drawLayerDrawing(
   // Dimension lines measure the solid pallet outline, ticked at its edges.
   const tick = 0.04;
   doc.setLineWidth(0.006);
-  const dimY = oy + h + 0.08;
+  const dimY = topY + h + 0.08;
   doc.line(px, dimY, px + pw, dimY);
   doc.line(px, dimY - tick, px, dimY + tick);
   doc.line(px + pw, dimY - tick, px + pw, dimY + tick);
-  const dimX = ox - 0.08;
+  const dimX = left - 0.08;
   doc.line(dimX, py, dimX, py + ph);
   doc.line(dimX - tick, py, dimX + tick, py);
   doc.line(dimX - tick, py + ph, dimX + tick, py + ph);
@@ -466,10 +478,10 @@ function drawLayerDrawing(
   const widthText = lengthText(pallet.dy, unit);
   doc.text(widthText, dimX - 0.07, py + ph / 2 + doc.getTextWidth(widthText) / 2, { angle: 90 });
   font(doc, 8, 'normal', GREY_TEXT);
-  doc.text('Top view, pallet length across', ox + w / 2, oy + h + 0.4, { align: 'center' });
+  doc.text('Top view, pallet length across', left + w / 2, topY + h + 0.4, { align: 'center' });
   if (key) {
     font(doc, 8, 'normal', BLACK);
-    doc.text(key.text, x, oy + h + 0.4 + KEY_H);
+    doc.text(key.text, x, topY + h + 0.4 + KEY_H);
   }
 }
 

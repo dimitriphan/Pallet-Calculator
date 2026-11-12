@@ -32,7 +32,8 @@ const layer = z.object({
   extent: z.object({ x: num, y: num }),
   z: num,
   // Added in Round 4: absent on straight-cut layers and on results stored before it.
-  kind: z.enum(['grid', 'pinwheel']).optional(),
+  // 'manual' added in Round 5: a layer placed by hand.
+  kind: z.enum(['grid', 'pinwheel', 'manual']).optional(),
   // Added in Round 4: only on layers turned half a turn to interlock.
   turned: z.boolean().optional(),
 });

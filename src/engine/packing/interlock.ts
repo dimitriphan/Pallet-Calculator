@@ -60,9 +60,14 @@ function sameBlocks(p: readonly Block[], q: readonly Block[]): boolean {
   );
 }
 
-/** Whether two layers are the same unturned layer: same axis, height, kind and blocks. */
+/**
+ * Whether two layers are the same unturned layer: same axis, height, kind and blocks. Never
+ * for a layer placed by hand: whether its upper layers are turned is the user's choice, made
+ * when the manual layout is built, so interlocking leaves a manual layout as it is.
+ */
 function identical(p: Layer, q: Layer): boolean {
   return (
+    p.kind !== 'manual' &&
     !p.turned &&
     !q.turned &&
     p.vertical === q.vertical &&

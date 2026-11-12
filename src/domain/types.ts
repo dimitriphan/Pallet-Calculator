@@ -91,8 +91,16 @@ export interface Block {
   rotated: boolean;
 }
 
-/** How a layer's blocks are arranged: straight cuts, or four blocks turning round a centre gap. */
-export type LayerPatternKind = 'grid' | 'pinwheel';
+/**
+ * How a layer's blocks are arranged: straight cuts, four blocks turning round a centre gap, or
+ * placed by hand ('manual': one block of one carton, `cols: 1, rows: 1`, per carton).
+ *
+ * The blocks of a grid or pinwheel layer are in the layer's own frame and the layer is centred
+ * in the usable footprint when placed. The blocks of a manual layer are where the user put
+ * them: in the frame of the usable footprint (origin at its minimum corner), never re-centred,
+ * and they may lie outside it (negative, or beyond its size) where cartons overhang.
+ */
+export type LayerPatternKind = 'grid' | 'pinwheel' | 'manual';
 
 export interface LayerPattern {
   vertical: ProductAxis;

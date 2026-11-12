@@ -3,7 +3,7 @@
  * Every number and drawing coordinate comes from the same analytics and placement functions
  * the screen uses, taken from the inputs the result was computed from.
  */
-import { PALLET_HEIGHT } from '../domain/constants';
+import { EPS, PALLET_HEIGHT } from '../domain/constants';
 import type { Inputs, Layout, OptimizeResult, ProductAxis } from '../domain/types';
 import {
   cartonDisplayDims,
@@ -50,6 +50,12 @@ export interface SheetPattern {
     pallet: SheetRect;
     cartons: SheetRect[];
     blocks: SheetBlock[];
+    /**
+     * What the drawing must show, in the footprint's frame: the footprint itself, grown to
+     * hold any carton that lies outside it (a layer placed by hand may overhang, so x and y
+     * may be negative). Equal to the footprint at the origin when every carton is inside.
+     */
+    bounds: SheetRect;
   };
 }
 /** Says which outline in the layer drawings is the pallet and which the overhang limit. */
@@ -176,6 +182,22 @@ function weightRows(
   return rows;
 }
 
+/** The footprint at the origin, grown to hold every carton (see SheetPattern.drawing.bounds). */
+export function drawingBounds(
+  footprint: { x: number; y: number },
+  cartons: SheetRect[],
+): SheetRect {
+  let [x0, y0, x1, y1] = [0, 0, footprint.x, footprint.y];
+  // Float noise at an edge is not a carton outside: only a real overhang grows the bounds.
+  for (const c of cartons) {
+    if (c.x < x0 - EPS) x0 = c.x;
+    if (c.y < y0 - EPS) y0 = c.y;
+    if (c.x + c.dx > x1 + EPS) x1 = c.x + c.dx;
+    if (c.y + c.dy > y1 + EPS) y1 = c.y + c.dy;
+  }
+  return { x: x0, y: y0, dx: x1 - x0, dy: y1 - y0 };
+}
+
 export function buildSheetContent(a: {
   inputs: Inputs;
   result: OptimizeResult;
@@ -222,9 +244,10 @@ export function buildSheetContent(a: {
       .filter((c) => c.layerIndex === p.layerIndex)
       .map((c) => ({ x: c.x, y: c.y, dx: c.dx, dy: c.dy }));
     // Placements come block by block, rows × cols each: each block's region bounds its run.
+    // A layer placed by hand has one block per carton: nothing to label.
     const blocks: SheetBlock[] = [];
     let next = 0;
-    for (const b of layer.blocks) {
+    for (const b of p.kind === 'manual' ? [] : layer.blocks) {
       const run = cartons.slice(next, next + b.rows * b.cols);
       next += run.length;
       if (run.length === 0) continue;
@@ -265,12 +288,20 @@ export function buildSheetContent(a: {
         { label: 'Carton footprint as placed', value: footprintText },
         { label: 'Layer height', value: length(p.height) },
         { label: 'Side facing up', value: SIDE_UP[p.vertical] },
-        {
-          label: 'Blocks (rows × columns)',
-          value: layer.blocks.map((b) => `${b.rows} × ${b.cols}`).join(', '),
-        },
+        p.kind === 'manual'
+          ? { label: 'Arrangement', value: 'Placed by hand: build as drawn' }
+          : {
+              label: 'Blocks (rows × columns)',
+              value: layer.blocks.map((b) => `${b.rows} × ${b.cols}`).join(', '),
+            },
       ],
-      drawing: { footprint: { ...footprint }, pallet: { ...palletRect }, cartons, blocks },
+      drawing: {
+        footprint: { ...footprint },
+        pallet: { ...palletRect },
+        cartons,
+        blocks,
+        bounds: drawingBounds(footprint, cartons),
+      },
       ...(notes.length > 0 ? { note: notes.join(' ') } : {}),
     };
   });
