@@ -13,7 +13,7 @@ import {
 } from './packing/cartons';
 import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
 import {
-  PINWHEEL_EXTRA_WORK_PER_OPTIMIZE,
+  PINWHEEL_EXTRA_TIME_SHARE,
   PINWHEEL_WORK_PER_OPTIMIZE,
   type PinwheelAllowance,
 } from './packing/pinwheel';
@@ -22,6 +22,7 @@ import {
   cartonFitsPallet,
   type LayerCache,
   type PinwheelPreference,
+  type PinwheelSearchTime,
 } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
 import { meetsMinimum, rankLayouts, rankWithMinimum } from './ranking/rank';
@@ -99,10 +100,26 @@ export function optimize(
   // Inputs from before the setting existed have no layer pattern: Auto.
   const pref: LayerPatternPref = (i as Partial<Inputs>).layerPattern ?? 'auto';
   const only = pref === 'pinwheelOnly';
-  // What the pinwheels Auto does not look for may cost (counted too, so just as repeatable).
-  const extraWork: PinwheelAllowance = { remaining: PINWHEEL_EXTRA_WORK_PER_OPTIMIZE };
+  // The time the searches for pinwheels Auto does not look for may take between them. A
+  // result is the same on every machine unless one of them is cut short, and then it says so.
+  const extraTime: PinwheelSearchTime = {
+    now,
+    limitMs: budgetMs * PINWHEEL_EXTRA_TIME_SHARE,
+    spentMs: 0,
+  };
+  // Prefer pinwheel: the layouts built that Auto would not have built.
+  const beyondAuto = new WeakSet<Layout>();
   const pattern: PinwheelPreference | undefined =
-    pref === 'auto' ? undefined : { pref, allowance: extraWork };
+    pref === 'auto'
+      ? undefined
+      : {
+          pref,
+          time: extraTime,
+          beyondAuto,
+          // For the cartons Pinwheel only looks at after Auto's own search has stopped: the
+          // same allowance again, apart from Auto's, so Auto's layouts stay exactly Auto's.
+          ownWork: { remaining: PINWHEEL_WORK_PER_OPTIMIZE },
+        };
   // Inputs from before the setting existed have no minimum: Auto.
   const minimum: MinStability = (i as Partial<Inputs>).minStability ?? 'auto';
   // For every layout the ranking reaches: alternate identical layers turned where that is free
@@ -134,14 +151,20 @@ export function optimize(
   // weight limit ruled them out. A carton that could never fit counts toward neither.
   let built = 0;
   let tooHeavy = 0;
+  // Pinwheel only: pinwheel layouts built, whether or not the weight limit then left them
+  // out, and whether a carton that fits the pallet was too heavy to look for a pinwheel of.
+  let pinwheelsBuilt = 0;
+  let heavyUnsearched = false;
   // Product counts of the best KEEP_BEST layouts that can be listed, descending: with a
   // minimum stability, only of those that meet it. A carton is skipped when it cannot reach
   // them, and layouts that will be left out must not make a carton look beaten: the only
   // layout that meets the minimum, or the best one, may be in a carton below 30 that do not.
   const best: number[] = [];
-  // The same over every layout, as Auto counts them, and the most products of any layout:
-  // what Auto would put first.
+  // The same over every layout, as Auto counts them.
   const bestOfAll: number[] = [];
+  // The most products of any layout Auto builds: what layer pattern Auto and minimum
+  // stability Auto would put first.
+  let autoTop: number | undefined;
   let evaluated = 0;
   let autoEvaluated = 0; // cartons Auto would have evaluated (all of them unless Pinwheel only)
   const keep = (full: Layout, into: Layout[], index: Map<string, number>, counts: number[]) => {
@@ -149,6 +172,9 @@ export function optimize(
     // (and so every later skip) and the ranking only ever see what can really be loaded.
     const l = trimToWeight(full, i);
     if (l === null) return;
+    if (into === layouts && !beyondAuto.has(full)) {
+      autoTop = Math.max(autoTop ?? 0, l.totalProducts);
+    }
     if (limited) {
       if (!isNewOrFewerRemoved(l, into, index)) return;
       index.set(l.id, into.length);
@@ -171,7 +197,8 @@ export function optimize(
   const overBudget = () => {
     if (!timedOut) {
       const elapsed = now() - start;
-      if (elapsed >= budgetMs && (layouts.length > 0 || elapsed >= HARD_LIMIT_MS)) timedOut = true;
+      const something = layouts.length > 0 || pinwheelLayouts.length > 0;
+      if (elapsed >= budgetMs && (something || elapsed >= HARD_LIMIT_MS)) timedOut = true;
     }
     return timedOut;
   };
@@ -188,7 +215,9 @@ export function optimize(
     if (!autoDone) autoEvaluated++;
     // The pallet and one full carton already over the maximum: no layer of it can fit.
     if (maxCartonsByWeight(c, i) === 0) {
-      if (!autoDone && cartonFitsPallet(c, i)) tooHeavy++;
+      const fits = cartonFitsPallet(c, i);
+      if (!autoDone && fits) tooHeavy++;
+      if (only && fits) heavyUnsearched = true;
       continue;
     }
     // The same check runs between this carton's layer searches.
@@ -207,13 +236,16 @@ export function optimize(
     }
     if (only && pattern) {
       for (const full of buildLayouts(c, i, cache, overBudget, undefined, pattern)) {
+        pinwheelsBuilt++;
         keep(full, pinwheelLayouts, pinwheelIndexById, bestPinwheel);
       }
     }
     if (timedOut) break;
   }
 
-  if (layouts.length === 0) {
+  // Pinwheel only may have a pinwheel layout to list where Auto has nothing: a pinwheel of
+  // few cartons can fit under a weight maximum that every straight-cut layer is over.
+  if (layouts.length === 0 && pinwheelLayouts.length === 0) {
     const reason =
       built + tooHeavy === 0 ? 'CARTON_EXCEEDS_PALLET' : overWeightReason(i, capped || timedOut);
     return { ...empty(reason), candidatesEvaluated: evaluated };
@@ -221,10 +253,16 @@ export function optimize(
   // Pinwheel only lists its own layouts; with none, the layouts Auto gives, marked as such.
   const patternFallback = only && pinwheelLayouts.length === 0;
   const listed = only && !patternFallback ? pinwheelLayouts : layouts;
-  // The allowance of the further pinwheel searches ran out: a pinwheel may have been missed.
-  const searchLimited = capped || timedOut || (pattern !== undefined && extraWork.capped === true);
-  // What Auto would put first, to compare with the first layout listed.
-  let autoBest = bestOfAll[0];
+  // The fallback when the weight maximum is why: pinwheel layouts were built and every one
+  // was over it, or a carton was too heavy to look for one. "No pinwheel exists" would be
+  // untrue of the first and unknown of the second.
+  const pinwheelOverWeight = patternFallback && limited && (pinwheelsBuilt > 0 || heavyUnsearched);
+  // A further pinwheel search ran out of time: a pinwheel may have been missed.
+  const searchLimited = capped || timedOut || (pattern !== undefined && extraTime.cut === true);
+  // What layer pattern Auto and minimum stability Auto would put first, to compare with the
+  // first layout listed. (Not the most products of the layouts this setting built: under
+  // Prefer pinwheel and Pinwheel only those can hold more than anything Auto finds.)
+  const autoBest = autoTop;
   let truncated = searchLimited;
   let ranked: OptimizeResult['layouts'];
   let belowMinimum = false;
@@ -242,12 +280,9 @@ export function optimize(
     ranked = ranking.layouts;
     truncated ||= ranking.truncated;
     belowMinimum = ranking.belowMinimum;
-    if (ranking.autoBestProducts !== undefined) {
-      autoBest = Math.max(autoBest ?? 0, ranking.autoBestProducts);
-    }
   }
   const shown = ranked[0]?.layout.totalProducts;
-  const settingsApplied = minimum !== 'auto' || only;
+  const settingsApplied = minimum !== 'auto' || pref !== 'auto';
   const costs =
     settingsApplied && autoBest !== undefined && shown !== undefined && shown < autoBest;
   return {
@@ -259,6 +294,7 @@ export function optimize(
     ...(belowMinimum ? { belowMinimum: true } : {}),
     ...(costs ? { autoBestProducts: autoBest } : {}),
     ...(patternFallback ? { patternFallback: true } : {}),
+    ...(pinwheelOverWeight ? { pinwheelOverWeight: true } : {}),
   };
 }
 

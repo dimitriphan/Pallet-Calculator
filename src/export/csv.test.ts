@@ -175,7 +175,12 @@ describe('buildCsv', () => {
     expect(value(pinwheels, 'Result notes')).toBe('Auto would give 30 more boxes.');
 
     // Pinwheel only with square cartons: the straight-cut layouts, said so.
-    const cubes: Inputs = { ...CUBES, layerPattern: 'pinwheelOnly' };
+    // One cube to a carton: every footprint is square, so no pinwheel exists.
+    const cubes: Inputs = {
+      ...CUBES,
+      maxCarton: { length: 10, width: 10, height: 10 },
+      layerPattern: 'pinwheelOnly',
+    };
     const fallback = buildCsv(buildExportPayload(cubes, optimize(cubes), 0, NOW)).split('\r\n');
     expect(value(fallback, 'Result notes')).toBe(
       'No pinwheel layout exists for these sizes. Showing straight-cut layouts.',

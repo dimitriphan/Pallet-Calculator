@@ -25,12 +25,21 @@ export const PATTERN_FALLBACK =
 export const PATTERN_FALLBACK_LIMITED =
   'No pinwheel layout was found before the search was stopped. Showing straight-cut layouts.';
 
+/**
+ * The same when the maximum pallet weight is why: pinwheel layouts exist (or may, in a carton
+ * too heavy to load) and "none exists for these sizes" would not be true.
+ */
+export const PATTERN_FALLBACK_OVER_WEIGHT =
+  'No pinwheel layout fits under the maximum weight. Showing straight-cut layouts.';
+
 /** The fallback message for a result, or null when the result is not the fallback. */
 export function patternFallbackText(result: {
   layouts: unknown[];
   truncated: boolean;
   patternFallback?: boolean;
+  pinwheelOverWeight?: boolean;
 }): string | null {
   if (!result.patternFallback || result.layouts.length === 0) return null;
-  return result.truncated ? PATTERN_FALLBACK_LIMITED : PATTERN_FALLBACK;
+  if (result.truncated) return PATTERN_FALLBACK_LIMITED;
+  return result.pinwheelOverWeight ? PATTERN_FALLBACK_OVER_WEIGHT : PATTERN_FALLBACK;
 }
