@@ -4,6 +4,7 @@ import { DEFAULT_INPUTS } from '../domain/constants';
 import type { MinStability } from '../domain/types';
 import { autoMoreText, belowMinimumText, MIN_STABILITY_LABEL } from './minStability';
 import { settingsSummary } from './settingsSummary';
+import { optimize } from '../engine/optimize';
 import { flush, renderApp, summaryTile } from './testUtils';
 
 type App = Awaited<ReturnType<typeof renderApp>>;
@@ -24,6 +25,8 @@ const ALL_FAIR: Record<string, string> = {
 };
 
 const BELOW = 'No layout reaches Good. Showing the most stable found.';
+const BELOW_LIMITED =
+  'No layout reaching Good was found before the search was stopped. Showing the most stable found.';
 const MORE = 'Auto would give 15 more boxes.';
 
 function control() {
@@ -76,6 +79,13 @@ describe('minimum stability wording', () => {
   it('says nothing reaches the minimum', () => {
     expect(belowMinimumText('good')).toBe(BELOW);
     expect(belowMinimumText('fair')).toBe('No layout reaches Fair. Showing the most stable found.');
+  });
+
+  it('says only that none was found when the search was limited', () => {
+    expect(belowMinimumText('good', true)).toBe(BELOW_LIMITED);
+    expect(belowMinimumText('fair', true)).toBe(
+      'No layout reaching Fair was found before the search was stopped. Showing the most stable found.',
+    );
   });
 
   it('is part of the settings sentence only when it is not Auto', () => {
@@ -157,6 +167,22 @@ describe('MinStabilityControl', () => {
     await setMinimum(stores, 'fair');
     expect(screen.queryByText(BELOW)).not.toBeInTheDocument();
     expect(screen.queryByText('Below your minimum')).not.toBeInTheDocument();
+  });
+
+  it('a limited search that found nothing at the minimum does not claim that nothing reaches it', async () => {
+    // The same result, but from a search that was cut short.
+    const { stores } = await renderApp((i) => Promise.resolve({ ...optimize(i), truncated: true }));
+    await setFields(stores, ALL_FAIR);
+    await setMinimum(stores, 'good');
+    expect(stores.results.getState().result).toMatchObject({ belowMinimum: true, truncated: true });
+    expect(screen.getByText(BELOW_LIMITED)).toBeInTheDocument();
+    expect(screen.queryByText(BELOW)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Search was limited to keep it fast; results may not be the best possible.'),
+    ).toBeInTheDocument();
+    // The layouts are still shown, each marked.
+    for (const row of tableRows())
+      expect(within(row).getByText('Below your minimum')).toBeInTheDocument();
   });
 });
 

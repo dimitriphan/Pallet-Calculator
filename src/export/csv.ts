@@ -20,7 +20,7 @@ import {
   withUnit,
 } from '../ui/format';
 import { LAYER_PATTERN_LABEL } from '../ui/layerPattern';
-import { MIN_STABILITY_LABEL } from '../ui/minStability';
+import { BELOW_MINIMUM, MIN_STABILITY_LABEL } from '../ui/minStability';
 import type { ExportPayload } from './exportData';
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
@@ -91,6 +91,8 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Keep cartons upright', yesNo(i.keepCartonsUpright)],
     ['Minimum stability', MIN_STABILITY_LABEL[i.minStability]],
     ['Layer pattern', LAYER_PATTERN_LABEL[i.layerPattern]],
+    // What those two settings did to the result, as the screen says it; blank when nothing.
+    ['Result notes', p.notes.join(' ')],
     [L('Usable stacking height'), len(a.pallet.usableHeight)],
     [L('Carton inner length'), len(a.carton.inner.length)],
     [L('Carton inner width'), len(a.carton.inner.width)],
@@ -119,6 +121,8 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Layers needed for target', a.target.layersNeeded ?? ''],
     // Stability: blank for a layout stored before layouts were rated.
     ['Stability rating', st ? RATING[st.rating] : ''],
+    // The mark the screen puts beside the rating when nothing reached the minimum.
+    ['Stability mark', p.belowMinimum ? BELOW_MINIMUM : ''],
     ['Stability warnings', st ? st.warnings.map(describeWarning).join(' ') : ''],
     ['Stack height ÷ shorter side of base', st ? ratio(st.measures.stackHeightRatio) : ''],
     [
@@ -176,7 +180,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     c.cartons,
     c.layers,
     ...(patterned ? [c.pinwheel ? 'Pinwheel' : ''] : []),
-    c.stability ? RATING[c.stability] : '',
+    c.stability ? `${RATING[c.stability]}${p.belowMinimum ? ` (${BELOW_MINIMUM})` : ''}` : '',
     fmtPct(c.utilizationPct),
     ...(weighed ? [c.weight === undefined ? '' : wt(c.weight)] : []),
     vol(c.remainingVolume),

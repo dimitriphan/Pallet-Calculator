@@ -22,6 +22,8 @@ import { footprintAxes } from '../engine/packing/stacking';
 import type { Unit } from '../engine/units/units';
 import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
 import { settingsSummary } from '../ui/settingsSummary';
+import { BELOW_MINIMUM } from '../ui/minStability';
+import { resultNotes } from '../ui/resultNotes';
 
 export interface SheetRow {
   label: string;
@@ -134,10 +136,15 @@ const RATING_WORD = { good: 'Good', fair: 'Fair', poor: 'Poor' } as const;
  * The stability rating, one row per warning, and which layers are drawn turned half a turn (as
  * which pattern). Nothing for a layout stored before layouts were rated.
  */
-function stabilityRows(layout: Layout): SheetRow[] {
+function stabilityRows(layout: Layout, belowMinimum: boolean): SheetRow[] {
   const rows: SheetRow[] = [];
   if (layout.stability) {
-    rows.push({ label: 'Stability', value: RATING_WORD[layout.stability.rating] });
+    const rating = RATING_WORD[layout.stability.rating];
+    // The mark the screen puts beside the rating when nothing reached the minimum.
+    rows.push({
+      label: 'Stability',
+      value: belowMinimum ? `${rating} (${BELOW_MINIMUM})` : rating,
+    });
     for (const w of layout.stability.warnings)
       rows.push({ label: 'Stability warning', value: describeWarning(w) });
   }
@@ -190,6 +197,7 @@ export function buildSheetContent(a: {
   const analytics = computeAnalytics(layout, inputs);
   const { summary, pallet, weight } = analytics;
   const weightOf = (lb: number) => weightText(lb, unit);
+  const notes = resultNotes(inputs, result);
 
   const trimmed = a.jobName.trim().slice(0, MAX_JOB_NAME);
   const placements = cartonPlacements(layout, inputs);
@@ -298,7 +306,11 @@ export function buildSheetContent(a: {
       value: `${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} including pallet`,
     },
     ...(weight ? weightRows(weight, weightOf) : []),
-    ...stabilityRows(layout),
+    ...stabilityRows(layout, notes.belowMinimum !== null),
+    // What the minimum stability and the layer pattern setting did, as the screen says it.
+    ...(notes.belowMinimum ? [{ label: 'Minimum stability', value: notes.belowMinimum }] : []),
+    ...(notes.patternFallback ? [{ label: 'Layer pattern', value: notes.patternFallback }] : []),
+    ...(notes.autoMore ? [{ label: 'Compared with Auto', value: notes.autoMore }] : []),
   ];
 
   const palletSize = sizeText(palletRect.dx, palletRect.dy);

@@ -24,9 +24,16 @@ export function minStabilityText(minimum: MinStability): string {
   return `Minimum stability: ${MIN_STABILITY_LABEL[minimum]}.`;
 }
 
-/** What is said when no layout meets the minimum and the best-rated ones are shown instead. */
-export function belowMinimumText(minimum: Exclude<MinStability, 'auto'>): string {
-  return `No layout reaches ${MINIMUM_RATING[minimum]}. Showing the most stable found.`;
+/**
+ * What is said when no layout meets the minimum and the best-rated ones are shown instead.
+ * `limited` is a search that was cut short: it cannot say that none reaches the minimum, only
+ * that none was found.
+ */
+export function belowMinimumText(minimum: Exclude<MinStability, 'auto'>, limited = false): string {
+  const rating = MINIMUM_RATING[minimum];
+  return limited
+    ? `No layout reaching ${rating} was found before the search was stopped. Showing the most stable found.`
+    : `No layout reaches ${rating}. Showing the most stable found.`;
 }
 
 /**

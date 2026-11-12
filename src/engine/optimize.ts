@@ -4,6 +4,7 @@ import type {
   Layout,
   MinStability,
   OptimizeResult,
+  Stability,
 } from '../domain/types';
 import {
   anyCartonFits,
@@ -23,7 +24,7 @@ import {
   type PinwheelPreference,
 } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
-import { rankLayouts, rankWithMinimum } from './ranking/rank';
+import { meetsMinimum, rankLayouts, rankWithMinimum } from './ranking/rank';
 import { trimToWeight } from './analytics/weight';
 import { assessStability } from './analytics/stability';
 import { interlockLayers } from './packing/interlock';
@@ -52,10 +53,19 @@ const KEEP_BEST = 30;
  */
 export function optimize(
   i: Inputs,
-  opts: { now?: () => number; budgetMs?: number } = {},
+  opts: {
+    now?: () => number;
+    budgetMs?: number;
+    /**
+     * False evaluates every carton, skipping none as unable to reach the layouts already
+     * kept. For tests, which compare the result with this slow, plainly complete search.
+     */
+    prune?: boolean;
+  } = {},
 ): OptimizeResult {
   const now = opts.now ?? (() => performance.now());
   const budgetMs = opts.budgetMs ?? TIME_BUDGET_MS;
+  const prune = opts.prune ?? true;
   const start = now();
 
   const { candidates, truncated: capped } = generateCartonCandidatesWithInfo(i);
@@ -93,6 +103,22 @@ export function optimize(
   const extraWork: PinwheelAllowance = { remaining: PINWHEEL_EXTRA_WORK_PER_OPTIMIZE };
   const pattern: PinwheelPreference | undefined =
     pref === 'auto' ? undefined : { pref, allowance: extraWork };
+  // Inputs from before the setting existed have no minimum: Auto.
+  const minimum: MinStability = (i as Partial<Inputs>).minStability ?? 'auto';
+  // For every layout the ranking reaches: alternate identical layers turned where that is free
+  // (same boxes; nothing above changes, since product counts and weights stay as they are),
+  // and the result rated. Better-rated layouts win ties on products. Remembered per layout,
+  // since with a minimum the search rates layouts before the ranking does.
+  const preparedLayouts = new Map<Layout, Layout>();
+  const prepare = (l: Layout): Layout => {
+    let p = preparedLayouts.get(l);
+    if (!p) {
+      const interlocked = interlockLayers(l, i);
+      p = { ...interlocked, stability: assessStability(interlocked, i) };
+      preparedLayouts.set(l, p);
+    }
+    return p;
+  };
   const layouts: Layout[] = [];
   // Pinwheel only: the layouts listed, built beside the ones Auto builds. Auto's own are still
   // built, exactly as under Auto, to say what Auto would give and to show when no pinwheel
@@ -108,7 +134,14 @@ export function optimize(
   // weight limit ruled them out. A carton that could never fit counts toward neither.
   let built = 0;
   let tooHeavy = 0;
-  const best: number[] = []; // product counts of the best KEEP_BEST layouts, descending
+  // Product counts of the best KEEP_BEST layouts that can be listed, descending: with a
+  // minimum stability, only of those that meet it. A carton is skipped when it cannot reach
+  // them, and layouts that will be left out must not make a carton look beaten: the only
+  // layout that meets the minimum, or the best one, may be in a carton below 30 that do not.
+  const best: number[] = [];
+  // The same over every layout, as Auto counts them, and the most products of any layout:
+  // what Auto would put first.
+  const bestOfAll: number[] = [];
   let evaluated = 0;
   let autoEvaluated = 0; // cartons Auto would have evaluated (all of them unless Pinwheel only)
   const keep = (full: Layout, into: Layout[], index: Map<string, number>, counts: number[]) => {
@@ -121,10 +154,18 @@ export function optimize(
       index.set(l.id, into.length);
     }
     into.push(l);
-    insertDescending(counts, l.totalProducts);
+    if (into === layouts) insertDescending(bestOfAll, l.totalProducts);
+    // Rated here only when its count would enter the list: the rest cannot change a skip.
+    const enters = counts.length < KEEP_BEST || l.totalProducts > (counts[KEEP_BEST - 1] as number);
+    if (
+      minimum === 'auto' ||
+      (enters && meetsMinimum((prepare(l).stability as Stability).rating, minimum))
+    ) {
+      insertDescending(counts, l.totalProducts);
+    }
   };
   const cannotReach = (counts: number[], bound: number) =>
-    counts.length >= KEEP_BEST && bound < (counts[KEEP_BEST - 1] as number);
+    prune && counts.length >= KEEP_BEST && bound < (counts[KEEP_BEST - 1] as number);
   // Stop at the budget once there is something to show, or at the hard limit regardless.
   // The first carton's first layer search always runs.
   const overBudget = () => {
@@ -136,7 +177,9 @@ export function optimize(
   };
   for (const { c, bound } of ordered) {
     // Bounds are descending, so once one falls short every later one does too.
-    const autoDone = cannotReach(best, bound);
+    // Once Pinwheel only has pinwheel layouts to list, Auto's own are wanted only for what
+    // Auto would put first, which the count over all of them settles.
+    const autoDone = cannotReach(only && pinwheelLayouts.length > 0 ? bestOfAll : best, bound);
     // Pinwheel only goes on past where Auto stops, until no carton can reach the pinwheel
     // layouts already kept: a carton Auto has no use for may still hold the best pinwheel.
     if (autoDone && (!only || cannotReach(bestPinwheel, bound))) break;
@@ -175,25 +218,16 @@ export function optimize(
       built + tooHeavy === 0 ? 'CARTON_EXCEEDS_PALLET' : overWeightReason(i, capped || timedOut);
     return { ...empty(reason), candidatesEvaluated: evaluated };
   }
-  // Then, for every layout the ranking reaches: alternate identical layers turned where that
-  // is free (same boxes; nothing above changes, since product counts and weights stay as they
-  // are), and the result rated. Better-rated layouts win ties on products.
-  const prepare = (l: Layout): Layout => {
-    const interlocked = interlockLayers(l, i);
-    return { ...interlocked, stability: assessStability(interlocked, i) };
-  };
   // Pinwheel only lists its own layouts; with none, the layouts Auto gives, marked as such.
   const patternFallback = only && pinwheelLayouts.length === 0;
   const listed = only && !patternFallback ? pinwheelLayouts : layouts;
   // The allowance of the further pinwheel searches ran out: a pinwheel may have been missed.
   const searchLimited = capped || timedOut || (pattern !== undefined && extraWork.capped === true);
   // What Auto would put first, to compare with the first layout listed.
-  let autoBest = best[0];
+  let autoBest = bestOfAll[0];
   let truncated = searchLimited;
   let ranked: OptimizeResult['layouts'];
   let belowMinimum = false;
-  // Inputs from before the setting existed have no minimum: Auto.
-  const minimum: MinStability = (i as Partial<Inputs>).minStability ?? 'auto';
   if (minimum === 'auto') {
     ranked = rankLayouts(listed, i, undefined, prepare);
   } else {
@@ -202,7 +236,7 @@ export function optimize(
     const walkStart = now();
     const shouldStop = () => {
       const t = now();
-      return t - start >= budgetMs && t - walkStart >= MIN_RATING_WALK_MS;
+      return ratingWalkOver(t - start, t - walkStart, budgetMs);
     };
     const ranking = rankWithMinimum(listed, i, minimum, { prepare, shouldStop });
     ranked = ranking.layouts;
@@ -226,6 +260,15 @@ export function optimize(
     ...(costs ? { autoBestProducts: autoBest } : {}),
     ...(patternFallback ? { patternFallback: true } : {}),
   };
+}
+
+/**
+ * Whether the rating walk of a minimum stability must stop: past the time budget, once it has
+ * had MIN_RATING_WALK_MS of its own, or at the hard limit whatever it has had. (The first
+ * group of layouts is rated without asking.)
+ */
+export function ratingWalkOver(elapsed: number, walked: number, budgetMs: number): boolean {
+  return elapsed >= budgetMs && (walked >= MIN_RATING_WALK_MS || elapsed >= HARD_LIMIT_MS);
 }
 
 /**

@@ -1,7 +1,6 @@
 import { emptyMessage } from './emptyMessage';
-import { patternFallbackText } from './layerPattern';
-import { belowMinimumText } from './minStability';
 import { Mascot } from './Mascot';
+import { resultNotes } from './resultNotes';
 import { SproutProgress } from './SproutProgress';
 import { useResults } from './StoreContext';
 
@@ -49,20 +48,19 @@ export function useStatusContent(): {
       text: 'Search was limited to keep it fast; results may not be the best possible.',
       tone: 'text-amber-800 dark:text-harbor-sand',
     });
-  // The layouts shown are the best-rated found, each marked as below the minimum.
-  if (result?.belowMinimum && result.layouts.length > 0 && inputs && inputs.minStability !== 'auto')
+  // The layouts shown are the best-rated found, each marked as below the minimum; or, under
+  // Pinwheel only with no pinwheel found, the straight-cut ones Auto gives.
+  const notes = result && inputs ? resultNotes(inputs, result) : null;
+  if (notes?.belowMinimum)
     lines.push({
       key: 'belowMinimum',
-      text: belowMinimumText(inputs.minStability),
+      text: notes.belowMinimum,
       tone: 'text-amber-800 dark:text-harbor-sand',
     });
-  // Pinwheel only found no pinwheel: the layouts shown are the straight-cut ones Auto gives.
-  const fallback =
-    result && inputs?.layerPattern === 'pinwheelOnly' ? patternFallbackText(result) : null;
-  if (fallback)
+  if (notes?.patternFallback)
     lines.push({
       key: 'patternFallback',
-      text: fallback,
+      text: notes.patternFallback,
       tone: 'text-amber-800 dark:text-harbor-sand',
     });
 

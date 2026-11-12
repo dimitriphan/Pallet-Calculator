@@ -1,6 +1,7 @@
 import type { Dims, Inputs, OptimizeResult, RankedLayout, StabilityRating } from '../domain/types';
 import { cartonDisplayDims, computeAnalytics, type Analytics } from '../engine/analytics/analytics';
 import { hasPinwheelLayer } from '../engine/analytics/stack';
+import { resultNoteLines } from '../ui/resultNotes';
 
 /** What every export says when the result shown is older than the current inputs. */
 export const STALE_NOTE = 'Out of date: inputs changed after this calculation';
@@ -12,6 +13,14 @@ export interface ExportPayload {
   /** "Current", or STALE_NOTE when stale. */
   status: string;
   inputs: Inputs;
+  /**
+   * What the minimum stability and the layer pattern setting did to the result, as on screen:
+   * nothing reached the minimum, no pinwheel was found, what Auto would give. Empty when
+   * neither changed anything.
+   */
+  notes: string[];
+  /** True when every layout is shown although it rates below the minimum stability. */
+  belowMinimum: boolean;
   selectedLayout: RankedLayout;
   analytics: Analytics;
   comparison: {
@@ -47,6 +56,8 @@ export function buildExportPayload(
     stale,
     status: stale ? STALE_NOTE : 'Current',
     inputs,
+    notes: resultNoteLines(inputs, result),
+    belowMinimum: result.belowMinimum === true && inputs.minStability !== 'auto',
     selectedLayout,
     analytics: computeAnalytics(selectedLayout.layout, inputs),
     comparison: result.layouts.map((r) => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import type { Inputs, MinStability, OptimizeResult } from '../domain/types';
 import { NAMED_CASES, randomCases } from './autoBaseline.testSupport';
-import { optimize } from './optimize';
+import { HARD_LIMIT_MS, MIN_RATING_WALK_MS, optimize, ratingWalkOver } from './optimize';
 import { PINWHEEL_INPUTS } from './packing/testSupport';
 import { meetsMinimum } from './ranking/rank';
 
@@ -115,32 +115,72 @@ describe('minimum stability (Round 5 spec 4)', () => {
       expect(r.layouts.length).toBeGreaterThan(0);
     });
 
-    it('marks the result limited when the budget ends the rating walk early', () => {
-      // Count the clock readings of the search, then let the time run out right after it.
-      let readings = 0;
-      const full = optimize(withMinimum(DEFAULT_INPUTS, 'good'), {
-        now: () => {
-          readings += 1;
-          return 0;
-        },
-      });
-      expect(full.truncated).toBe(false);
-      expect(readings).toBeGreaterThan(2);
-      const searchReadings = (() => {
-        let n = 0;
-        optimize(DEFAULT_INPUTS, { now: () => ((n += 1), 0) });
-        return n;
-      })();
+    /**
+     * With no time budget at all the search stops after its first carton, whatever the clock
+     * says, as soon as it has layouts: for the defaults those are 250, 240 and 200 boxes rated
+     * Fair and 210 and 180 rated Good. What follows is the rating walk alone. `after` is the
+     * clock once the search is over (its reading number, from 1).
+     */
+    const GOOD = withMinimum(DEFAULT_INPUTS, 'good');
+    const searchReadings = (() => {
       let n = 0;
-      const cut = optimize(withMinimum(DEFAULT_INPUTS, 'good'), {
-        now: () => ((n += 1) <= searchReadings ? 0 : 1e9 + n * 1000),
+      optimize(DEFAULT_INPUTS, { now: () => ((n += 1), 0), budgetMs: 0 });
+      return n;
+    })();
+    const walk = (after: (reading: number) => number) => {
+      let n = 0;
+      return optimize(GOOD, {
+        now: () => ((n += 1) <= searchReadings ? 0 : after(n - searchReadings)),
+        budgetMs: 0,
       });
-      expect(cut.truncated).toBe(true);
-      // Only the group of 260 was rated, and it is fair: the best found, below the minimum.
-      expect(cut.belowMinimum).toBe(true);
-      expect(new Set(products(cut))).toEqual(new Set([260]));
-      // Auto reads the clock no more than before: its result cannot depend on the walk.
+    };
+
+    it('past the budget the walk still gets its 500 ms, enough here to find the good layouts', () => {
+      // Each reading of the clock is 1 ms on: every layout is rated well inside 500 ms.
+      const r = walk((k) => k);
+      expect(products(r)).toEqual([210, 180]);
+      expect(ratings(r)).toEqual(['good', 'good']);
+      expect(r.belowMinimum).toBeUndefined();
+      expect(r.autoBestProducts).toBe(250);
+    });
+
+    it('marks the result limited when the walk is ended after its 500 ms', () => {
+      // 300 ms a reading: the walk starts at 300, and is over at the reading of 900.
+      const r = walk((k) => 300 * k);
+      expect(r.truncated).toBe(true);
+      // Only the group of 250 was rated in full, and it is fair: the best found.
+      expect(r.belowMinimum).toBe(true);
+      expect(new Set(ratings(r))).toEqual(new Set(['fair']));
+      expect(products(r)[0]).toBe(250);
+    });
+
+    it('at the hard limit the walk rates the first group and no more, 500 ms or not', () => {
+      // The clock stands at 7 s: the walk has had none of its 500 ms, but the limit is passed.
+      const r = walk(() => 7000);
+      expect(r.truncated).toBe(true);
+      expect(r.belowMinimum).toBe(true);
+      expect(products(r)).toEqual([250]);
+      // Just under the limit, with a clock that stands still, it goes on to the good ones.
+      expect(products(walk(() => HARD_LIMIT_MS - 1))).toEqual([210, 180]);
+    });
+
+    it('the rule itself: budget and 500 ms of its own, or budget and the hard limit', () => {
+      expect(ratingWalkOver(3999, 9999, 4000)).toBe(false);
+      expect(ratingWalkOver(4000, MIN_RATING_WALK_MS - 1, 4000)).toBe(false);
+      expect(ratingWalkOver(4000, MIN_RATING_WALK_MS, 4000)).toBe(true);
+      expect(ratingWalkOver(HARD_LIMIT_MS - 1, 0, 4000)).toBe(false);
+      expect(ratingWalkOver(HARD_LIMIT_MS, 0, 4000)).toBe(true);
+      // A budget above the hard limit is the caller's own: nothing stops before it.
+      expect(ratingWalkOver(HARD_LIMIT_MS, 9999, 10_000)).toBe(false);
+    });
+
+    it('Auto reads the clock no more than the search does: no walk', () => {
+      let n = 0;
       expect(optimize(DEFAULT_INPUTS, { now: () => ((n += 1), 0) })).toEqual(auto);
+      const plain = n;
+      n = 0;
+      optimize(withMinimum(DEFAULT_INPUTS, 'good'), { now: () => ((n += 1), 0) });
+      expect(n).toBeGreaterThan(plain);
     });
   });
 
@@ -150,7 +190,9 @@ describe('minimum stability (Round 5 spec 4)', () => {
       const r = optimize(withMinimum(inputs, m));
       expect(r.truncated).toBe(base.truncated);
       expect(r.emptyReason).toBe(base.emptyReason);
-      expect(r.candidatesEvaluated).toBe(base.candidatesEvaluated);
+      // Cartons are skipped only against layouts that meet the minimum, so never more than
+      // under Auto.
+      expect(r.candidatesEvaluated).toBeGreaterThanOrEqual(base.candidatesEvaluated);
       expect(r).toEqual(optimize(withMinimum(inputs, m))); // deterministic
       if (base.layouts.length === 0) {
         expect(r).toEqual(base);
@@ -179,7 +221,7 @@ describe('minimum stability (Round 5 spec 4)', () => {
       }
       // When every layout Auto lists meets the minimum, the minimum changes nothing.
       if (base.layouts.every((x) => meetsMinimum(x.layout.stability!.rating, m))) {
-        expect(r).toEqual(base);
+        expect({ ...r, candidatesEvaluated: 0 }).toEqual({ ...base, candidatesEvaluated: 0 });
       }
     });
   });

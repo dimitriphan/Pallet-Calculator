@@ -10,6 +10,7 @@ import {
   patternFallbackText,
 } from './layerPattern';
 import { settingsSummary } from './settingsSummary';
+import { optimize } from '../engine/optimize';
 import { flush, renderApp, summaryTile } from './testUtils';
 
 type App = Awaited<ReturnType<typeof renderApp>>;
@@ -197,6 +198,14 @@ describe('LayerPatternControl', () => {
       expect(within(row).queryByText('Poor')).not.toBeInTheDocument();
     }
     expect(screen.getByText(/^Auto would give \d+ more boxes\.$/)).toBeInTheDocument();
+  });
+
+  it('a limited search that found no pinwheel does not claim that none exists', async () => {
+    const { stores } = await renderApp((i) => Promise.resolve({ ...optimize(i), truncated: true }));
+    await setFields(stores, NO_PINWHEEL);
+    await setPattern(stores, 'pinwheelOnly');
+    expect(screen.getByText(PATTERN_FALLBACK_LIMITED)).toBeInTheDocument();
+    expect(screen.queryByText(PATTERN_FALLBACK)).not.toBeInTheDocument();
   });
 });
 

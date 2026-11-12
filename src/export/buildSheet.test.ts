@@ -451,3 +451,62 @@ describe('buildSheetContent with a pinwheel layer', () => {
     });
   });
 });
+
+describe('buildSheetContent, minimum stability and layer pattern', () => {
+  const row = (s: ReturnType<typeof build>, label: string) =>
+    s.palletAndLoad.find((r) => r.label === label)?.value;
+
+  it('says nothing more under Auto', () => {
+    const s = build();
+    expect(row(s, 'Stability')).toBe('Fair');
+    for (const label of ['Minimum stability', 'Layer pattern', 'Compared with Auto'])
+      expect(row(s, label)).toBeUndefined();
+  });
+
+  it('marks a layout below the minimum and says nothing reached it', () => {
+    const s = build({ ...PINWHEEL_INPUTS, minStability: 'good' });
+    expect(row(s, 'Stability')).toBe('Fair (Below your minimum)');
+    expect(row(s, 'Minimum stability')).toBe(
+      'No layout reaches Good. Showing the most stable found.',
+    );
+    expect(row(s, 'Compared with Auto')).toBeUndefined();
+    expect(s.footer).toContain('minimum stability Good only');
+  });
+
+  it('a limited search says only that none was found', () => {
+    const inputs: Inputs = { ...PINWHEEL_INPUTS, minStability: 'good' };
+    const s = buildSheetContent({
+      inputs,
+      result: { ...optimize(inputs), truncated: true },
+      selectedIndex: 0,
+      jobName: '',
+      stale: false,
+      now: NOW,
+    });
+    expect(row(s, 'Minimum stability')).toBe(
+      'No layout reaching Good was found before the search was stopped. Showing the most stable found.',
+    );
+  });
+
+  it('says how many more boxes Auto would give, under a minimum and under Pinwheel only', () => {
+    const good = build({ minStability: 'good' });
+    expect(row(good, 'Stability')).toBe('Good');
+    expect(row(good, 'Compared with Auto')).toBe('Auto would give 15 more boxes.');
+    const only = build({ layerPattern: 'pinwheelOnly' });
+    expect(row(only, 'Compared with Auto')).toBe('Auto would give 30 more boxes.');
+    expect(row(only, 'Layer pattern')).toBeUndefined();
+    expect(only.footer).toContain('layer pattern Pinwheel only');
+  });
+
+  it('says when the straight-cut layouts are shown because no pinwheel exists', () => {
+    const s = build({
+      product: { length: 30, width: 25, height: 20 },
+      maxCarton: { length: 31, width: 26, height: 21 },
+      layerPattern: 'pinwheelOnly',
+    });
+    expect(row(s, 'Layer pattern')).toBe(
+      'No pinwheel layout exists for these sizes. Showing straight-cut layouts.',
+    );
+    expect(row(s, 'Compared with Auto')).toBeUndefined();
+  });
+});
