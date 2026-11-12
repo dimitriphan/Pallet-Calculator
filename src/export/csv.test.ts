@@ -55,9 +55,18 @@ describe('buildCsv', () => {
     expect(idx('Selected layout')).toBeGreaterThan(-1);
     expect(idx('Pallet length (in)')).toBeLessThan(idx('Product length (in)'));
     expect(idx('Keep cartons upright')).toBeLessThan(idx('Usable stacking height (in)'));
+    expect(idx('Minimum stability')).toBe(idx('Keep cartons upright') + 1);
     expect(idx('Boxes per carton')).toBeLessThan(idx('Load length (in)'));
     expect(idx('Utilization (%)')).toBeLessThan(idx('Target status'));
     expect(labels.at(-1)).toBe('Space contribution');
+  });
+
+  it('names the minimum stability the result was worked out with', () => {
+    expect(lines).toContain('Minimum stability,Auto');
+    const inputs: Inputs = { ...DEFAULT_INPUTS, minStability: 'good' };
+    const good = buildCsv(buildExportPayload(inputs, optimize(inputs), 0, NOW)).split('\r\n');
+    expect(good).toContain('Minimum stability,Good only');
+    expect(good).toContain('Total boxes per pallet,245');
   });
 
   it('writes counts as integers and other numbers with two decimals', () => {

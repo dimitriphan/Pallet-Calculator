@@ -1,4 +1,5 @@
 import { emptyMessage } from './emptyMessage';
+import { belowMinimumText } from './minStability';
 import { Mascot } from './Mascot';
 import { SproutProgress } from './SproutProgress';
 import { useResults } from './StoreContext';
@@ -45,6 +46,13 @@ export function useStatusContent(): {
     lines.push({
       key: 'truncated',
       text: 'Search was limited to keep it fast; results may not be the best possible.',
+      tone: 'text-amber-800 dark:text-harbor-sand',
+    });
+  // The layouts shown are the best-rated found, each marked as below the minimum.
+  if (result?.belowMinimum && result.layouts.length > 0 && inputs && inputs.minStability !== 'auto')
+    lines.push({
+      key: 'belowMinimum',
+      text: belowMinimumText(inputs.minStability),
       tone: 'text-amber-800 dark:text-harbor-sand',
     });
 

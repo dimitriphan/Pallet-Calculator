@@ -9,6 +9,11 @@ export interface Dims {
 export type ProductAxis = 'L' | 'W' | 'H';
 export type OrientationCode = 'LWH' | 'LHW' | 'WLH' | 'WHL' | 'HLW' | 'HWL';
 export type RotationMode = 'full' | 'upright' | 'noSide' | 'custom';
+/**
+ * The lowest stability rating a layout may have to be offered: any ('auto'), Fair or better,
+ * or Good only.
+ */
+export type MinStability = 'auto' | 'fair' | 'good';
 
 /** Weights in pounds. Blank box weight means weight is ignored everywhere. */
 export interface WeightInputs {
@@ -31,6 +36,7 @@ export interface Inputs {
   customOrientations: OrientationCode[]; // used only when rotationMode === 'custom'
   keepCartonsUpright: boolean;
   weights: WeightInputs;
+  minStability: MinStability;
 }
 
 /** Same shape as Inputs but every numeric field is the raw text the user typed. */
@@ -47,6 +53,7 @@ export interface InputsDraft {
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;
   weights: Record<keyof WeightInputs, string>; // '' = blank
+  minStability: MinStability;
 }
 
 /**
@@ -161,6 +168,16 @@ export interface OptimizeResult {
   truncated: boolean;
   /** Only with NO_CARTON_WITH_COUNT: the nearest achievable boxes per carton on each side. */
   nearestCounts?: { below: number | null; above: number | null };
+  /**
+   * Only with a minimum stability: no layout reached it, and `layouts` are the best-rated
+   * ones found instead. Never set to false.
+   */
+  belowMinimum?: boolean;
+  /**
+   * Only with a minimum stability: the most products of any layout before the minimum was
+   * applied (what Auto would put first), when that is more than the first layout here holds.
+   */
+  autoBestProducts?: number;
 }
 
 export interface Preset {
@@ -178,6 +195,7 @@ export interface Preset {
   keepCartonsUpright: boolean;
   /** The product box weight stays with the product, so a preset never holds it. */
   weights: Omit<WeightInputs, 'productBox'>;
+  minStability: MinStability;
   advanced: Record<string, unknown>; // reserved for the later Advanced Optimization release
 }
 

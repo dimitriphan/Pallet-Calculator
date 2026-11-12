@@ -37,7 +37,8 @@ interface Scored {
   score: ScoreBreakdown;
 }
 
-const RATING_ORDER: Record<StabilityRating, number> = { good: 0, fair: 1, poor: 2 };
+/** Ratings from best to worst. */
+export const RATING_ORDER: Record<StabilityRating, number> = { good: 0, fair: 1, poor: 2 };
 
 /**
  * Where a layout's stability rating sorts: good, fair, poor. A layout without a rating (only

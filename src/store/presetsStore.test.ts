@@ -104,6 +104,35 @@ describe('presets store', () => {
     expect(inputsMatchPreset({ ...loaded, boxesPerCarton: 7 }, p)).toBe(false);
   });
 
+  it('stores the minimum stability, copies it back and counts it as a preset change', () => {
+    const { store } = setup();
+    const p = store.getState().create('Steady', { ...other, minStability: 'good' });
+    expect(p.minStability).toBe('good');
+    const loaded = presetToInputs(p, DEFAULT_INPUTS);
+    expect(loaded.minStability).toBe('good');
+    expect(inputsMatchPreset(loaded, p)).toBe(true);
+    expect(inputsMatchPreset({ ...loaded, minStability: 'auto' }, p)).toBe(false);
+    expect(samplePresets.every((s) => s.minStability === 'auto')).toBe(true);
+  });
+
+  it('loads and imports presets stored before the minimum stability as Auto', () => {
+    const storage = new FakeStorage();
+    const old = samplePresets.map((p) => {
+      const copy = structuredClone(p) as unknown as Record<string, unknown>;
+      delete copy.minStability;
+      return copy;
+    });
+    storage.setItem(STORAGE_KEYS.presets, JSON.stringify({ version: 1, items: old }));
+    const { store, notices } = setup(storage);
+    expect(notices).toEqual([]);
+    expect(store.getState().presets).toEqual(samplePresets);
+    expect(store.getState().importJson(JSON.stringify({ version: 1, presets: old }))).toEqual({
+      imported: 2,
+      skipped: 0,
+    });
+    expect(store.getState().presets.every((p) => p.minStability === 'auto')).toBe(true);
+  });
+
   it('sample presets leave boxesPerCarton blank', () => {
     expect(samplePresets.every((p) => p.boxesPerCarton === null)).toBe(true);
   });

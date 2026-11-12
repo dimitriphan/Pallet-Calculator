@@ -107,6 +107,26 @@ describe('inputsSchema', () => {
     expect(inputsSchema.parse({ ...DEFAULT_INPUTS, boxesPerCarton: 6 }).boxesPerCarton).toBe(6);
   });
 
+  it('reads inputs stored before the minimum stability as Auto, and keeps a stored one', () => {
+    const old: Record<string, unknown> = { ...DEFAULT_INPUTS };
+    delete old.minStability;
+    expect('minStability' in old).toBe(false);
+    expect(inputsSchema.parse(old)).toEqual(DEFAULT_INPUTS);
+    expect(inputsSchema.parse(old).minStability).toBe('auto');
+    for (const m of ['auto', 'fair', 'good'] as const)
+      expect(inputsSchema.parse({ ...DEFAULT_INPUTS, minStability: m }).minStability).toBe(m);
+    expect(inputsSchema.safeParse({ ...DEFAULT_INPUTS, minStability: 'poor' }).success).toBe(false);
+  });
+
+  it('drafts and parses the minimum stability', () => {
+    const draft = draftFromInputs({ ...DEFAULT_INPUTS, minStability: 'good' });
+    expect(draft.minStability).toBe('good');
+    expect(parseDraft(draft)).toEqual({
+      ok: true,
+      inputs: { ...DEFAULT_INPUTS, minStability: 'good' },
+    });
+  });
+
   it('rejects a boxesPerCarton that is not a whole number of 1 or more', () => {
     for (const bad of [0, 2.5, -1, '6'])
       expect(inputsSchema.safeParse({ ...DEFAULT_INPUTS, boxesPerCarton: bad }).success).toBe(
@@ -130,6 +150,7 @@ describe('presetSchema', () => {
     customOrientations: [],
     keepCartonsUpright: false,
     weights: { maxPallet: null, emptyCarton: 0, pallet: 40 },
+    minStability: 'auto',
     advanced: {},
   };
 
@@ -141,6 +162,14 @@ describe('presetSchema', () => {
     const round1Preset: Record<string, unknown> = { ...preset };
     delete round1Preset.boxesPerCarton;
     expect(presetSchema.parse(round1Preset)).toEqual({ ...preset, boxesPerCarton: null });
+  });
+
+  it('reads a preset stored before the minimum stability as Auto, and keeps a stored one', () => {
+    const old: Record<string, unknown> = { ...preset };
+    delete old.minStability;
+    expect(presetSchema.parse(old)).toEqual(preset);
+    expect(presetSchema.parse({ ...preset, minStability: 'fair' }).minStability).toBe('fair');
+    expect(presetSchema.safeParse({ ...preset, minStability: 'best' }).success).toBe(false);
   });
 });
 
@@ -319,6 +348,18 @@ describe('optimizeResultSchema', () => {
     expect(optimizeResultSchema.safeParse(bad).success).toBe(false);
   });
 
+  it('keeps what a minimum stability adds to a result, and loads results stored without it', () => {
+    const plain = optimize(DEFAULT_INPUTS);
+    expect('belowMinimum' in plain || 'autoBestProducts' in plain).toBe(false);
+    expect(optimizeResultSchema.parse(structuredClone(plain))).toEqual(plain);
+    const good = optimize({ ...DEFAULT_INPUTS, minStability: 'good' });
+    expect(good.autoBestProducts).toBe(260);
+    expect(optimizeResultSchema.parse(structuredClone(good))).toEqual(good);
+    const below = optimize({ ...PINWHEEL_INPUTS, minStability: 'good' });
+    expect(below.belowMinimum).toBe(true);
+    expect(optimizeResultSchema.parse(structuredClone(below))).toEqual(below);
+  });
+
   it('accepts a Round 1 result without nearestCounts', () => {
     const r = optimize(DEFAULT_INPUTS);
     expect('nearestCounts' in r).toBe(false);
@@ -411,6 +452,32 @@ describe('scenarioSchema', () => {
     const saved = { ...scenario, inputs, result: r, selectedIndex: 0, analytics: a };
     expect(r.layouts.some((l) => l.layout.weightTrim)).toBe(true);
     expect(scenarioSchema.parse(structuredClone(saved))).toEqual(saved);
+  });
+
+  it('loads a scenario saved before the minimum stability as Auto', () => {
+    const old = structuredClone(scenario) as unknown as { inputs: Record<string, unknown> };
+    delete old.inputs.minStability;
+    expect('minStability' in old.inputs).toBe(false);
+    const parsed = scenarioSchema.safeParse(old);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.inputs.minStability).toBe('auto');
+    expect(parsed.data?.inputs).toEqual(DEFAULT_INPUTS);
+    expect(parsed.data?.result).toEqual(result);
+  });
+
+  it('keeps a scenario saved with a minimum stability', () => {
+    const inputs = { ...DEFAULT_INPUTS, minStability: 'good' as const };
+    const withMinimum = optimize(inputs);
+    const saved = {
+      ...scenario,
+      inputs,
+      result: withMinimum,
+      analytics: computeAnalytics(withMinimum.layouts[1]!.layout, inputs),
+    };
+    const parsed = scenarioSchema.parse(structuredClone(saved));
+    expect(parsed.inputs.minStability).toBe('good');
+    expect(parsed.result.autoBestProducts).toBe(260);
+    expect(parsed).toEqual(saved);
   });
 
   it('loads a Round 1 scenario without boxesPerCarton, reading it as null', () => {

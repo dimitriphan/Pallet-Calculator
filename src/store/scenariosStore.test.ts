@@ -77,6 +77,28 @@ describe('scenarios store', () => {
     expect(reloaded.store.getState().scenarios[0]!.inputs.boxesPerCarton).toBeNull();
   });
 
+  it('loads a scenario stored before the minimum stability as Auto', () => {
+    const storage = new FakeStorage();
+    const s = setup(storage).store.getState().save('Old', DEFAULT_INPUTS, result, 1);
+    const old = structuredClone(s) as unknown as { inputs: Record<string, unknown> };
+    delete old.inputs.minStability;
+    storage.setItem(STORAGE_KEYS.scenarios, JSON.stringify({ version: 1, items: [old] }));
+    const reloaded = setup(storage);
+    expect(reloaded.notices).toEqual([]);
+    expect(reloaded.store.getState().scenarios).toEqual([s]);
+    expect(reloaded.store.getState().scenarios[0]!.inputs.minStability).toBe('auto');
+  });
+
+  it('saves and reloads a scenario worked out with a minimum stability', () => {
+    const storage = new FakeStorage();
+    const inputs = { ...DEFAULT_INPUTS, minStability: 'good' as const };
+    const s = setup(storage).store.getState().save('Good only', inputs, optimize(inputs), 0);
+    expect(s.result.autoBestProducts).toBe(260);
+    const reloaded = setup(storage);
+    expect(reloaded.notices).toEqual([]);
+    expect(reloaded.store.getState().scenarios).toEqual([s]);
+  });
+
   it('keeps state and reports when storage is full', () => {
     const storage = new FakeStorage();
     storage.failWrites = true;

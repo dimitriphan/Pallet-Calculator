@@ -11,6 +11,7 @@ import { describeWarning } from '../engine/analytics/stability';
 import { dimsText, roomText, weightText, weightTrimText } from './format';
 import { useUnit } from './useUnit';
 import { Mascot } from './Mascot';
+import { BelowMinimumBadge, MinimumNote, useBelowMinimum } from './MinimumNotes';
 import { StabilityBadge } from './StabilityBadge';
 import { StaleBadge } from './StaleBadge';
 import { useStatusContent } from './StatusMessages';
@@ -43,6 +44,7 @@ export function WhatToBuildCard() {
   const { error, empty } = useStatusContent();
   const heading = useRef<HTMLHeadingElement>(null);
   const unit = useUnit();
+  const belowMinimum = useBelowMinimum();
 
   const showBest = () => {
     select(0);
@@ -87,6 +89,7 @@ export function WhatToBuildCard() {
             </button>
           </div>
         )}
+        <MinimumNote always />
         <Part title="Carton">
           <dl className="bracket divide-y divide-gray-100 dark:divide-harbor-foam/40">
             {carton.map(([label, value]) => (
@@ -153,8 +156,9 @@ export function WhatToBuildCard() {
           )}
           {layout.stability && (
             <div className="space-y-1">
-              <p>
+              <p className="flex flex-wrap items-center gap-1.5">
                 <StabilityBadge stability={layout.stability} className="px-2 py-0.5 text-sm" />
+                {belowMinimum && <BelowMinimumBadge className="px-2 py-0.5 text-sm" />}
               </p>
               {layout.stability.warnings.map((warning) => (
                 <p

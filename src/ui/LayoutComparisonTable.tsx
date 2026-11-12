@@ -17,6 +17,7 @@ import {
   weightTrimText,
   withUnit,
 } from './format';
+import { BelowMinimumBadge, MinimumNote, useBelowMinimum } from './MinimumNotes';
 import { useUnit } from './useUnit';
 import { StabilityBadge } from './StabilityBadge';
 import { StatusMessages } from './StatusMessages';
@@ -56,6 +57,7 @@ export function LayoutComparisonTable() {
   const selectedIndex = useResults((s) => s.selectedIndex);
   const select = useResults((s) => s.select);
   const unit = useUnit();
+  const belowMinimum = useBelowMinimum();
   // Weight is shown only when the result was computed with a box weight.
   const weighed = !!inputs && inputs.weights.productBox !== null;
 
@@ -84,6 +86,7 @@ export function LayoutComparisonTable() {
         </h2>
       </div>
       <StatusMessages />
+      {rows.length > 0 && <MinimumNote />}
       {rows.length > 0 && (
         <div className="overflow-x-auto border border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">
@@ -144,7 +147,16 @@ export function LayoutComparisonTable() {
                   >
                     <td className={td}>{ranked.rank}</td>
                     <td className={td}>
-                      {formatDims(cartonDisplayDims(ranked.layout, 'outer'), unit)}
+                      {belowMinimum ? (
+                        // Under the carton size, the one column wide enough to hold the mark
+                        // without widening the table past its panel.
+                        <span className="flex flex-col items-start gap-0.5">
+                          <span>{formatDims(cartonDisplayDims(ranked.layout, 'outer'), unit)}</span>
+                          <BelowMinimumBadge />
+                        </span>
+                      ) : (
+                        formatDims(cartonDisplayDims(ranked.layout, 'outer'), unit)
+                      )}
                     </td>
                     <td className={`${td} text-right`}>
                       <span className="flex flex-col items-end gap-0.5">

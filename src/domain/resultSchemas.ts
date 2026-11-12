@@ -93,6 +93,9 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   truncated: z.boolean(),
   // Added in Round 2: optional, so results saved before it still load.
   nearestCounts: z.object({ below: num.nullable(), above: num.nullable() }).optional(),
+  // Added in Round 5: only on results worked out with a minimum stability.
+  belowMinimum: z.boolean().optional(),
+  autoBestProducts: num.optional(),
 });
 
 /** Analytics as stored, where fields added after the first release may be missing. */

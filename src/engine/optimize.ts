@@ -1,4 +1,4 @@
-import type { Inputs, Layout, OptimizeResult } from '../domain/types';
+import type { Inputs, Layout, MinStability, OptimizeResult } from '../domain/types';
 import {
   anyCartonFits,
   generateCartonCandidatesWithInfo,
@@ -8,7 +8,7 @@ import { availableVolume, usableHeight, volumeOf } from './packing/geometry';
 import { PINWHEEL_WORK_PER_OPTIMIZE, type PinwheelAllowance } from './packing/pinwheel';
 import { buildLayouts, cartonFitsPallet, type LayerCache } from './packing/stacking';
 import { fitsCount } from './packing/tolerance';
-import { rankLayouts } from './ranking/rank';
+import { rankLayouts, rankWithMinimum } from './ranking/rank';
 import { trimToWeight } from './analytics/weight';
 import { assessStability } from './analytics/stability';
 import { interlockLayers } from './packing/interlock';
@@ -21,6 +21,12 @@ export const TIME_BUDGET_MS = 4000;
  * as a product of a hundredth of an inch, get here); the result is marked truncated.
  */
 export const HARD_LIMIT_MS = 6000;
+
+/**
+ * With a minimum stability, the ranking rates layouts until enough meet it. That walk stops at
+ * the time budget, but always gets this long, even after a search that used the whole budget.
+ */
+export const MIN_RATING_WALK_MS = 500;
 
 /** A candidate is skipped when its upper bound cannot reach the product count of this many layouts. */
 const KEEP_BEST = 30;
@@ -117,17 +123,39 @@ export function optimize(
       built + tooHeavy === 0 ? 'CARTON_EXCEEDS_PALLET' : overWeightReason(i, capped || timedOut);
     return { ...empty(reason), candidatesEvaluated: evaluated };
   }
+  // Then, for every layout the ranking reaches: alternate identical layers turned where that
+  // is free (same boxes; nothing above changes, since product counts and weights stay as they
+  // are), and the result rated. Better-rated layouts win ties on products.
+  const prepare = (l: Layout): Layout => {
+    const interlocked = interlockLayers(l, i);
+    return { ...interlocked, stability: assessStability(interlocked, i) };
+  };
+  // Inputs from before the setting existed have no minimum: Auto.
+  const minimum: MinStability = (i as Partial<Inputs>).minStability ?? 'auto';
+  if (minimum === 'auto') {
+    return {
+      layouts: rankLayouts(layouts, i, undefined, prepare),
+      candidatesEvaluated: evaluated,
+      emptyReason: null,
+      truncated: capped || timedOut,
+    };
+  }
+  // Layouts below the minimum are left out, so the ranking rates further down the list.
+  const walkStart = now();
+  const shouldStop = () => {
+    const t = now();
+    return t - start >= budgetMs && t - walkStart >= MIN_RATING_WALK_MS;
+  };
+  const ranking = rankWithMinimum(layouts, i, minimum, { prepare, shouldStop });
   return {
-    // Then, for every layout the ranking reaches: alternate identical layers turned where
-    // that is free (same boxes; nothing above changes, since product counts and weights stay
-    // as they are), and the result rated. Better-rated layouts win ties on products.
-    layouts: rankLayouts(layouts, i, undefined, (l) => {
-      const interlocked = interlockLayers(l, i);
-      return { ...interlocked, stability: assessStability(interlocked, i) };
-    }),
+    layouts: ranking.layouts,
     candidatesEvaluated: evaluated,
     emptyReason: null,
-    truncated: capped || timedOut,
+    truncated: capped || timedOut || ranking.truncated,
+    ...(ranking.belowMinimum ? { belowMinimum: true } : {}),
+    ...(ranking.autoBestProducts !== undefined
+      ? { autoBestProducts: ranking.autoBestProducts }
+      : {}),
   };
 }
 

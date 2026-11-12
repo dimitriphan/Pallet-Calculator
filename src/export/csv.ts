@@ -19,6 +19,7 @@ import {
   weightLabel,
   withUnit,
 } from '../ui/format';
+import { MIN_STABILITY_LABEL } from '../ui/minStability';
 import type { ExportPayload } from './exportData';
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
@@ -87,6 +88,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Product rotation', ROTATION[i.rotationMode]],
     ['Custom orientations', i.rotationMode === 'custom' ? i.customOrientations.join(' ') : ''],
     ['Keep cartons upright', yesNo(i.keepCartonsUpright)],
+    ['Minimum stability', MIN_STABILITY_LABEL[i.minStability]],
     [L('Usable stacking height'), len(a.pallet.usableHeight)],
     [L('Carton inner length'), len(a.carton.inner.length)],
     [L('Carton inner width'), len(a.carton.inner.width)],

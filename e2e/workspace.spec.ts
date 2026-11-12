@@ -415,6 +415,77 @@ test('every layout carries a stability rating', async ({ page }) => {
   await expect(page.getByText(/^Stability: (Good|Fair|Poor)$/).first()).toBeVisible();
 });
 
+test('a minimum stability leaves layouts out and says what Auto would give', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  const rows = page.getByRole('table', { name: 'Layout comparison' }).locator('tbody tr');
+  const total = page
+    .getByRole('region', { name: 'Production summary' })
+    .locator('div', { has: page.getByText('Total boxes per pallet', { exact: true }) })
+    .locator('dd');
+  const minimum = page.getByRole('radiogroup', { name: 'Minimum stability' });
+
+  // Auto: the most boxes first, and every layout of the defaults is rated Fair.
+  await expect(minimum.getByRole('radio', { name: 'Auto' })).toBeChecked();
+  await expect(total).toHaveText('260');
+  await expect(rows).toHaveCount(5);
+  await expect(rows.first()).toContainText('Fair');
+
+  // Good only: a different list, every layout Good, and the cost of the choice.
+  await minimum.getByRole('radio', { name: 'Good only' }).click();
+  await expect(total).toHaveText('245');
+  await expect(rows).toHaveCount(5);
+  for (const text of await rows.allTextContents()) {
+    expect(text).toContain('Good');
+    expect(text).not.toContain('Fair');
+  }
+  await expect(page.getByText('Auto would give 15 more boxes.')).toBeVisible();
+  await expect(page.getByText('Below your minimum')).toHaveCount(0);
+
+  // Basic view has no control, but says the minimum is in force.
+  await page
+    .getByRole('radiogroup', { name: 'View' })
+    .getByRole('radio', { name: 'Basic' })
+    .click();
+  await expect(page.getByRole('radiogroup', { name: 'Minimum stability' })).toHaveCount(0);
+  const card = page.getByRole('region', { name: 'What to build' });
+  await expect(card).toContainText('Minimum stability: Good only. Auto would give 15 more boxes.');
+  await expect(page.getByText(/minimum stability Good only\./)).toBeVisible();
+
+  // The choice is remembered with the other inputs.
+  await page.reload();
+  await expect(card).toContainText('Minimum stability: Good only.');
+  await expect(total).toHaveText('245');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  await expect(minimum.getByRole('radio', { name: 'Good only' })).toBeChecked();
+
+  // Nothing reaches Good in the pinwheel case: the most stable layouts, each marked.
+  await fillDims(page, 'Pallet limitation', ['Length', 'Width', 'Height'], ['48', '40', '60']);
+  await fillDims(page, 'Product box', ['Length', 'Width', 'Height'], ['16.5', '10.5', '18']);
+  await fillDims(
+    page,
+    'Maximum carton',
+    ['Max length', 'Max width', 'Max height'],
+    ['16.5', '10.5', '18'],
+  );
+  await page.getByLabel('Box leeway', { exact: true }).fill('0');
+  await page.getByLabel('Carton wall thickness', { exact: true }).fill('0');
+  await expect(
+    page.getByText('No layout reaches Good. Showing the most stable found.'),
+  ).toBeVisible();
+  await expect(total).toHaveText('30');
+  await expect(rows.first()).toContainText('Fair');
+  await expect(page.getByText('Below your minimum')).toHaveCount(await rows.count());
+
+  // Fair or better is met, so nothing is marked.
+  await minimum.getByRole('radio', { name: 'Fair or better' }).click();
+  await expect(page.getByText('Below your minimum')).toHaveCount(0);
+  await expect(page.getByText(/No layout reaches/)).toHaveCount(0);
+  await expect(total).toHaveText('30');
+  expect(problems).toEqual([]);
+});
+
 test('the unused-space overlay can be switched on and exported', async ({ page }) => {
   const problems = watchProblems(page);
   await page.goto('/');
