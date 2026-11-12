@@ -39,10 +39,14 @@ const layer = z.object({
 });
 
 const stabilityWarning = z.object({
-  check: z.enum(['stackHeight', 'cartonHeight', 'support', 'columns']),
+  // 'deck' added in Round 5: only on layouts placed by hand.
+  check: z.enum(['stackHeight', 'cartonHeight', 'support', 'columns', 'deck']),
   level: z.enum(['caution', 'serious']),
   value: num,
   layer: num.optional(),
+  // Added in Round 5, on warnings of layouts placed by hand only.
+  freeStanding: z.literal(true).optional(),
+  cartons: num.optional(),
 });
 
 const stability = z.object({
@@ -189,6 +193,9 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
         cartonHeight: z.object({ ratio: num, layer: num }).nullable(),
         support: z.object({ share: num, layer: num }).nullable(),
         columns: z.object({ layers: num, from: num }).nullable(),
+        // Added in Round 5, on layouts placed by hand only.
+        freeStandingGroups: num.optional(),
+        deck: z.object({ share: num, cartons: num }).optional(),
       }),
       turnedLayers: z.array(num),
     })

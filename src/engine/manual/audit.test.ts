@@ -125,8 +125,22 @@ describe('stability of a manual layout', () => {
     const same = measureStability(SAME);
     expect(same.support?.share).toBe(1);
     expect(same.columns?.layers).toBe(SAME.layers.length);
-    // Stack height over the shorter side of the bottom layer's bounding box (60 x 43).
-    expect(same.stackHeightRatio).toBeCloseTo((SAME.layers.length * 5) / 43, 12);
+    // A and C stand 1 in apart, alongside for 17 in: one group, 25 x 43. B is 10 in from C:
+    // a group of its own, 25 x 17. The stack height is over the shorter side of the narrower
+    // group (17), not of the bottom layer's bounding box (60 x 43) as for a calculated layout.
+    expect(same.freeStandingGroups).toBe(2);
+    expect(same.stackHeightRatio).toBeCloseTo((SAME.layers.length * 5) / 17, 12);
+    expect(SAME.stability!.warnings[0]).toMatchObject({ check: 'stackHeight', freeStanding: true });
+    // The pallet is at 1..51 by 1..43 of the frame: A has 21 x 14 of its 25 x 17 on it, B
+    // 19 x 17, C all of it. Measured only with the inputs.
+    expect(same.deck).toBeUndefined();
+    expect(measureStability(SAME, I).deck).toEqual({ share: 294 / 425, cartons: 2 });
+    expect(SAME.stability!.warnings.at(-1)).toEqual({
+      check: 'deck',
+      level: 'serious',
+      value: 294 / 425,
+      cartons: 2,
+    });
   });
 });
 

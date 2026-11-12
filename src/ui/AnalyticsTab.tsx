@@ -195,7 +195,13 @@ function StabilityRows({ stability: s }: { stability: NonNullable<Analytics['sta
                 ],
               ] as [string, ReactNode][])
             : []),
-          ['Stack height ÷ shorter side of base', ratioText(m.stackHeightRatio)],
+          [
+            // A layout placed by hand whose bottom layer stands in separate groups.
+            (m.freeStandingGroups ?? 1) > 1
+              ? 'Stack height ÷ shorter side of the narrowest free-standing group'
+              : 'Stack height ÷ shorter side of base',
+            ratioText(m.stackHeightRatio),
+          ],
           [
             'Carton height ÷ shorter base side, worst layer',
             m.cartonHeight ? (
@@ -212,6 +218,14 @@ function StabilityRows({ stability: s }: { stability: NonNullable<Analytics['sta
               '—'
             ),
           ],
+          ...(m.deck
+            ? ([
+                [
+                  'Least share of a bottom carton resting on the pallet',
+                  <span className="whitespace-nowrap">{shareText(m.deck.share)}</span>,
+                ],
+              ] as [string, ReactNode][])
+            : []),
           [
             'Most identical layers in straight columns',
             <span className="whitespace-nowrap">

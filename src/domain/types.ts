@@ -123,7 +123,8 @@ export interface Layer extends LayerPattern {
 }
 
 export type StabilityRating = 'good' | 'fair' | 'poor';
-export type StabilityCheck = 'stackHeight' | 'cartonHeight' | 'support' | 'columns';
+/** 'deck' (Round 5) is only made on a layout placed by hand. */
+export type StabilityCheck = 'stackHeight' | 'cartonHeight' | 'support' | 'columns' | 'deck';
 
 /**
  * One stability check over its caution or serious threshold. `value` is the measured ratio,
@@ -134,6 +135,13 @@ export interface StabilityWarning {
   level: 'caution' | 'serious';
   value: number;
   layer?: number;
+  /**
+   * 'stackHeight' on a layout placed by hand whose bottom layer stands in several separate
+   * groups: `value` is the ratio of the worst free-standing group, not of the whole load.
+   */
+  freeStanding?: true;
+  /** 'deck': how many bottom-layer cartons have less than the caution share on the pallet. */
+  cartons?: number;
 }
 
 export interface Stability {

@@ -254,7 +254,7 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
     },
     weight: weightAnalytics(l, i),
     stability: l.stability
-      ? { ...l.stability, measures: measureStability(l), turnedLayers: turnedLayerNumbers(l) }
+      ? { ...l.stability, measures: measureStability(l, i), turnedLayers: turnedLayerNumbers(l) }
       : null,
   };
 }
