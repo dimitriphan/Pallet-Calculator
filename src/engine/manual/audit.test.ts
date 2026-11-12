@@ -15,6 +15,7 @@ import {
 import { unusedSpace } from '../analytics/unusedSpace';
 import { availableVolume, usableFootprint, usableHeight } from '../packing/geometry';
 import { interlockLayers, turnBlocks } from '../packing/interlock';
+import { optimize } from '../optimize';
 import { layoutMetrics } from '../packing/metrics';
 import { cartonPlacements, layerOffset } from '../packing/positions';
 import { layoutSignature } from '../packing/stacking';
@@ -193,6 +194,19 @@ describe('unused space with overhanging cartons', () => {
   });
 });
 
+/** Used, remaining and utilisation are one measurement inside the envelope. */
+function reconciles(a: ReturnType<typeof computeAnalytics>, layout: Layout) {
+  const t = a.totals;
+  expect(t.volumeUsed + t.remainingVolume).toBeCloseTo(t.volumeAvailable, 6);
+  expect(t.volumeUsed).toBeGreaterThanOrEqual(0);
+  expect(t.utilizationPct).toBeCloseTo((t.volumeUsed / t.volumeAvailable) * 100, 9);
+  const { L: l, W: w, H: h } = layout.carton.outer;
+  expect(t.volumeUsed + (t.volumeOutsideEnvelope ?? 0)).toBeCloseTo(
+    layout.totalCartons * l * w * h,
+    6,
+  );
+}
+
 describe('analytics of a manual layout', () => {
   it('has no negative or NaN figure, and what is left adds up inside the envelope', () => {
     for (const layout of [L, SAME]) {
@@ -205,12 +219,19 @@ describe('analytics of a manual layout', () => {
       );
       expect(a.totals.utilizationPct).toBeGreaterThanOrEqual(0);
       expect(a.totals.utilizationPct).toBeLessThanOrEqual(100);
+      reconciles(a, layout);
+      expect(a.totals.volumeOutsideEnvelope).toBeGreaterThan(0);
       expect(a.pallet.remainingFootprintArea).toBeGreaterThanOrEqual(0);
       expect(a.pallet.remainingHeight).toBeGreaterThanOrEqual(0);
       expect(a.totals.products).toBe(layout.totalProducts);
       expect(a.weight?.total).toBe(40 + layout.totalCartons * 9);
     }
     const a = computeAnalytics(SAME, I);
+    // Inside 52 x 44, 1095 of the cartons' 3 x 425 = 1275 sq in, 13 layers of 5.
+    expect(a.totals.volumeUsed).toBeCloseTo(1095 * 65, 6);
+    expect(a.totals.volumeOutsideEnvelope).toBeCloseTo((1275 - 1095) * 65, 6);
+    expect(a.totals.utilizationPct).toBeCloseTo((1095 * 65 * 100) / availableVolume(I), 9);
+    expect(a.pallet.volumeUtilizationPct).toBe(a.totals.utilizationPct);
     expect(a.pallet.remainingFootprintArea).toBeCloseTo(2288 - 1095, 9);
     expect(a.pallet.loadLength).toBe(60);
     expect(a.pallet.loadWidth).toBe(43);
@@ -236,12 +257,63 @@ describe('analytics of a manual layout', () => {
     );
     const a = computeAnalytics(layout, small);
     finite(a);
-    // Carton volume is far more than the envelope holds: nothing may go negative.
-    expect(a.totals.volumeUsed).toBeGreaterThan(a.totals.volumeAvailable);
+    // Carton volume is far more than the envelope holds: what is used is only the part of it
+    // inside, the rest is reported apart, and nothing goes negative.
+    const cartonVolume = layout.totalCartons * 25 * 17 * 5;
+    expect(cartonVolume).toBeGreaterThan(a.totals.volumeAvailable);
+    expect(a.totals.volumeUsed).toBeLessThanOrEqual(a.totals.volumeAvailable);
+    reconciles(a, layout);
     expect(a.totals.remainingVolume).toBeGreaterThanOrEqual(0);
     expect(a.pallet.remainingFootprintArea).toBeGreaterThanOrEqual(0);
     expect(a.totals.utilizationPct).toBeLessThanOrEqual(100);
     expect(a.pallet.volumeUtilizationPct).toBeLessThanOrEqual(100);
+  });
+
+  it('a layout wholly inside the envelope uses exactly its carton volume, none outside', () => {
+    const inside = [
+      { x: 0, y: 0, rotated: false },
+      { x: 25, y: 0, rotated: false },
+      { x: 0, y: 17, rotated: true },
+    ];
+    for (const upperLayers of ['same', 'alternate'] as const) {
+      const { layout, flags } = buildManualLayout(manualSpec({ cartons: inside, upperLayers }), I);
+      expect(flags).toEqual([]);
+      const a = computeAnalytics(layout, I);
+      expect(a.totals.volumeUsed).toBeCloseTo(layout.totalCartons * 25 * 17 * 5, 6);
+      expect(a.totals.volumeOutsideEnvelope).toBe(0);
+      reconciles(a, layout);
+      expect(a.pallet.remainingHeight).toBe(usableHeight(I) - layout.layers.length * 5);
+    }
+  });
+
+  it('a carton above the height limit: no remaining height, and its top is outside', () => {
+    const low = { ...I, pallet: { ...I.pallet, height: 8 } }; // 3 usable, carton 5 tall
+    const inside = [{ x: 0, y: 0, rotated: false }];
+    const { layout, flags } = buildManualLayout(manualSpec({ cartons: inside }, low), low);
+    expect(flags.map((f) => f.kind)).toEqual(['overHeight']);
+    const a = computeAnalytics(layout, low);
+    finite(a);
+    // Not -2: the clamp.
+    expect(a.pallet.remainingHeight).toBe(0);
+    expect(a.pallet.totalLoadHeight).toBe(10);
+    expect(a.totals.volumeUsed).toBeCloseTo(25 * 17 * 3, 6);
+    expect(a.totals.volumeOutsideEnvelope).toBeCloseTo(25 * 17 * 2, 6);
+    expect(a.totals.remainingVolume).toBeCloseTo((2288 - 425) * 3, 6);
+    reconciles(a, layout);
+  });
+
+  it('a calculated layout keeps its figures: carton volume, the subtraction, no outside figure', () => {
+    const result = optimize(I);
+    expect(result.layouts.length).toBeGreaterThan(0);
+    for (const { layout } of result.layouts) {
+      const a = computeAnalytics(layout, I);
+      const { L: l, W: w, H: h } = layout.carton.outer;
+      expect(a.totals.volumeUsed).toBe(layout.totalCartons * l * w * h);
+      expect(a.totals.remainingVolume).toBe(a.totals.volumeAvailable - a.totals.volumeUsed);
+      expect(a.totals.utilizationPct).toBe((a.totals.volumeUsed / a.totals.volumeAvailable) * 100);
+      expect('volumeOutsideEnvelope' in a.totals).toBe(false);
+      expect(a.pallet.remainingHeight).toBe(a.pallet.usableHeight - (a.pallet.totalLoadHeight - 5));
+    }
   });
 
   it('copes with a layout of no layers', () => {

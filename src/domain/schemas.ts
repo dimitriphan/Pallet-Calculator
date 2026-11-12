@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DEFAULT_INPUTS, PALLET_HEIGHT } from './constants';
 import { computeAnalytics, type Analytics } from '../engine/analytics/analytics';
+import { manualLayoutListSchema } from './manualSchemas';
 import { analyticsSchema, optimizeResultSchema } from './resultSchemas';
 import type { Inputs, InputsDraft, OrientationCode, Preset, Scenario, WeightInputs } from './types';
 
@@ -130,7 +131,12 @@ export const scenarioSchema: z.ZodType<Scenario> = z
     result: optimizeResultSchema,
     selectedIndex: z.number().int().min(0),
     analytics: analyticsSchema.nullable(),
+    // Added in Round 5; absent on older scenarios. An entry that cannot be read is dropped.
+    manualLayouts: manualLayoutListSchema.optional(),
   })
+  .transform(({ manualLayouts, ...rest }) =>
+    manualLayouts === undefined ? rest : { ...rest, manualLayouts },
+  )
   .transform((s): Scenario => {
     const a = s.analytics;
     const complete =

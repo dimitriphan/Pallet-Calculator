@@ -149,6 +149,8 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
     // recomputes analytics when they are missing).
     headroomVolume: num.optional(),
     layerGapVolume: num.optional(),
+    // Added in Round 5; present only for a layout placed by hand.
+    volumeOutsideEnvelope: num.optional(),
   }),
   target: z.object({
     status: z.enum(['none', 'met', 'exceeded', 'notAchievable']),

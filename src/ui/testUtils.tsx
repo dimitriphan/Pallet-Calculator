@@ -6,7 +6,9 @@ import type { Inputs } from '../domain/types';
 import { optimize } from '../engine/optimize';
 import { FakeStorage } from '../persistence/testStorage';
 import { createInputsStore } from '../store/inputsStore';
+import { createManualStores } from '../store/manualStores';
 import { samplePresets } from '../data/samplePresets';
+import { manualLayoutSpecSchema } from '../domain/manualSchemas';
 import { presetSchema, scenarioSchema } from '../domain/schemas';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { createLocalStorageRepository } from '../persistence/localStorageRepository';
@@ -56,7 +58,16 @@ export function makeStores(
     () => {},
   );
   const prefs = createPrefsStore(new FakeStorage(), { viewMode, theme: 'light' });
-  return { inputs, results, scene, presets, scenarios, prefs };
+  const manual = createManualStores({
+    inputs,
+    results,
+    repo: createLocalStorageRepository({
+      key: STORAGE_KEYS.manualLayouts,
+      schema: manualLayoutSpecSchema,
+      storage: new FakeStorage(),
+    }),
+  });
+  return { inputs, results, scene, presets, scenarios, prefs, ...manual };
 }
 
 /** Lets the debounce elapse and any optimizer run settle. */

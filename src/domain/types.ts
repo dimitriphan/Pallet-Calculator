@@ -1,4 +1,5 @@
 import type { Analytics } from '../engine/analytics/analytics';
+import type { ManualLayoutSpec } from '../engine/manual/build';
 import type { Unit } from '../engine/units/units';
 
 export interface Dims {
@@ -233,4 +234,10 @@ export interface Scenario {
   result: OptimizeResult;
   selectedIndex: number;
   analytics: Analytics | null;
+  /**
+   * The manual layouts present when the scenario was saved; loading the scenario puts these
+   * in place of the ones present. Absent on a scenario saved before manual layouts existed:
+   * loading that one leaves the manual layouts as they are.
+   */
+  manualLayouts?: ManualLayoutSpec[];
 }

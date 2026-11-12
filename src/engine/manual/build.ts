@@ -31,7 +31,6 @@ import {
 } from './carton';
 import {
   cartonBase,
-  cartonsOf,
   explodePattern,
   manualPattern,
   overhangOf,
@@ -85,7 +84,14 @@ export type ManualFlag =
   /** Cartons overlap (only possible in stored data changed by hand): `pairs` of them. */
   | { kind: 'overlap'; pairs: number }
   /** The boxes stand a way up the rotation inputs would not let the search use. A note. */
-  | { kind: 'orientationNotAllowed' };
+  | { kind: 'orientationNotAllowed' }
+  /**
+   * The spec is not one the editor can make (only possible in data changed by hand): a count
+   * that is not a whole number of 1 or more, a position or size that is not a finite number,
+   * an unknown facing, side down or upper-layer choice. Nothing is built from it: the layout
+   * has no layers. Cannot be saved.
+   */
+  | { kind: 'invalid' };
 
 /** The flags that stop a layout being saved. */
 const BLOCKING: ReadonlySet<ManualFlag['kind']> = new Set([
@@ -93,6 +99,7 @@ const BLOCKING: ReadonlySet<ManualFlag['kind']> = new Set([
   'cannotFit',
   'empty',
   'overlap',
+  'invalid',
 ]);
 
 /** Whether a build may be saved: no flag that the spec says cannot be saved. */
@@ -112,6 +119,71 @@ export interface ManualBuild {
    * leeway are the stored ones (the pallet, limits and weights are still the current ones).
    */
   inputs: Inputs;
+}
+
+const FACINGS: readonly string[] = ['LWH', 'LHW', 'WLH', 'WHL', 'HLW', 'HWL'];
+const SIDES_DOWN: readonly string[] = ['base', 'side', 'end'];
+const isCount = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 1;
+const isSize = (n: unknown) => typeof n === 'number' && Number.isFinite(n) && n > 0;
+const isAmount = (n: unknown) => typeof n === 'number' && Number.isFinite(n) && n >= 0;
+
+/** Whether a design is one the editor can make: whole counts of 1 or more, a known facing. */
+export function isValidDesign(design: CartonDesign): boolean {
+  const c = design?.counts;
+  return (
+    !!c &&
+    isCount(c.length) &&
+    isCount(c.width) &&
+    isCount(c.height) &&
+    FACINGS.includes(design.facing) &&
+    SIDES_DOWN.includes(design.sideDown)
+  );
+}
+
+/**
+ * Whether a spec is one the editor can make: a valid design, every carton at a finite
+ * position, a known upper-layer choice, and finite positive sizes in `madeFor`. The arithmetic
+ * below does not survive anything else (NaN and negative totals), so `buildManualLayout`
+ * builds nothing from a spec that fails this and flags it 'invalid'.
+ */
+export function isValidSpec(spec: ManualLayoutSpec): boolean {
+  const m = spec.madeFor;
+  return (
+    isValidDesign(spec.design) &&
+    Array.isArray(spec.cartons) &&
+    spec.cartons.every(
+      (c) => !!c && Number.isFinite(c.x) && Number.isFinite(c.y) && typeof c.rotated === 'boolean',
+    ) &&
+    (spec.upperLayers === 'same' || spec.upperLayers === 'alternate') &&
+    !!m &&
+    !!m.product &&
+    !!m.outer &&
+    [m.product.length, m.product.width, m.product.height, m.outer.L, m.outer.W, m.outer.H].every(
+      isSize,
+    ) &&
+    isAmount(m.wallThickness) &&
+    isAmount(m.leeway)
+  );
+}
+
+/** What is returned for a spec that fails `isValidSpec`: no layers, one blocking flag. */
+function invalidBuild(spec: ManualLayoutSpec, inputs: Inputs): ManualBuild {
+  const carton = designCarton(
+    { counts: { length: 1, width: 1, height: 1 }, facing: 'LWH' },
+    inputs,
+  );
+  return {
+    layout: {
+      id: MANUAL_ID_PREFIX + spec.id,
+      carton,
+      layers: [],
+      totalCartons: 0,
+      totalProducts: 0,
+    },
+    flags: [{ kind: 'invalid' }],
+    status: 'current',
+    inputs,
+  };
 }
 
 /** What `madeFor` holds for a design under the inputs: record it when a layout is saved. */
@@ -147,7 +219,7 @@ function stack(
   upperLayers: UpperLayers,
   carton: CartonCandidate,
   inputs: Inputs,
-): { layers: Layer[]; turned: LayerPattern | null } {
+): Layer[] {
   let turned: LayerPattern | null = null;
   if (upperLayers === 'alternate' && pattern.blocks.length > 0) {
     const { a, b } = cartonBase(carton, pattern.vertical);
@@ -161,7 +233,7 @@ function stack(
     const z = k * pattern.height;
     layers.push(k % 2 === 1 && turned ? { ...turned, z, turned: true } : { ...pattern, z });
   }
-  return { layers, turned };
+  return layers;
 }
 
 /**
@@ -175,6 +247,7 @@ function stack(
  * Cheap enough to call on every change in the editor (pass the working layer in a spec).
  */
 export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): ManualBuild {
+  if (!isValidSpec(spec)) return invalidBuild(spec, inputs);
   const status = isOutOfDate(spec, inputs) ? 'outOfDate' : 'current';
   // An out-of-date layout is shown as it was made: with the carton it was made for.
   const built: Inputs =
@@ -204,7 +277,7 @@ export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): Manua
   const fit = pattern.cartonCount === 0 ? 0 : fitsCount(usableHeight(built), pattern.height);
   // A carton over the height limit still stands as one layer, flagged, so there is a load to show.
   const count = pattern.cartonCount === 0 ? 0 : Math.max(1, fit);
-  const { layers, turned } = stack(pattern, count, spec.upperLayers, carton, built);
+  const layers = stack(pattern, count, spec.upperLayers, carton, built);
   const id = MANUAL_ID_PREFIX + spec.id;
   const totalCartons = count * pattern.cartonCount;
   let layout: Layout = {
@@ -233,15 +306,10 @@ export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): Manua
     layout = { ...trimmed, id };
   }
 
-  // Overhang is counted on the layers really stacked: the layer as built, and its turned twin.
-  let overhang = overhangOf(spec.cartons, base, usable);
-  if (turned && layout.layers.some((layer) => layer.turned)) {
-    const twin = overhangOf(cartonsOf(turned), base, usable);
-    overhang = {
-      cartons: Math.max(overhang.cartons, twin.cartons),
-      by: Math.max(overhang.by, twin.by),
-    };
-  }
+  // Counted on the layer as built. A turned layer needs no count of its own: the half turn is
+  // about the centre of the usable footprint, which maps the footprint onto itself, so the
+  // turned layer has as many cartons outside it, reaching exactly as far.
+  const overhang = overhangOf(spec.cartons, base, usable);
   if (overhang.cartons > 0) flags.push({ kind: 'overhang', ...overhang });
   if (cf.orientationNotAllowed) flags.push({ kind: 'orientationNotAllowed' });
 

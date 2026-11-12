@@ -15,6 +15,8 @@ import {
   buildManualLayout,
   canSave,
   isOutOfDate,
+  isValidDesign,
+  isValidSpec,
   madeForOf,
   MANUAL_ID_PREFIX,
   specFromLayout,
@@ -152,20 +154,26 @@ describe('buildManualLayout', () => {
       expect(layout.layers.every((l) => !l.turned)).toBe(true);
     });
 
-    it('flags the overhang a turn causes', () => {
-      // Inside as built, but 2 in from the left only: turned, with overhang 0, still inside.
+    it('a turned layer overhangs exactly as the layer as built does, on the other side', () => {
       const inputs = asInputs({ overhang: 2 });
-      const inside = buildManualLayout(
-        spec({ cartons: [at(0, 0)], upperLayers: 'alternate' }, inputs),
-        inputs,
-      );
-      expect(inside.flags).toEqual([]);
-      // A carton hanging off the left: its turned twin hangs off the right by as much.
-      const out = buildManualLayout(
-        spec({ cartons: [at(-3, 0), at(22, 0)], upperLayers: 'alternate' }, inputs),
-        inputs,
-      );
-      expect(flag(out.flags, 'overhang')).toEqual({ kind: 'overhang', cartons: 1, by: 3 });
+      const { x: ux } = usableFootprint(inputs);
+      const { a: baseA } = cartonBase(designCarton(DESIGN, inputs), 'H');
+      // One carton hanging 3 in off the left; nothing near the right edge.
+      const cartons = [at(-3, 0), at(22, 0)];
+      const same = buildManualLayout(spec({ cartons, upperLayers: 'same' }, inputs), inputs);
+      const alt = buildManualLayout(spec({ cartons, upperLayers: 'alternate' }, inputs), inputs);
+      expect(flag(same.flags, 'overhang')).toEqual({ kind: 'overhang', cartons: 1, by: 3 });
+      // The half turn is about the centre of the usable footprint, so the flag is the same.
+      expect(alt.flags).toEqual(same.flags);
+      // And the turned layer really does hang off the right by as much.
+      const turned = alt.layout.layers[1]!;
+      expect(turned.turned).toBe(true);
+      const right = Math.max(...turned.blocks.map((blk) => blk.x + baseA));
+      const left = Math.min(...turned.blocks.map((blk) => blk.x));
+      expect(right).toBeCloseTo(ux + 3, 9);
+      expect(left).toBeGreaterThanOrEqual(0);
+      const placed = cartonPlacements(alt.layout, inputs).filter((c) => c.layerIndex === 1);
+      expect(Math.max(...placed.map((c) => c.x + c.dx))).toBeCloseTo(ux + 3, 9);
     });
   });
 
@@ -512,4 +520,60 @@ describe('a manual copy of a calculated layout', () => {
     expect(trimmed).toBeGreaterThan(5);
     expect(mixed).toBeGreaterThan(5);
   }, 120_000);
+});
+
+describe('a spec the editor could not have made', () => {
+  const bad: [string, Partial<ManualLayoutSpec>][] = [
+    ['a position that is NaN', { cartons: [at(NaN, 0)] }],
+    ['a position that is infinite', { cartons: [at(0, Infinity)] }],
+    ['a position that is not a number', { cartons: [{ x: '1', y: 0, rotated: false } as never] }],
+    ['a turn that is not a boolean', { cartons: [{ x: 0, y: 0, rotated: 1 } as never] }],
+    ['a missing carton', { cartons: [null as never] }],
+    ['cartons that are not a list', { cartons: null as never }],
+    ['a count of 0', { design: { ...DESIGN, counts: { length: 0, width: 2, height: 1 } } }],
+    ['a count of 1.5', { design: { ...DESIGN, counts: { length: 2, width: 1.5, height: 1 } } }],
+    ['a count of -1', { design: { ...DESIGN, counts: { length: 2, width: 2, height: -1 } } }],
+    [
+      'a count that is NaN',
+      { design: { ...DESIGN, counts: { length: NaN, width: 2, height: 1 } } },
+    ],
+    ['an unknown facing', { design: { ...DESIGN, facing: 'XYZ' as never } }],
+    ['an unknown side down', { design: { ...DESIGN, sideDown: 'top' as never } }],
+    ['an unknown upper-layer choice', { upperLayers: 'spiral' as never }],
+  ];
+
+  it.each(bad)('%s is refused: flagged invalid, nothing built, cannot be saved', (_, over) => {
+    const s = spec(over);
+    expect(isValidSpec(s)).toBe(false);
+    const build = buildManualLayout(s, BASE);
+    expect(build.flags).toEqual([{ kind: 'invalid' }]);
+    expect(canSave(build.flags)).toBe(false);
+    expect(build.layout).toMatchObject({
+      id: MANUAL_ID_PREFIX + s.id,
+      layers: [],
+      totalCartons: 0,
+      totalProducts: 0,
+    });
+    expect(Number.isFinite(build.layout.carton.boxesPerCarton)).toBe(true);
+  });
+
+  it.each([
+    ['a product size of 0', { product: { length: 0, width: 8, height: 4 } }],
+    ['an outer size that is NaN', { outer: { L: NaN, W: 17, H: 5 } }],
+    ['a negative wall thickness', { wallThickness: -1 }],
+    ['an infinite leeway', { leeway: Infinity }],
+  ])('%s in madeFor is refused', (_, over) => {
+    const good = spec();
+    const s = { ...good, madeFor: { ...good.madeFor, ...over } };
+    expect(isValidSpec(s)).toBe(false);
+    expect(buildManualLayout(s, BASE).flags).toEqual([{ kind: 'invalid' }]);
+  });
+
+  it('isValidDesign and isValidSpec pass what the editor makes', () => {
+    expect(isValidDesign(DESIGN)).toBe(true);
+    expect(isValidSpec(spec())).toBe(true);
+    expect(isValidSpec(spec({ cartons: [] }))).toBe(true);
+    expect(isValidSpec(spec({ cartons: [at(-30.5, 1e6, true)] }))).toBe(true);
+    expect(flag(buildManualLayout(spec(), BASE).flags, 'invalid')).toBeUndefined();
+  });
 });

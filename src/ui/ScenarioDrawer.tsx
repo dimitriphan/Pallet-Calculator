@@ -36,7 +36,7 @@ export function ScenarioDrawer() {
 }
 
 function Drawer({ onClose }: { onClose(): void }) {
-  const { inputs, results, scenarios: store } = useStores();
+  const { inputs, results, scenarios: store, manualLayouts } = useStores();
   const scenarios = useScenarios((s) => s.scenarios);
   const ready = useResults((s) => s.status === 'ready' && s.result !== null && s.inputs !== null);
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
@@ -44,13 +44,19 @@ function Drawer({ onClose }: { onClose(): void }) {
 
   const saveCurrent = (name: string) => {
     const { inputs: resultInputs, result, selectedIndex } = results.getState();
-    if (resultInputs && result) store.getState().save(name, resultInputs, result, selectedIndex);
+    if (resultInputs && result) {
+      const manual = manualLayouts.getState().specs;
+      store.getState().save(name, resultInputs, result, selectedIndex, manual);
+    }
     toList();
   };
 
   const load = (s: Scenario) => {
     inputs.getState().replaceInputs(s.inputs);
     results.getState().restore(s.inputs, s.result, s.selectedIndex);
+    // The scenario's manual layouts take the place of the ones present, as its inputs and
+    // result do. One saved before manual layouts existed has none to give and changes none.
+    if (s.manualLayouts) manualLayouts.getState().replaceAll(s.manualLayouts);
     onClose();
   };
 

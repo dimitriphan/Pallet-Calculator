@@ -11,7 +11,8 @@ import { BuildSheetDialog } from './BuildSheetDialog';
 import { useUnit } from './useUnit';
 import { BUTTON } from './ModalDialog';
 import type { ViewMode } from '../store/prefsStore';
-import { usePrefs, useResults, useScene } from './StoreContext';
+import { usePrefs, useScene } from './StoreContext';
+import { useExportSource, useSelectedLayout } from './useSelectedLayout';
 
 type Format = 'pdf' | 'json' | 'csv' | 'png';
 
@@ -39,10 +40,9 @@ const ITEM =
  * (Basic mode offers the build sheet and PNG).
  */
 export function ExportMenu() {
-  const inputs = useResults((s) => s.inputs);
-  const result = useResults((s) => s.result);
-  const selectedIndex = useResults((s) => s.selectedIndex);
-  const stale = useResults((s) => s.stale);
+  // The selected layout, calculated or manual, read through the one selection.
+  const hasLayout = useSelectedLayout() !== null;
+  const exportSource = useExportSource();
   const captureViews = useScene((s) => s.captureViews);
   const viewMode = usePrefs((s) => s.viewMode);
   const unit = useUnit();
@@ -53,7 +53,6 @@ export function ExportMenu() {
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
 
-  const hasLayout = !!inputs && !!result?.layouts[selectedIndex];
   const disabledFor = (f: Format) => !hasLayout || (f === 'png' && !captureViews);
   const titleFor = (f: Format) =>
     !hasLayout ? NO_LAYOUT : f === 'png' && !captureViews ? NO_3D : undefined;
@@ -130,7 +129,9 @@ export function ExportMenu() {
 
   const saveBuildSheet = async (jobName: string) => {
     try {
-      if (!inputs || !result) throw new Error('No layout');
+      const source = exportSource();
+      if (!source) throw new Error('No layout');
+      const { inputs, result, selectedIndex, stale } = source;
       const now = new Date();
       const sheet = buildSheetContent({
         inputs,
@@ -156,7 +157,9 @@ export function ExportMenu() {
 
   const choose = async (format: Format) => {
     close(true);
-    if (!inputs || !result) return;
+    const source = exportSource();
+    if (!source) return;
+    const { inputs, result, selectedIndex, stale } = source;
     if (format === 'pdf') {
       setSheetDialog(true);
       return;

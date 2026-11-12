@@ -54,7 +54,8 @@ const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; class
 export function LayoutComparisonTable() {
   const result = useResults((s) => s.result);
   const inputs = useResults((s) => s.inputs);
-  const selectedIndex = useResults((s) => s.selectedIndex);
+  // While a manual layout is selected no calculated row is.
+  const selectedIndex = useResults((s) => (s.selectedManualId === null ? s.selectedIndex : -1));
   const select = useResults((s) => s.select);
   const unit = useUnit();
   const belowMinimum = useBelowMinimum();

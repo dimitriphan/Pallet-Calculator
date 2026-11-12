@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import { scenarioSchema } from '../domain/schemas';
+import { manualSpec } from '../engine/manual/testSupport';
 import { optimize } from '../engine/optimize';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { createLocalStorageRepository } from '../persistence/localStorageRepository';
@@ -134,5 +135,26 @@ describe('scenarios store', () => {
     expect(tabB.getState().scenarios.map((x) => x.name)).toEqual(['A', 'B']);
     tabA.getState().refresh();
     expect(tabA.getState().scenarios.map((x) => x.name)).toEqual(['A', 'B']);
+  });
+
+  it('saves the manual layouts given with the scenario, as a copy, and reads them back', () => {
+    const { store, storage } = setup();
+    const layouts = [manualSpec({ id: 'a' }), manualSpec({ id: 'b', name: 'Manual 2' })];
+    const s = store.getState().save('With layouts', DEFAULT_INPUTS, result, 0, layouts);
+    expect(s.manualLayouts).toEqual(layouts);
+    expect(s.manualLayouts).not.toBe(layouts);
+    expect(s.manualLayouts![0]).not.toBe(layouts[0]);
+    expect(setup(storage).store.getState().scenarios[0]!.manualLayouts).toEqual(layouts);
+    expect(store.getState().duplicate(s.id).manualLayouts).toEqual(layouts);
+    expect(store.getState().save('None', DEFAULT_INPUTS, result, 0, []).manualLayouts).toEqual([]);
+  });
+
+  it('a scenario saved without manual layouts has no such field, as before Round 5', () => {
+    const { store, storage } = setup();
+    const s = store.getState().save('Old style', DEFAULT_INPUTS, result, 0);
+    expect('manualLayouts' in s).toBe(false);
+    const read = setup(storage).store.getState().scenarios[0]!;
+    expect('manualLayouts' in read).toBe(false);
+    expect(read).toEqual(s);
   });
 });

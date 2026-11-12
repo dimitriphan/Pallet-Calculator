@@ -168,6 +168,22 @@ describe('turnCarton', () => {
     expect(turned?.[0]).toEqual(at(10, 6, true));
     assertNoOverlap(turned!, BASE);
   });
+  it('keeps the right-edge corner on the near side when the left corners are taken', () => {
+    // 10..20 x 10..16, turned 6 x 10. A neighbour over the left part of the far side
+    // (4..14 x 16..22) is in the way of the minimum corner only: turned against its own
+    // right edge (x = 14) the carton clears it.
+    const turned = turnCarton([at(10, 10), at(4, 16)], 0, BASE, USABLE);
+    expect(turned?.[0]).toEqual(at(14, 10, true));
+    assertNoOverlap(turned!, BASE);
+  });
+  it('keeps the right-edge corner on the far side when the other three are taken', () => {
+    // A neighbour across the whole far side takes both near-side corners; one over the left
+    // part of the near side (4..14 x 4..10) takes the left far-side corner. What is left is
+    // the turn about the carton's right, far corner: 14..20 x 6..16.
+    const turned = turnCarton([at(10, 10), at(10, 16), at(4, 4)], 0, BASE, USABLE);
+    expect(turned?.[0]).toEqual(at(14, 6, true));
+    assertNoOverlap(turned!, BASE);
+  });
   it('is refused when the turned carton would overlap wherever it is put', () => {
     // Boxed in by a ring of cartons two deep.
     const ring: ManualCarton[] = [at(10, 12)];

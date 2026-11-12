@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
 import type { Inputs, Layout } from '../domain/types';
 import { cartonPlacements, type PlacedCarton } from '../engine/packing/positions';
-import { selectSelected } from '../store/resultsStore';
-import { useResults } from '../ui/StoreContext';
+import { useSelectedLayout } from '../ui/useSelectedLayout';
 import { loadBounds, measuredBounds, type SceneBounds } from './transforms';
 
 export interface SceneData {
   layout: Layout | null;
-  /** The inputs the shown result was computed from, never the live draft. */
+  /**
+   * The inputs the shown layout was built from, never the live draft: a calculated layout's
+   * calculation, or the inputs a manual layout was last checked with.
+   */
   inputs: Inputs | null;
   cartons: PlacedCarton[];
   /** The load with its pallet: camera framing and captures. */
@@ -16,11 +18,14 @@ export interface SceneData {
   measured: SceneBounds;
 }
 
-/** The selected layout and the inputs it was computed from, with derived placements. */
+/**
+ * The selected layout, calculated or manual, and the inputs it was built from, with derived
+ * placements.
+ */
 export function useSceneData(): SceneData {
-  const ranked = useResults(selectSelected);
-  const inputs = useResults((s) => s.inputs);
-  const layout = inputs ? (ranked?.layout ?? null) : null;
+  const selected = useSelectedLayout();
+  const layout = selected?.ranked.layout ?? null;
+  const inputs = selected?.inputs ?? null;
   const cartons = useMemo(
     () => (layout && inputs ? cartonPlacements(layout, inputs) : []),
     [layout, inputs],

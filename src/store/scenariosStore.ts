@@ -2,6 +2,7 @@ import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { scenarioSchema } from '../domain/schemas';
 import type { Inputs, OptimizeResult, Scenario } from '../domain/types';
+import type { ManualLayoutSpec } from '../engine/manual/build';
 import { computeAnalytics } from '../engine/analytics/analytics';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { createDefaultRepository, onStorageChange } from '../persistence/localStorageRepository';
@@ -10,7 +11,17 @@ import { useNoticesStore } from './noticesStore';
 
 export interface ScenariosState {
   scenarios: Scenario[];
-  save(name: string, inputs: Inputs, result: OptimizeResult, selectedIndex: number): Scenario;
+  /**
+   * Saves the result with the manual layouts present (all of them, out-of-date ones too).
+   * Leave `manualLayouts` out only where there is no manual layouts store to read.
+   */
+  save(
+    name: string,
+    inputs: Inputs,
+    result: OptimizeResult,
+    selectedIndex: number,
+    manualLayouts?: ManualLayoutSpec[],
+  ): Scenario;
   rename(id: string, name: string): void;
   duplicate(id: string): Scenario;
   remove(id: string): void;
@@ -32,7 +43,7 @@ export function createScenariosStore(
     };
     return {
       scenarios: repo.list(),
-      save(name, inputs, result, selectedIndex) {
+      save(name, inputs, result, selectedIndex, manualLayouts) {
         const ranked = result.layouts[selectedIndex];
         const scenario: Scenario = {
           id: crypto.randomUUID(),
@@ -42,6 +53,7 @@ export function createScenariosStore(
           result,
           selectedIndex,
           analytics: ranked ? computeAnalytics(ranked.layout, inputs) : null,
+          ...(manualLayouts ? { manualLayouts: structuredClone(manualLayouts) } : {}),
         };
         add(scenario);
         return scenario;
