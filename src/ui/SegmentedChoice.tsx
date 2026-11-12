@@ -14,8 +14,8 @@ interface SegmentedChoiceProps<T extends string> {
 
 /**
  * A setting with a few named choices, as one row of radio buttons with a line of explanation
- * under it. Arrow keys move the choice, as in a native radio group; only the chosen button is
- * in the tab order.
+ * under it. Arrow keys move the choice, as in a native radio group, and Home and End choose
+ * the first and last; only the chosen button is in the tab order.
  */
 export function SegmentedChoice<T extends string>({
   label,
@@ -34,7 +34,8 @@ export function SegmentedChoice<T extends string>({
     const k = (index + count) % count;
     const option = options[k];
     if (!option) return;
-    onChange(option);
+    // Choosing what is already chosen changes nothing, so nothing is reported.
+    if (option !== value) onChange(option);
     refs.current[k]?.focus();
   };
 
@@ -45,6 +46,12 @@ export function SegmentedChoice<T extends string>({
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
       choose(index - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      choose(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      choose(count - 1);
     }
   };
 

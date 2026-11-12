@@ -12,16 +12,24 @@ import type {
 import { cartonKey } from './cartons';
 import { usableFootprint, usableHeight } from './geometry';
 import { gridLayer, searchLayer, type LayerSearchResult } from './layerSearch';
-import { layerCountBound, pinwheelLayer, type PinwheelAllowance } from './pinwheel';
+import {
+  layerCountBound,
+  pinwheelLayer,
+  type PinwheelAllowance,
+  type PinwheelOptions,
+  type PinwheelResult,
+} from './pinwheel';
 import { allowedVerticalAxes } from './rotation';
 import { fitsCount, fitsWithin } from './tolerance';
+import { maxCartonsByWeight } from './weightLimit';
 
 /**
  * Best layer patterns keyed by footprint `${a}|${b}`. The layer search depends only on the
  * footprint sizes and the usable area, so one cache serves every candidate of one set of inputs.
  * When a pinwheel is best, the straight-cut layer is kept beside it under `${a}|${b}|straight`.
  * Under the layer pattern settings Prefer pinwheel and Pinwheel only, the pinwheel wanted for
- * the footprint (or null) is kept under `${a}|${b}|pinwheel`; one cache serves one setting.
+ * the footprint (or null) is kept under `${a}|${b}|pinwheel`, and under Pinwheel only the one
+ * of at most n cartons under `${a}|${b}|pinwheel|n`; one cache serves one setting.
  */
 export type LayerCache = Map<string, LayerPattern | null>;
 
@@ -34,12 +42,39 @@ function pinwheelKey(key: string): string {
 }
 
 /**
- * A layer pattern setting other than Auto, with the work its further pinwheel searches may
- * spend between them (see PINWHEEL_EXTRA_WORK_PER_OPTIMIZE; unlimited when absent).
+ * The time the further pinwheel searches of one optimize() call may take between them (those
+ * Auto does not run: see PINWHEEL_EXTRA_TIME_SHARE in optimize).
+ */
+export interface PinwheelSearchTime {
+  now: () => number;
+  /** Most milliseconds the searches may take in all. */
+  limitMs: number;
+  /** Milliseconds they have taken so far. */
+  spentMs: number;
+  /**
+   * Set once a search was stopped before its end, or not run because no time was left, so a
+   * pinwheel may have been missed. Never set to false.
+   */
+  cut?: boolean;
+}
+
+/**
+ * A layer pattern setting other than Auto, with the time its further pinwheel searches may
+ * take between them (unlimited when absent).
  */
 export interface PinwheelPreference {
   pref: Exclude<LayerPatternPref, 'auto'>;
-  allowance?: PinwheelAllowance;
+  time?: PinwheelSearchTime;
+  /**
+   * Pinwheel only: the pinwheel work its own best-layer searches may spend between them, for
+   * the cartons whose best layer the caller has not already searched (see pinwheelOnlyLayouts).
+   */
+  ownWork?: PinwheelAllowance;
+  /**
+   * Prefer pinwheel: buildLayouts adds here every layout it returns that Auto would not have
+   * built, so the caller can tell what Auto alone would give.
+   */
+  beyondAuto?: WeakSet<Layout>;
 }
 
 /** Footprint axes for a vertical axis: the other two product axes in L, W, H order. */
@@ -218,15 +253,62 @@ export function straightCutLayer(
 }
 
 /**
+ * One of the further pinwheel searches (a true pinwheel: PinwheelOptions.strict), within the
+ * time left to them. It is bounded by time alone, not by a count of work, so it is cut short
+ * only when the time really is spent; `time.cut` then says so. Null when nothing was found.
+ */
+function furtherPinwheel(
+  x: number,
+  y: number,
+  a: number,
+  b: number,
+  opts: Pick<PinwheelOptions, 'beat' | 'atMost'>,
+  time: PinwheelSearchTime | undefined,
+  shouldStop?: () => boolean,
+): PinwheelResult | null {
+  if (shouldStop?.()) return null;
+  const search = (stop?: () => boolean): { found: PinwheelResult | null; cut: boolean } => {
+    const allowance: PinwheelAllowance = { remaining: Infinity };
+    const found = pinwheelLayer(x, y, a, b, {
+      ...opts,
+      strict: true,
+      maxWork: Infinity,
+      shouldStop: stop,
+      allowance,
+    });
+    return { found, cut: allowance.capped === true };
+  };
+  if (!time) return search(shouldStop).found;
+  const left = time.limitMs - time.spentMs;
+  if (!(left > 0)) {
+    time.cut = true;
+    return null;
+  }
+  const started = time.now();
+  const { found, cut } = search(() => shouldStop?.() === true || time.now() - started >= left);
+  time.spentMs += Math.max(0, time.now() - started);
+  if (cut) time.cut = true;
+  return found;
+}
+
+/** The fewest cartons a pinwheel holds: one in each of its four blocks. */
+const SMALLEST_PINWHEEL = 4;
+
+/**
  * The pinwheel layer wanted for the carton standing on `vertical` under a layer pattern
  * setting, or null when there is none:
  * - the best layer itself when that is a pinwheel (it holds more than straight cuts);
  * - Prefer pinwheel: otherwise a true pinwheel of at least as many cartons as the straight-cut
  *   layer. Call after bestLayer for the same carton and axis, which gives that count;
- * - Pinwheel only: otherwise the true pinwheel of the most cartons, however few.
- * "True" is PinwheelOptions.strict: no straight line right across misses every carton. The
- * search spends from `pattern.allowance`, not from the allowance bestLayer uses, so the best
- * layers stay exactly those found under Auto.
+ * - Pinwheel only: otherwise the true pinwheel of the most cartons, however few. And when a
+ *   maximum pallet weight allows fewer cartons than that pinwheel holds in its one layer, the
+ *   true pinwheel of the most cartons the weight allows, if there is one (if not, the heavier
+ *   one is returned, and its layouts are then left out as over the weight).
+ * "True" is PinwheelOptions.strict: no straight line right across passes through no carton.
+ * The best layer, when it is a pinwheel, is used exactly as Auto lays it: it holds more than
+ * any straight-cut layer, though a line may still divide a strip of it from the rest.
+ * The searches take their time from `pattern.time`, not from the allowance bestLayer uses, so
+ * the best layers stay exactly those found under Auto.
  */
 export function preferredPinwheel(
   c: CartonCandidate,
@@ -239,28 +321,36 @@ export function preferredPinwheel(
   const [a, b] = footprintSizes(c, vertical);
   const key = `${a}|${b}`;
   const height = c.outer[vertical];
+  const only = pattern.pref === 'pinwheelOnly';
+  const { x, y } = usableFootprint(i);
   let found = cache.get(pinwheelKey(key));
   if (found === undefined) {
     const best = cache.get(key);
     found = null;
     if (best?.kind === 'pinwheel') {
       found = best;
-    } else if (pattern.pref === 'preferPinwheel' && !best) {
+    } else if (!only && !best) {
       // No layer at all (or bestLayer was not asked): nothing to tie.
     } else if (!isSquare(a, b)) {
-      const { allowance } = pattern;
-      if (allowance !== undefined && allowance.remaining <= 0) {
-        allowance.capped = true;
-      } else if (!shouldStop?.()) {
-        const { x, y } = usableFootprint(i);
-        const beat = pattern.pref === 'preferPinwheel' && best ? best.cartonCount - 1 : 0;
-        const pinwheel = pinwheelLayer(x, y, a, b, { beat, shouldStop, allowance, strict: true });
-        if (pinwheel) found = toPattern(pinwheel, vertical, height, a, b, 'pinwheel');
-      }
+      const beat = !only && best ? best.cartonCount - 1 : 0;
+      const pinwheel = furtherPinwheel(x, y, a, b, { beat }, pattern.time, shouldStop);
+      if (pinwheel) found = toPattern(pinwheel, vertical, height, a, b, 'pinwheel');
     }
     cache.set(pinwheelKey(key), found);
   }
-  return found === null ? null : { ...found, vertical, height };
+  if (found === null) return null;
+  const most = only ? maxCartonsByWeight(c, i) : Infinity;
+  if (found.cartonCount > most && most >= SMALLEST_PINWHEEL) {
+    const lighterKey = `${pinwheelKey(key)}|${most}`;
+    let lighter = cache.get(lighterKey);
+    if (lighter === undefined) {
+      const pinwheel = furtherPinwheel(x, y, a, b, { atMost: most }, pattern.time, shouldStop);
+      lighter = pinwheel ? toPattern(pinwheel, vertical, height, a, b, 'pinwheel') : null;
+      cache.set(lighterKey, lighter);
+    }
+    if (lighter) found = lighter;
+  }
+  return { ...found, vertical, height };
 }
 
 /**
@@ -487,15 +577,20 @@ export function buildLayouts(
 
   // Under Prefer pinwheel the layouts of the tying pinwheels come first; every layout Auto
   // builds follows, so nothing Auto offers is lost and the straight-cut alternative stays.
-  const candidates: Layout[] = [];
+  const further: Layout[] = [];
   if (preferred.some((t, k) => t.kind !== types[k]?.kind)) {
-    candidates.push(...layoutsFromTypes(c, i, preferred, shouldStop));
+    further.push(...layoutsFromTypes(c, i, preferred, shouldStop));
   }
-  candidates.push(...layoutsFromTypes(c, i, types, shouldStop));
+  const auto = layoutsFromTypes(c, i, types, shouldStop);
   if (straight.some((t, k) => t !== types[k])) {
-    candidates.push(...layoutsFromTypes(c, i, straight, shouldStop));
+    auto.push(...layoutsFromTypes(c, i, straight, shouldStop));
   }
-  return distinct(candidates);
+  const all = distinct([...further, ...auto]);
+  if (pattern?.beyondAuto && further.length > 0) {
+    const autoIds = new Set(auto.map((l) => l.id));
+    for (const l of all) if (!autoIds.has(l.id)) pattern.beyondAuto.add(l);
+  }
+  return all;
 }
 
 /**
@@ -512,6 +607,10 @@ function pinwheelOnlyLayouts(
   const types: LayerPattern[] = [];
   for (const [k, v] of usableVerticalAxes(c, i).entries()) {
     if (k > 0 && shouldStop?.()) break;
+    // The best layer first, as Auto searches it (a no-op when Auto has searched this
+    // footprint): a best layer that is a pinwheel is the one listed, so the layouts do not
+    // depend on whether the caller built Auto's layouts for this carton too.
+    bestLayer(c, v, i, cache, shouldStop, pattern.ownWork);
     const layer = preferredPinwheel(c, v, i, cache, pattern, shouldStop);
     if (layer) types.push(layer);
   }

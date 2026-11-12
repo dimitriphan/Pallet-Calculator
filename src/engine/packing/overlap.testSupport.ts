@@ -56,3 +56,35 @@ export function assertNoOverlapWithin(
     }
   }
 }
+
+/**
+ * A straight line right across the layer that passes through no carton, or null when every
+ * such line meets one: the check a true pinwheel must pass. Works on the carton rectangles
+ * alone (never on blocks), so it can judge the engine's own block-based check. A line counts
+ * only strictly inside the cartons' bounding box; `axis` 'x' is the line x = at.
+ */
+export function lineMissingEveryCarton(
+  blocks: Block[],
+  a: number,
+  b: number,
+): { axis: 'x' | 'y'; at: number } | null {
+  return lineMissingEveryRect(cartonRects(blocks, a, b));
+}
+
+/** The same for any list of rectangles. */
+export function lineMissingEveryRect(rects: Rect[]): { axis: 'x' | 'y'; at: number } | null {
+  for (const axis of ['x', 'y'] as const) {
+    const spans = rects.map((r) => (axis === 'x' ? [r.x, r.x + r.w] : [r.y, r.y + r.h]));
+    const lo = Math.min(...spans.map((s) => s[0] as number));
+    const hi = Math.max(...spans.map((s) => s[1] as number));
+    // Only a line along some carton's edge can miss them all.
+    // (Each distinct edge once: a layer of thousands of cartons has only a few dozen.)
+    const edges = [...new Set(spans.flat().map((v) => Math.round(v / EPS) * EPS))];
+    for (const at of edges) {
+      if (at <= lo + EPS || at >= hi - EPS) continue;
+      const met = spans.some((s) => (s[0] as number) < at - EPS && (s[1] as number) > at + EPS);
+      if (!met) return { axis, at };
+    }
+  }
+  return null;
+}

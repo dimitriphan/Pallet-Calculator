@@ -201,6 +201,12 @@ export interface OptimizeResult {
    * the straight-cut layouts Auto gives instead. Never set to false.
    */
   patternFallback?: boolean;
+  /**
+   * Only with `patternFallback` and a maximum pallet weight: the weight is why no pinwheel
+   * layout is listed (pinwheel layouts were found and every one is over it, or a carton was
+   * too heavy to look for one), so "no pinwheel exists" must not be said. Never set to false.
+   */
+  pinwheelOverWeight?: boolean;
 }
 
 export interface Preset {

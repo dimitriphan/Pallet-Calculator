@@ -7,6 +7,7 @@ import {
   layerPatternText,
   PATTERN_FALLBACK,
   PATTERN_FALLBACK_LIMITED,
+  PATTERN_FALLBACK_OVER_WEIGHT,
   patternFallbackText,
 } from './layerPattern';
 import { settingsSummary } from './settingsSummary';
@@ -91,6 +92,23 @@ describe('layer pattern wording', () => {
     expect(PATTERN_FALLBACK_LIMITED).toBe(
       'No pinwheel layout was found before the search was stopped. Showing straight-cut layouts.',
     );
+  });
+
+  it('says the weight is why when pinwheels exist but none fits under the maximum', () => {
+    expect(PATTERN_FALLBACK_OVER_WEIGHT).toBe(
+      'No pinwheel layout fits under the maximum weight. Showing straight-cut layouts.',
+    );
+    const shown = { layouts: [{}], truncated: false, patternFallback: true };
+    expect(patternFallbackText({ ...shown, pinwheelOverWeight: true })).toBe(
+      PATTERN_FALLBACK_OVER_WEIGHT,
+    );
+    // A limited search still says only what it knows; and never without the fallback.
+    expect(patternFallbackText({ ...shown, truncated: true, pinwheelOverWeight: true })).toBe(
+      PATTERN_FALLBACK_LIMITED,
+    );
+    expect(
+      patternFallbackText({ layouts: [{}], truncated: false, pinwheelOverWeight: true }),
+    ).toBeNull();
   });
 
   it('is part of the settings sentence only when it is not Auto', () => {

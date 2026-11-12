@@ -97,6 +97,29 @@ describe('Good only finds the good layout in a carton that 30 better-filled ones
   });
 });
 
+describe('Pinwheel only lists the same pinwheel whether or not Auto looked at the carton', () => {
+  it('pallet 44 x 40 x 76, product 2 x 2 x 2: rank 1 is that of the search that skips nothing', () => {
+    // Found by the review probe: a carton Auto's own search no longer needed got a different
+    // pinwheel of the same 45 cartons than the one Auto's best-layer search lays.
+    const i: Inputs = {
+      ...BASE,
+      pallet: d(44, 40, 76),
+      product: d(2, 2, 2),
+      maxCarton: d(11.5, 2.5, 10.5),
+      targetQuantity: 180,
+      rotationMode: 'noSide',
+      layerPattern: 'pinwheelOnly',
+    };
+    for (const minStability of ['auto', 'fair', 'good'] as const) {
+      const r = optimize({ ...i, minStability });
+      const all = optimize({ ...i, minStability }, { prune: false });
+      expect(r.candidatesEvaluated).toBeLessThanOrEqual(all.candidatesEvaluated);
+      expect(r.truncated || all.truncated).toBe(false);
+      expect(r.layouts[0]?.layout, minStability).toEqual(all.layouts[0]?.layout);
+    }
+  }, 30_000);
+});
+
 /** A small seeded generator (mulberry32): the same numbers on every run. */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -108,6 +131,9 @@ function mulberry32(seed: number): () => number {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+/** Generous: the run takes a few seconds alone and several times that on a loaded machine. */
+const HEAVY = 30_000;
 
 const MODES: RotationMode[] = ['full', 'upright', 'noSide'];
 
@@ -150,6 +176,7 @@ const SETTINGS: [MinStability, LayerPatternPref][] = [
   ['good', 'auto'],
   ['auto', 'preferPinwheel'],
   ['auto', 'pinwheelOnly'],
+  ['fair', 'preferPinwheel'],
   ['good', 'preferPinwheel'],
   ['good', 'pinwheelOnly'],
   ['fair', 'pinwheelOnly'],
@@ -158,48 +185,64 @@ const SETTINGS: [MinStability, LayerPatternPref][] = [
 describe('the search lists what a search that skips no carton lists', () => {
   const cases = hardCases(60);
 
-  it.each(cases)('$name', ({ inputs }) => {
-    // Auto first: the generator is worth something only if skipping happens at all.
-    const auto = optimize(inputs);
-    const autoAll = optimize(inputs, { prune: false });
-    expect(auto.truncated || autoAll.truncated).toBe(false);
-    expect(auto.layouts[0]?.layout).toEqual(autoAll.layouts[0]?.layout);
-    for (const [minStability, layerPattern] of SETTINGS) {
-      const i: Inputs = { ...inputs, minStability, layerPattern };
-      const r = optimize(i);
-      const all = optimize(i, { prune: false });
-      const setting = `${minStability}, ${layerPattern}`;
-      expect(r.truncated || all.truncated, setting).toBe(false);
-      // Rank 1 is the same layout, and nothing is said of the result that is not true of
-      // the complete search.
-      expect(r.layouts[0]?.layout, setting).toEqual(all.layouts[0]?.layout);
-      expect(r.belowMinimum, setting).toBe(all.belowMinimum);
-      expect(r.patternFallback, setting).toBe(all.patternFallback);
-      expect(r.autoBestProducts, setting).toBe(all.autoBestProducts);
-      expect(r.emptyReason, setting).toBe(all.emptyReason);
-    }
-  });
-
-  it('the cases include ones where cartons are skipped, and ones each setting changes', () => {
-    // Counting 30 layouts the minimum leaves out, as the first release did, changes rank 1 in
-    // four of these cases (hard 18, 27, 31 and 51).
-    let skipped = 0;
-    let below = 0;
-    let fewer = 0;
-    let pinwheelFewer = 0;
-    for (const { inputs } of cases) {
+  it.each(cases)(
+    '$name',
+    ({ inputs }) => {
+      // Auto first: the generator is worth something only if skipping happens at all.
       const auto = optimize(inputs);
-      const all = optimize(inputs, { prune: false });
-      if (auto.candidatesEvaluated < all.candidatesEvaluated) skipped++;
-      const good = optimize({ ...inputs, minStability: 'good' });
-      if (good.belowMinimum) below++;
-      if (good.autoBestProducts !== undefined) fewer++;
-      const only = optimize({ ...inputs, layerPattern: 'pinwheelOnly' });
-      if (only.autoBestProducts !== undefined) pinwheelFewer++;
-    }
-    expect(skipped).toBeGreaterThan(30);
-    expect(below).toBeGreaterThan(10);
-    expect(fewer).toBeGreaterThan(15);
-    expect(pinwheelFewer).toBeGreaterThan(15);
-  });
+      const autoAll = optimize(inputs, { prune: false });
+      expect(auto.truncated || autoAll.truncated).toBe(false);
+      expect(auto.layouts[0]?.layout).toEqual(autoAll.layouts[0]?.layout);
+      for (const [minStability, layerPattern] of SETTINGS) {
+        const i: Inputs = { ...inputs, minStability, layerPattern };
+        const r = optimize(i);
+        const all = optimize(i, { prune: false });
+        const setting = `${minStability}, ${layerPattern}`;
+        expect(r.truncated || all.truncated, setting).toBe(false);
+        // Rank 1 is the same layout, and nothing is said of the result that is not true of
+        // the complete search.
+        expect(r.layouts[0]?.layout, setting).toEqual(all.layouts[0]?.layout);
+        expect(r.belowMinimum, setting).toBe(all.belowMinimum);
+        expect(r.patternFallback, setting).toBe(all.patternFallback);
+        expect(r.autoBestProducts, setting).toBe(all.autoBestProducts);
+        expect(r.pinwheelOverWeight, setting).toBe(all.pinwheelOverWeight);
+        // What Auto would give is what the default settings really give, when that is more.
+        const [top, shown] = [
+          auto.layouts[0]?.layout.totalProducts,
+          r.layouts[0]?.layout.totalProducts,
+        ];
+        const more = top !== undefined && shown !== undefined && shown < top;
+        expect(r.autoBestProducts, setting).toBe(more ? top : undefined);
+        expect(r.emptyReason, setting).toBe(all.emptyReason);
+      }
+    },
+    HEAVY,
+  );
+
+  it(
+    'the cases include ones where cartons are skipped, and ones each setting changes',
+    () => {
+      // Counting 30 layouts the minimum leaves out, as the first release did, changes rank 1 in
+      // four of these cases (hard 18, 27, 31 and 51).
+      let skipped = 0;
+      let below = 0;
+      let fewer = 0;
+      let pinwheelFewer = 0;
+      for (const { inputs } of cases) {
+        const auto = optimize(inputs);
+        const all = optimize(inputs, { prune: false });
+        if (auto.candidatesEvaluated < all.candidatesEvaluated) skipped++;
+        const good = optimize({ ...inputs, minStability: 'good' });
+        if (good.belowMinimum) below++;
+        if (good.autoBestProducts !== undefined) fewer++;
+        const only = optimize({ ...inputs, layerPattern: 'pinwheelOnly' });
+        if (only.autoBestProducts !== undefined) pinwheelFewer++;
+      }
+      expect(skipped).toBeGreaterThan(30);
+      expect(below).toBeGreaterThan(10);
+      expect(fewer).toBeGreaterThan(15);
+      expect(pinwheelFewer).toBeGreaterThan(15);
+    },
+    HEAVY,
+  );
 });
