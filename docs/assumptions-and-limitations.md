@@ -78,7 +78,7 @@ Good means no warnings, Fair cautions only, Poor any serious warning. The warnin
 
 - **Layers are straight-cut or pinwheel.** A layer is built either by straight cuts from edge to edge or as a four-block pinwheel, whichever holds more cartons (straight cuts win a tie, being easier to build). Other patterns are not tried. The pinwheel search shares one fixed work allowance across the whole calculation. When it is spent, the remaining pinwheel searches are skipped and a rarer pinwheel pattern may be missed; this is not marked on the result (marking it would flag many ordinary results). Only the main search, when it stops early on time, marks the result as limited. When a pinwheel wins, the straight-cut layouts of the same carton are still offered below it, with or without a weight limit, since staff may prefer the simpler build.
 - **Flat layers.** A load is a stack of flat layers. A carton never straddles two layers.
-- **One carton size per layout.** Mixed carton sizes in one load are not supported. Mixed pallets (several products on one pallet) are stage 2 and are not built.
+- **One carton size per layout.** Mixed carton sizes in one load are not supported. Several products on one pallet are not supported and are not planned.
 - **Weight: whole layers only.** With a weight per product box and a maximum pallet weight, layers are removed from the top until the whole load (pallet included) is at or under the maximum. When layers were removed, "Room for N more cartons by weight" is advice: the tool never places a part layer. It is not shown when nothing was removed, because then the height, not the weight, is the limit. Straight-cut layouts are still offered under a weight limit, so a limit never gives fewer boxes than a simple layout would. The maximum is the only weight check: there is no limit per carton, no crush or load-bearing check, and the weight per carton is shown without judgement.
 - **Weight is optional.** With the weight per product box blank, weight is ignored everywhere: nothing about it is shown, and the CSV, PDF and PNG are unchanged (the JSON export carries the blank weight fields as they are). The empty carton weight defaults to 0 and the pallet to 40 lb. Weights are in pounds with inches and in kilograms with cm or mm. Presets keep the maximum, empty carton and pallet weights; the product box weight stays with the product.
 - **The stability rating is advice, not a safety check.** It looks at shape only, using the thresholds in the "Stability rating" table above (stack height, carton proportions, support from the layer below, straight columns). Crush strength and load-bearing are not checked, and a Poor layout is still offered when it carries the most boxes. A full-height load on a standard pallet usually rates Fair, because the stack is more than 1.5 times as tall as its base is wide. You must judge whether the load is safe.
@@ -117,7 +117,6 @@ Good means no warnings, Fair cautions only, Poor any serious warning. The warnin
 
 ## Planned for a later round (not built yet)
 
-- Mixed pallets (stage 2).
 - Advanced optimization (weighting the score towards stability).
 - A target-quantity field in Basic view, company branding on exports, shareable links.
 
