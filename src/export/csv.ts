@@ -124,7 +124,13 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     // The mark the screen puts beside the rating when nothing reached the minimum.
     ['Stability mark', p.belowMinimum ? BELOW_MINIMUM : ''],
     ['Stability warnings', st ? st.warnings.map(describeWarning).join(' ') : ''],
-    ['Stack height ÷ shorter side of base', st ? ratio(st.measures.stackHeightRatio) : ''],
+    [
+      // A layout placed by hand whose bottom layer stands in separate groups.
+      (st?.measures.freeStandingGroups ?? 1) > 1
+        ? 'Stack height ÷ shorter side of the narrowest free-standing group'
+        : 'Stack height ÷ shorter side of base',
+      st ? ratio(st.measures.stackHeightRatio) : '',
+    ],
     [
       'Carton height ÷ shorter base side, worst layer',
       st?.measures.cartonHeight ? ratio(st.measures.cartonHeight.ratio) : '',
@@ -133,6 +139,12 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
       'Least support from the layer below',
       st?.measures.support ? share(st.measures.support.share) : '',
     ],
+    // Only for a layout placed by hand: calculated layouts keep the rows they had.
+    ...(st?.measures.deck
+      ? ([
+          ['Least share of a bottom carton resting on the pallet', share(st.measures.deck.share)],
+        ] as Row[])
+      : []),
     ['Layers turned half a turn (180°)', st ? st.turnedLayers.join(' ') : ''],
     ['Overall score', n(sel.score.total)],
     ['Quantity contribution', n(sel.score.quantityContribution)],

@@ -41,7 +41,7 @@ A strict product setting also limits how the carton may be turned on the pallet.
 
 **Target quantity.** The tool always finds the maximum. If you enter a target, each layout says Target Met (equal), Target Exceeded (more) or Target Not Achievable (fewer), shows the most that is possible, and shows the cartons and layers needed to reach the target when it can be reached.
 
-**Stability rating.** Every layout is rated Good, Fair or Poor from four checks. Each check gives no warning, a caution or a serious warning; a value exactly at a limit gives no warning.
+**Stability rating.** Every layout is rated Good, Fair or Poor from four checks (a layout placed by hand has two extra rules, below). Each check gives no warning, a caution or a serious warning; a value exactly at a limit gives no warning.
 
 | Check | Caution | Serious |
 | --- | --- | --- |
@@ -49,6 +49,13 @@ A strict product setting also limits how the carton may be turned on the pallet.
 | Carton height ÷ the carton's shorter base side, as stacked, worst layer | above 1.5 | above 2.5 |
 | Share of a layer's carton base resting on cartons of the layer below, worst layer (layers compared as placed, each centred on the pallet) | under 90% | under 70% |
 | Four or more identical layers stacked in straight columns | caution | none |
+
+A layout placed by hand (a manual layout) is checked more closely, because its cartons can stand apart and off the pallet. These two rules apply to manual layouts only:
+
+- The stack height check is made on each free-standing group of the bottom layer, and the narrowest group decides. Cartons belong to one group when their facing edges are at most 1 inch apart and run alongside each other; cartons that only face at a corner do not. The warning then reads "A free-standing column of the load is tall for its base (3.8 times its shorter side)."
+- A fifth check measures how much of each bottom carton's base rests on the pallet itself (not on the allowed overhang around it), for the worst carton: a caution under 90%, a serious warning under 70%. For example "2 cartons in the bottom layer hang off the pallet; the worst rests only 55% on it."
+
+Because of the fifth check, a manual copy of a calculated layout can be rated lower than the original when overhang is allowed and a carton has under 90% of its base on the pallet.
 
 Good means no warnings, Fair cautions only, Poor any serious warning. The warnings are shown as plain sentences, for example "Stack is tall for its base (1.6 times its shorter side)." The limits live in one file (`src/domain/stabilityThresholds.ts`) and can be changed on request. The rating is advice only: crush strength, load on the bottom cartons, wrapping and strapping are not checked.
 

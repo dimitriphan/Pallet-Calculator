@@ -253,19 +253,21 @@ function manualRects(layer: Layer, c: CartonCandidate): Rect[] {
 }
 
 /**
- * Whether two cartons stand against each other: they meet (or, in data changed by hand,
- * overlap) along a stretch of edge longer than the engine's tolerance. Touching at a corner
- * only does not count: a corner holds nothing up.
+ * Whether two cartons stand together: their facing edges are at most `STABILITY.joinGap`
+ * apart (or meet, or, in data changed by hand, overlap) and run alongside each other for a
+ * stretch longer than the engine's tolerance. Facing at a corner only does not count: a
+ * corner holds nothing up.
  */
 function joined(p: Rect, q: Rect): boolean {
+  const gap = STABILITY.joinGap + EPS;
   const alongX = Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x);
   const alongY = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
-  return (alongX >= -EPS && alongY > EPS) || (alongY >= -EPS && alongX > EPS);
+  return (alongX >= -gap && alongY > EPS) || (alongY >= -gap && alongX > EPS);
 }
 
 /**
  * The free-standing groups of a set of cartons: the bounding box of each set of cartons
- * joined edge to edge, directly or through others (connected components).
+ * standing together (see `joined`), directly or through others (connected components).
  */
 export function freeStandingGroups(rects: readonly Rect[]): Rect[] {
   const parent = rects.map((_, k) => k);
@@ -282,7 +284,7 @@ export function freeStandingGroups(rects: readonly Rect[]): Rect[] {
     const p = rects[order[n]!]!;
     for (let m = n + 1; m < order.length; m++) {
       const q = rects[order[m]!]!;
-      if (q.x > p.x + p.w + EPS) break;
+      if (q.x > p.x + p.w + STABILITY.joinGap + EPS) break;
       if (joined(p, q)) parent[find(order[m]!)] = find(order[n]!);
     }
   }

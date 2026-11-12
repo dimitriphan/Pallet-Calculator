@@ -152,6 +152,14 @@ describe('exports of a manual layout', () => {
     expect(json).not.toContain('null,null');
     const csv = buildCsv(payload);
     expect(csv).not.toMatch(/NaN|Infinity/);
+    // Two free-standing groups, the narrower 17 in across under 65 in of stack; the worst
+    // bottom carton has 294 of its 425 sq in on the pallet.
+    const lines = csv.split('\r\n');
+    expect(lines).toContain(
+      'Stack height ÷ shorter side of the narrowest free-standing group,3.82',
+    );
+    expect(lines.some((l) => l.startsWith('Stack height ÷ shorter side of base,'))).toBe(false);
+    expect(lines).toContain('Least share of a bottom carton resting on the pallet,69%');
     expect(captionLines(payload).join('\n')).not.toMatch(/NaN|Infinity/);
   });
 });

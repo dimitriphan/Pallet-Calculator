@@ -94,8 +94,8 @@ describe('stack height of a layout placed by hand', () => {
     // The narrower group is 25 across: 65 / 25. The whole layer is 94 x 34: 65 / 34.
     expect(measureStability(l, big).stackHeightRatio).toBeCloseTo(65 / 25, 12);
     expect(oldRule(l).stackHeightRatio).toBeCloseTo(65 / 34, 12);
-    // A third group narrower still, 1 in above the turned pair: one carton, 17 across.
-    const three = build([...block, at(60, 0, true), at(77, 0, true), at(60, 26)], big);
+    // A third group narrower still, 2 in above the turned pair: one carton, 17 across.
+    const three = build([...block, at(60, 0, true), at(77, 0, true), at(60, 27)], big);
     expect(measureStability(three, big).freeStandingGroups).toBe(3);
     expect(measureStability(three, big).stackHeightRatio).toBeCloseTo(65 / 17, 12);
     // Moved down to touch the pair, it joins it: 34 x 42, and 25 is the narrowest again.
@@ -127,11 +127,23 @@ describe('stack height of a layout placed by hand', () => {
     expect(freeStandingGroups([rect(50, 0), rect(0, 0), rect(25, 0)])).toEqual([
       rect(0, 0, 75, 17),
     ]);
-    // Corner to corner, a hair of a gap, a shared stretch no longer than the tolerance: apart.
+    // Facing edges up to 1 in apart (STABILITY.joinGap) still stand together; further, not.
+    expect(STABILITY.joinGap).toBe(1);
+    expect(freeStandingGroups([rect(0, 0), rect(25.25, 0)])).toHaveLength(1);
+    expect(freeStandingGroups([rect(0, 0), rect(26, 0)])).toHaveLength(1);
+    expect(freeStandingGroups([rect(0, 0), rect(0, 18)])).toHaveLength(1);
+    expect(freeStandingGroups([rect(0, 0), rect(26.01, 0)])).toHaveLength(2);
+    expect(freeStandingGroups([rect(0, 0), rect(0, -18.01)])).toHaveLength(2);
+    // Within the gap and alongside each other for only part of an edge: together.
+    expect(freeStandingGroups([rect(0, 0), rect(25.5, 16)])).toHaveLength(1);
+    // Corner to corner, with or without a gap, or a shared stretch no longer than the
+    // tolerance: apart. The gap never stands in for running alongside.
     expect(freeStandingGroups([rect(0, 0), rect(25, 17)])).toHaveLength(2);
     expect(freeStandingGroups([rect(0, 0), rect(25, -17)])).toHaveLength(2);
-    expect(freeStandingGroups([rect(0, 0), rect(25.01, 0)])).toHaveLength(2);
+    expect(freeStandingGroups([rect(0, 0), rect(25.5, 17.5)])).toHaveLength(2);
     expect(freeStandingGroups([rect(0, 0), rect(25, 17 - 1e-12)])).toHaveLength(2);
+    // The review's columns: 8 in apart one way, corner to corner the other.
+    expect(freeStandingGroups([rect(0, 0), rect(25, 25)])).toHaveLength(2);
     // Two corner-joined pairs stay two groups, each with its own bounding box.
     const groups = freeStandingGroups([rect(0, 0), rect(25, 0), rect(50, 17), rect(75, 17)]);
     expect(groups.sort((p, q) => p.x - q.x)).toEqual([rect(0, 0, 50, 17), rect(50, 17, 50, 17)]);

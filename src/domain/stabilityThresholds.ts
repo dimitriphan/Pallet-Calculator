@@ -12,6 +12,14 @@ export const STABILITY = {
   /** This many identical layers or more in straight columns (no interlocking) give a caution. */
   columnLayers: 4,
   /**
+   * Layouts placed by hand only. Inches. Two bottom-layer cartons count as standing together
+   * (one free-standing group for the stack height check) when their facing edges are at most
+   * this far apart and overlap along that edge: cartons this close brace each other once the
+   * load is wrapped. It also keeps a hand copy of a calculated pinwheel layer, whose blocks
+   * can stand a fraction of an inch apart, rated as the original.
+   */
+  joinGap: 1,
+  /**
    * Layouts placed by hand only. Share of a bottom-layer carton's base area resting on the
    * pallet deck (the pallet itself, not the allowed overhang around it), for the worst carton.
    * The same shares as `supportShare`: a carton needs as much under it from the deck as from

@@ -461,8 +461,9 @@ function onePattern(l: Layout): boolean {
  * cartons. A copy is rated by the calculated layout's four checks with two differences, both
  * meant (a manual layout is checked for them, a calculated one is not):
  *
- * - `split`: the bottom layer stands in several groups that do not touch along an edge (some
- *   pinwheel layers leave a block a fraction of an inch clear of the others). The stack
+ * - `split`: the bottom layer stands in several groups more than 1 in apart (some pinwheel
+ *   layers leave a block a few inches clear of the others; closer blocks count as standing
+ *   together). The stack
  *   height check is then made on the narrowest group, so it can warn where the calculated
  *   layout does not, or more seriously.
  * - `deck`: a bottom carton has under 90% of its base on the pallet, which only the allowed
@@ -473,12 +474,13 @@ function onePattern(l: Layout): boolean {
 function expectedCopyStability(layout: Layout, inputs: Inputs) {
   const TOL = 1e-9;
   const rects = cartonPlacements(layout, inputs).filter((p) => p.layerIndex === 0);
-  // Groups of cartons joined along an edge, the slow obvious way.
+  // Groups of cartons standing together, the slow obvious way.
   const group = rects.map((_, k) => k);
   const touch = (p: (typeof rects)[number], q: (typeof rects)[number]) => {
     const alongX = Math.min(p.x + p.dx, q.x + q.dx) - Math.max(p.x, q.x);
     const alongY = Math.min(p.y + p.dy, q.y + q.dy) - Math.max(p.y, q.y);
-    return (alongX >= -TOL && alongY > TOL) || (alongY >= -TOL && alongX > TOL);
+    // Facing edges at most 1 in apart (STABILITY.joinGap), alongside for a positive length.
+    return (alongX >= -(1 + TOL) && alongY > TOL) || (alongY >= -(1 + TOL) && alongX > TOL);
   };
   for (let changed = true; changed;) {
     changed = false;
@@ -556,6 +558,8 @@ interface CopyTally {
   deck: number;
   /** Copies rated worse than the calculated layout (never better). */
   worse: number;
+  /** Of those, the copies that would not be rated worse but for the separate groups. */
+  worseByGroups: number;
 }
 const noTally = (): CopyTally => ({
   same: 0,
@@ -565,6 +569,7 @@ const noTally = (): CopyTally => ({
   split: 0,
   deck: 0,
   worse: 0,
+  worseByGroups: 0,
 });
 const RANK = { good: 0, fair: 1, poor: 2 } as const;
 
@@ -610,7 +615,21 @@ function checkCopy(name: string, layout: Layout, inputs: Inputs, tally: CopyTall
   const stability = built.layout.stability!;
   expect(stability.rating, where).toBe(expected.rating);
   expect(RANK[stability.rating], where).toBeGreaterThanOrEqual(RANK[calculated.rating]);
-  if (stability.rating !== calculated.rating) tally.worse++;
+  if (stability.rating !== calculated.rating) {
+    tally.worse++;
+    // The rating without the stack warning of a split layer: the calculated one's own
+    // stack warning put back, the deck warning kept.
+    const others = [
+      ...stability.warnings.filter((w) => !w.freeStanding),
+      ...calculated.warnings.filter((w) => expected.split && w.check === 'stackHeight'),
+    ];
+    const without = others.some((w) => w.level === 'serious')
+      ? 'poor'
+      : others.length > 0
+        ? 'fair'
+        : 'good';
+    if (without !== stability.rating) tally.worseByGroups++;
+  }
   const fields = (w: StabilityWarning) => [w.check, w.level, w.layer, w.freeStanding, w.cartons];
   expect(stability.warnings.map(fields), where).toEqual(expected.warnings.map(fields));
   stability.warnings.forEach((w, k) => {
@@ -653,19 +672,22 @@ describe('a manual copy of a calculated layout', () => {
       deck: 4,
       worse: 0,
     });
+    expect(tally.worseByGroups).toBe(0);
   }, 120_000);
 
   it('is rated worse where its layer stands in separate groups or hangs off the pallet', () => {
     // A longer run, in which both differences occur and change ratings. Of its 2321
     // one-pattern layouts (730 of them from the 187 inputs that allow overhang), 114 copies
-    // get a deck warning, 36 stand in separate groups (all pinwheel layers) and 31 are rated
-    // worse than the calculated layout. Every one is checked against the expected rating.
+    // get a deck warning, 20 stand in separate groups (pinwheel layers whose blocks stand
+    // more than the 1 in of STABILITY.joinGap apart; 36 would with no gap allowed) and 26 are
+    // rated worse than the calculated layout, 12 of them because of the groups and 14
+    // because of the deck warning alone. Every one is checked against the expected rating.
     const tally = noTally();
     for (const c of [...NAMED_CASES, ...randomCases(600, 77)]) {
       const inputs = asInputs(c.inputs);
       for (const { layout } of optimize(inputs).layouts) checkCopy(c.name, layout, inputs, tally);
     }
-    expect(tally).toMatchObject({ same: 2321, split: 36, deck: 114, worse: 31 });
+    expect(tally).toMatchObject({ same: 2321, split: 20, deck: 114, worse: 26, worseByGroups: 12 });
   }, 300_000);
 });
 
