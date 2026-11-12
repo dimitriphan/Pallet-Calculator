@@ -1,5 +1,5 @@
 /**
- * Stability thresholds (spec 7.1). Every comparison is strict: a value exactly at a threshold
+ * Stability thresholds (spec 7.1; `deckShare` added in Round 5 for layouts placed by hand). Every comparison is strict: a value exactly at a threshold
  * gives no warning. The owner may ask for any of these to be changed; nothing else holds them.
  */
 export const STABILITY = {
@@ -11,4 +11,11 @@ export const STABILITY = {
   supportShare: { caution: 0.9, serious: 0.7 },
   /** This many identical layers or more in straight columns (no interlocking) give a caution. */
   columnLayers: 4,
+  /**
+   * Layouts placed by hand only. Share of a bottom-layer carton's base area resting on the
+   * pallet deck (the pallet itself, not the allowed overhang around it), for the worst carton.
+   * The same shares as `supportShare`: a carton needs as much under it from the deck as from
+   * a layer of cartons.
+   */
+  deckShare: { caution: 0.9, serious: 0.7 },
 } as const;

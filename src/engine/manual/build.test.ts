@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../../domain/constants';
 import { singleFieldVariants } from '../../domain/testSupport';
-import type { Inputs, Layout } from '../../domain/types';
+import type { Inputs, Layout, StabilityWarning } from '../../domain/types';
 import { NAMED_CASES, randomCases } from '../autoBaseline.testSupport';
 import { layoutWeight, trimToWeight } from '../analytics/weight';
 import { optimize } from '../optimize';
@@ -456,70 +456,217 @@ function onePattern(l: Layout): boolean {
   );
 }
 
-describe('a manual copy of a calculated layout', () => {
-  const cases = [...NAMED_CASES, ...randomCases(40, 5150)];
-
-  it('reports the same boxes, weight, layers and stability as the calculated layout', () => {
-    let same = 0;
-    let turned = 0;
-    let trimmed = 0;
-    let mixed = 0;
-    for (const c of cases) {
-      const inputs = asInputs(c.inputs);
-      for (const { layout } of optimize(inputs).layouts) {
-        const copy = specFromLayout(layout, inputs, 'copy', 'Manual 1')!;
-        const built = buildManualLayout(copy, inputs);
-        expect(built.status).toBe('current');
-        expect(built.layout.carton).toEqual(layout.carton);
-        const base = cartonBase(layout.carton, layout.layers[0]!.vertical);
-        const { x, y } = usableFootprint(inputs);
-        assertNoOverlapWithin(built.layout.layers[0]!.blocks, base.a, base.b, x, y);
-        if (!onePattern(layout)) {
-          // A layout that mixes layer patterns: the copy stacks its bottom layer only.
-          mixed++;
-          expect(built.layout.layers[0]!.cartonCount).toBe(layout.layers[0]!.cartonCount);
-          expect(built.layout.layers.every((l) => l.vertical === layout.layers[0]!.vertical)).toBe(
-            true,
-          );
-          continue;
+/**
+ * What the rating of a manual copy must be, worked out here from the calculated layout's own
+ * cartons. A copy is rated by the calculated layout's four checks with two differences, both
+ * meant (a manual layout is checked for them, a calculated one is not):
+ *
+ * - `split`: the bottom layer stands in several groups that do not touch along an edge (some
+ *   pinwheel layers leave a block a fraction of an inch clear of the others). The stack
+ *   height check is then made on the narrowest group, so it can warn where the calculated
+ *   layout does not, or more seriously.
+ * - `deck`: a bottom carton has under 90% of its base on the pallet, which only the allowed
+ *   overhang makes possible. The copy then has a deck warning the calculated layout lacks.
+ *
+ * With neither, the copy's rating and warnings are the calculated layout's, exactly.
+ */
+function expectedCopyStability(layout: Layout, inputs: Inputs) {
+  const TOL = 1e-9;
+  const rects = cartonPlacements(layout, inputs).filter((p) => p.layerIndex === 0);
+  // Groups of cartons joined along an edge, the slow obvious way.
+  const group = rects.map((_, k) => k);
+  const touch = (p: (typeof rects)[number], q: (typeof rects)[number]) => {
+    const alongX = Math.min(p.x + p.dx, q.x + q.dx) - Math.max(p.x, q.x);
+    const alongY = Math.min(p.y + p.dy, q.y + q.dy) - Math.max(p.y, q.y);
+    return (alongX >= -TOL && alongY > TOL) || (alongY >= -TOL && alongX > TOL);
+  };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let p = 0; p < rects.length; p++) {
+      for (let q = p + 1; q < rects.length; q++) {
+        if (group[p] !== group[q] && touch(rects[p]!, rects[q]!)) {
+          const keep = Math.min(group[p]!, group[q]!);
+          const drop = Math.max(group[p]!, group[q]!);
+          group.forEach((g, k) => {
+            if (g === drop) group[k] = keep;
+          });
+          changed = true;
         }
-        same++;
-        if (layout.layers.some((l) => l.turned)) turned++;
-        if (layout.weightTrim) trimmed++;
-        const where = `${c.name} ${layout.id}`;
-        expect(built.flags, where).toEqual([]);
-        expect(built.layout.layers.length, where).toBe(layout.layers.length);
-        expect(built.layout.totalCartons, where).toBe(layout.totalCartons);
-        expect(built.layout.totalProducts, where).toBe(layout.totalProducts);
-        expect(
-          built.layout.layers.map((l) => !!l.turned),
-          where,
-        ).toEqual(layout.layers.map((l) => !!l.turned));
-        expect(layoutWeight(built.layout, inputs), where).toEqual(layoutWeight(layout, inputs));
-        expect(built.layout.stability?.rating, where).toBe(layout.stability?.rating);
-        const warnings = built.layout.stability!.warnings;
-        expect(
-          warnings.map((w) => [w.check, w.level, w.layer]),
-          where,
-        ).toEqual(layout.stability!.warnings.map((w) => [w.check, w.level, w.layer]));
-        warnings.forEach((w, k) => {
-          expect(w.value).toBeCloseTo(layout.stability!.warnings[k]!.value, 9);
-        });
-        // Carton for carton in the same places.
-        const mine = cartonPlacements(built.layout, inputs);
-        const theirs = cartonPlacements(layout, inputs);
-        expect(mine.length).toBe(theirs.length);
-        const spot = (p: { x: number; y: number; z: number; dx: number; dy: number }) =>
-          [p.z, p.x, p.y, p.dx, p.dy].map((v) => v.toFixed(6)).join(',');
-        expect(mine.map(spot).sort(), where).toEqual(theirs.map(spot).sort());
       }
     }
+  }
+  const ids = [...new Set(group)];
+  const narrowest = Math.min(
+    ...ids.map((id) => {
+      const mine = rects.filter((_, k) => group[k] === id);
+      const w = Math.max(...mine.map((r) => r.x + r.dx)) - Math.min(...mine.map((r) => r.x));
+      const h = Math.max(...mine.map((r) => r.y + r.dy)) - Math.min(...mine.map((r) => r.y));
+      return Math.min(w, h);
+    }),
+  );
+  // The pallet in the frame of the placements: inset by half the allowed overhang.
+  const inset = inputs.overhang / 2;
+  const shares = rects.map((r) => {
+    const w = Math.min(r.x + r.dx, inset + inputs.pallet.length) - Math.max(r.x, inset);
+    const h = Math.min(r.y + r.dy, inset + inputs.pallet.width) - Math.max(r.y, inset);
+    return (Math.max(0, w) * Math.max(0, h)) / (r.dx * r.dy);
+  });
+  const worst = Math.min(...shares);
+
+  const split = ids.length > 1;
+  const deck = worst < 0.9 - TOL;
+  let warnings: StabilityWarning[] = layout.stability!.warnings.map((w) => ({ ...w }));
+  if (split) {
+    const height = layout.layers.reduce((sum, l) => sum + l.height, 0);
+    const value = height / narrowest;
+    warnings = warnings.filter((w) => w.check !== 'stackHeight');
+    if (value > 1.5 + TOL) {
+      warnings.unshift({
+        check: 'stackHeight',
+        level: value > 2 + TOL ? 'serious' : 'caution',
+        value,
+        freeStanding: true,
+      });
+    }
+  }
+  if (deck) {
+    warnings.push({
+      check: 'deck',
+      level: worst < 0.7 - TOL ? 'serious' : 'caution',
+      value: worst,
+      cartons: shares.filter((s) => s < 0.9 - TOL).length,
+    });
+  }
+  const rating = warnings.some((w) => w.level === 'serious')
+    ? 'poor'
+    : warnings.length > 0
+      ? 'fair'
+      : 'good';
+  return { split, deck, rating, warnings };
+}
+
+interface CopyTally {
+  same: number;
+  turned: number;
+  trimmed: number;
+  mixed: number;
+  /** Copies whose bottom layer stands in several groups. */
+  split: number;
+  /** Copies with a deck warning. */
+  deck: number;
+  /** Copies rated worse than the calculated layout (never better). */
+  worse: number;
+}
+const noTally = (): CopyTally => ({
+  same: 0,
+  turned: 0,
+  trimmed: 0,
+  mixed: 0,
+  split: 0,
+  deck: 0,
+  worse: 0,
+});
+const RANK = { good: 0, fair: 1, poor: 2 } as const;
+
+/** Copies one calculated layout by hand and checks the copy against it. */
+function checkCopy(name: string, layout: Layout, inputs: Inputs, tally: CopyTally) {
+  const copy = specFromLayout(layout, inputs, 'copy', 'Manual 1')!;
+  const built = buildManualLayout(copy, inputs);
+  expect(built.status).toBe('current');
+  expect(built.layout.carton).toEqual(layout.carton);
+  const base = cartonBase(layout.carton, layout.layers[0]!.vertical);
+  const { x, y } = usableFootprint(inputs);
+  assertNoOverlapWithin(built.layout.layers[0]!.blocks, base.a, base.b, x, y);
+  if (!onePattern(layout)) {
+    // A layout that mixes layer patterns: the copy stacks its bottom layer only.
+    tally.mixed++;
+    expect(built.layout.layers[0]!.cartonCount).toBe(layout.layers[0]!.cartonCount);
+    expect(built.layout.layers.every((l) => l.vertical === layout.layers[0]!.vertical)).toBe(true);
+    return;
+  }
+  tally.same++;
+  if (layout.layers.some((l) => l.turned)) tally.turned++;
+  if (layout.weightTrim) tally.trimmed++;
+  const where = `${name} ${layout.id}`;
+  expect(built.flags, where).toEqual([]);
+  expect(built.layout.layers.length, where).toBe(layout.layers.length);
+  expect(built.layout.totalCartons, where).toBe(layout.totalCartons);
+  expect(built.layout.totalProducts, where).toBe(layout.totalProducts);
+  expect(
+    built.layout.layers.map((l) => !!l.turned),
+    where,
+  ).toEqual(layout.layers.map((l) => !!l.turned));
+  expect(layoutWeight(built.layout, inputs), where).toEqual(layoutWeight(layout, inputs));
+
+  // Stability: the calculated layout's, but for the two differences said above.
+  const expected = expectedCopyStability(layout, inputs);
+  const calculated = layout.stability!;
+  if (!expected.split && !expected.deck) {
+    expect(expected.warnings, where).toEqual(calculated.warnings);
+    expect(expected.rating, where).toBe(calculated.rating);
+  }
+  if (expected.split) tally.split++;
+  if (expected.deck) tally.deck++;
+  const stability = built.layout.stability!;
+  expect(stability.rating, where).toBe(expected.rating);
+  expect(RANK[stability.rating], where).toBeGreaterThanOrEqual(RANK[calculated.rating]);
+  if (stability.rating !== calculated.rating) tally.worse++;
+  const fields = (w: StabilityWarning) => [w.check, w.level, w.layer, w.freeStanding, w.cartons];
+  expect(stability.warnings.map(fields), where).toEqual(expected.warnings.map(fields));
+  stability.warnings.forEach((w, k) => {
+    expect(w.value, where).toBeCloseTo(expected.warnings[k]!.value, 9);
+  });
+  // Every warning but the deck's, and the stack's of a split layer, is the calculated one.
+  const kept = (w: StabilityWarning) =>
+    w.check !== 'deck' && !(expected.split && w.check === 'stackHeight');
+  expect(
+    stability.warnings.filter(kept).map((w) => [w.check, w.level, w.layer]),
+    where,
+  ).toEqual(calculated.warnings.filter(kept).map((w) => [w.check, w.level, w.layer]));
+
+  // Carton for carton in the same places.
+  const mine = cartonPlacements(built.layout, inputs);
+  const theirs = cartonPlacements(layout, inputs);
+  expect(mine.length).toBe(theirs.length);
+  const spot = (p: { x: number; y: number; z: number; dx: number; dy: number }) =>
+    [p.z, p.x, p.y, p.dx, p.dy].map((v) => v.toFixed(6)).join(',');
+  expect(mine.map(spot).sort(), where).toEqual(theirs.map(spot).sort());
+}
+
+describe('a manual copy of a calculated layout', () => {
+  it('reports the same boxes, weight, layers and stability as the calculated layout', () => {
+    const tally = noTally();
+    for (const c of [...NAMED_CASES, ...randomCases(40, 5150)]) {
+      const inputs = asInputs(c.inputs);
+      for (const { layout } of optimize(inputs).layouts) checkCopy(c.name, layout, inputs, tally);
+    }
     // The run must really cover turned, trimmed and mixed layouts.
-    expect(same).toBeGreaterThan(150);
-    expect(turned).toBeGreaterThan(20);
-    expect(trimmed).toBeGreaterThan(5);
-    expect(mixed).toBeGreaterThan(5);
+    expect(tally.same).toBeGreaterThan(150);
+    expect(tally.turned).toBeGreaterThan(20);
+    expect(tally.trimmed).toBeGreaterThan(5);
+    expect(tally.mixed).toBeGreaterThan(5);
+    // Exactly how many copies in this run differ in stability, and why: 4 have a deck warning
+    // (cautions on layouts already Fair or Poor, so no rating changes) and none has a split
+    // bottom layer. A change to any of these numbers is a change to the rating.
+    expect({ split: tally.split, deck: tally.deck, worse: tally.worse }).toEqual({
+      split: 0,
+      deck: 4,
+      worse: 0,
+    });
   }, 120_000);
+
+  it('is rated worse where its layer stands in separate groups or hangs off the pallet', () => {
+    // A longer run, in which both differences occur and change ratings. Of its 2321
+    // one-pattern layouts (730 of them from the 187 inputs that allow overhang), 114 copies
+    // get a deck warning, 36 stand in separate groups (all pinwheel layers) and 31 are rated
+    // worse than the calculated layout. Every one is checked against the expected rating.
+    const tally = noTally();
+    for (const c of [...NAMED_CASES, ...randomCases(600, 77)]) {
+      const inputs = asInputs(c.inputs);
+      for (const { layout } of optimize(inputs).layouts) checkCopy(c.name, layout, inputs, tally);
+    }
+    expect(tally).toMatchObject({ same: 2321, split: 36, deck: 114, worse: 31 });
+  }, 300_000);
 });
 
 describe('a spec the editor could not have made', () => {
