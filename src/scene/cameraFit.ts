@@ -20,7 +20,7 @@ export interface OrthoFit {
 }
 
 /** Viewing direction for the default perspective: from the front-right, above the load. */
-const VIEW_DIR: Vec3 = [0.9, 0.75, 1.3];
+export const VIEW_DIR: Vec3 = [0.9, 0.75, 1.3];
 const MARGIN = 1.1;
 
 function centre(b: Bounds): Vec3 {
@@ -33,16 +33,23 @@ function size(b: Bounds): Vec3 {
 
 /**
  * A camera position that keeps the bounds' bounding sphere inside the narrower of the vertical
- * and horizontal fields of view, looking at the bounds centre.
+ * and horizontal fields of view, looking at the bounds centre from `direction` (any length;
+ * the default view when left out or zero).
  */
-export function perspectiveFit(bounds: Bounds, fovDeg: number, aspect: number): PerspectiveFit {
+export function perspectiveFit(
+  bounds: Bounds,
+  fovDeg: number,
+  aspect: number,
+  direction: Vec3 = VIEW_DIR,
+): PerspectiveFit {
   const target = centre(bounds);
   const radius = Math.max(Math.hypot(...size(bounds)) / 2, 1);
   const vHalf = (fovDeg * Math.PI) / 360;
   const hHalf = Math.atan(Math.tan(vHalf) * aspect);
   const distance = (radius / Math.sin(Math.min(vHalf, hHalf))) * MARGIN;
-  const len = Math.hypot(...VIEW_DIR);
-  const position = target.map((t, k) => t + (VIEW_DIR[k]! / len) * distance) as Vec3;
+  const dir = Math.hypot(...direction) > 1e-9 ? direction : VIEW_DIR;
+  const len = Math.hypot(...dir);
+  const position = target.map((t, k) => t + (dir[k]! / len) * distance) as Vec3;
   return { position, target };
 }
 

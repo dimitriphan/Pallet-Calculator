@@ -99,6 +99,7 @@ describe('LayoutComparisonTable', () => {
       'Utilization',
       'Remaining volume (in³)',
       'Score',
+      'Edit',
     ]);
   });
 
@@ -141,7 +142,7 @@ describe('LayoutComparisonTable', () => {
     });
     expect(within(rows[0] as HTMLElement).getByText('Pinwheel')).toBeInTheDocument();
     // No column was added for it.
-    expect(screen.getAllByRole('columnheader')).toHaveLength(9);
+    expect(screen.getAllByRole('columnheader')).toHaveLength(10);
   });
 
   it('shows a stored result whose layers have no kind as before, without "Pinwheel"', async () => {

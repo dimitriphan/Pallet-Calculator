@@ -17,11 +17,13 @@ import {
   weightTrimText,
   withUnit,
 } from './format';
+import { DESIGN_OWN_ID, EDITOR_ENTRY_REASON_ID, useEditorEntry } from './editor/useEditorEntry';
 import { BelowMinimumBadge, MinimumNote, useBelowMinimum } from './MinimumNotes';
 import { useUnit } from './useUnit';
 import { StabilityBadge } from './StabilityBadge';
 import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
+import { BUTTON } from './ModalDialog';
 
 /** "Pinwheel" under the layer count of a layout that has a pinwheel layer. */
 const PINWHEEL_BADGE =
@@ -59,6 +61,8 @@ export function LayoutComparisonTable() {
   const select = useResults((s) => s.select);
   const unit = useUnit();
   const belowMinimum = useBelowMinimum();
+  const entry = useEditorEntry();
+  const entryOff = entry.blocked !== null;
   // Weight is shown only when the result was computed with a box weight.
   const weighed = !!inputs && inputs.weights.productBox !== null;
 
@@ -81,11 +85,26 @@ export function LayoutComparisonTable() {
   const td = 'whitespace-nowrap px-1 py-1.5 tabular-nums';
   return (
     <section aria-labelledby="comparison-heading" className="shrink-0 space-y-2">
-      <div className="flex items-baseline justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="comparison-heading" className="heading text-sm text-gray-900 dark:text-harbor-foam">
           Layout comparison
         </h2>
+        <button
+          type="button"
+          id={DESIGN_OWN_ID}
+          disabled={entryOff}
+          aria-describedby={entryOff ? EDITOR_ENTRY_REASON_ID : undefined}
+          onClick={() => entry.openOwn()}
+          className={BUTTON}
+        >
+          Design my own carton
+        </button>
       </div>
+      {entryOff && (
+        <p id={EDITOR_ENTRY_REASON_ID} className="text-xs text-gray-600 dark:text-harbor-mist">
+          {entry.blocked}
+        </p>
+      )}
       <StatusMessages />
       {rows.length > 0 && <MinimumNote />}
       {rows.length > 0 && (
@@ -124,6 +143,9 @@ export function LayoutComparisonTable() {
                 </th>
                 <th scope="col" className={`${th} text-right`}>
                   Score
+                </th>
+                <th scope="col" className={th}>
+                  <span className="sr-only">Edit</span>
                 </th>
               </tr>
             </thead>
@@ -208,6 +230,23 @@ export function LayoutComparisonTable() {
                       {formatVolume(analytics.totals.remainingVolume, unit)}
                     </td>
                     <td className={`${td} text-right`}>{fmtDecimal(ranked.score.total)}</td>
+                    <td className={`${td} text-right`}>
+                      <button
+                        type="button"
+                        aria-label={`Edit layout ${ranked.rank} by hand`}
+                        disabled={entryOff}
+                        aria-describedby={entryOff ? EDITOR_ENTRY_REASON_ID : undefined}
+                        // The row selects on click and on Enter; the button only edits.
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          entry.openCalculated(index);
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className={`${BUTTON} !px-1.5 !py-0.5 text-xs font-normal`}
+                      >
+                        Edit by hand
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

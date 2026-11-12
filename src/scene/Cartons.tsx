@@ -15,10 +15,19 @@ interface Props {
   productsShown: boolean;
   wireframe: boolean;
   onPick: (cartonIndex: number) => void;
+  /** How solid a see-through carton is drawn (with products shown); 0.25 unless given. */
+  shellOpacity?: number;
 }
 
 /** Every carton as one InstancedMesh, layers in alternating shades, with one edge outline. */
-export function Cartons({ cartons, inputs, productsShown, wireframe, onPick }: Props) {
+export function Cartons({
+  cartons,
+  inputs,
+  productsShown,
+  wireframe,
+  onPick,
+  shellOpacity = 0.25,
+}: Props) {
   const colorOf = useMemo(
     () => (k: number) => LAYER_SHADES[(cartons[k]?.layerIndex ?? 0) % 2]!,
     [cartons],
@@ -36,7 +45,7 @@ export function Cartons({ cartons, inputs, productsShown, wireframe, onPick }: P
         boxes={cartons}
         inputs={inputs}
         colorOf={colorOf}
-        opacity={productsShown ? 0.25 : 1}
+        opacity={productsShown ? shellOpacity : 1}
         wireframe={wireframe}
         onPick={productsShown ? undefined : onPick}
       />
@@ -44,7 +53,7 @@ export function Cartons({ cartons, inputs, productsShown, wireframe, onPick }: P
         <lineBasicMaterial
           color={EDGE_COLOR}
           transparent={productsShown}
-          opacity={productsShown ? 0.5 : 1}
+          opacity={productsShown ? Math.min(1, shellOpacity * 2) : 1}
         />
       </lineSegments>
     </>

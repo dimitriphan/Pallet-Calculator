@@ -1,9 +1,11 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { AnalyticsTab } from './AnalyticsTab';
+import { EDITOR_ENTRY_REASON_ID, useEditorEntry } from './editor/useEditorEntry';
 import { ExplanationTab } from './ExplanationTab';
+import { BUTTON } from './ModalDialog';
 import { SelectionTab } from './SelectionTab';
 import { StaleBadge } from './StaleBadge';
-import { useScene } from './StoreContext';
+import { useResults, useScene } from './StoreContext';
 import { useSelectedAnalytics } from './useSelectedAnalytics';
 
 const TABS = ['Analytics', 'Explanation', 'Selection'] as const;
@@ -15,6 +17,16 @@ export function DetailsPanel() {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const selected = useSelectedAnalytics();
   const selection = useScene((s) => s.selection);
+  const selectedIndex = useResults((s) => s.selectedIndex);
+  const entry = useEditorEntry();
+  // A manual layout that is out of date can only be rebuilt, not edited as it stands.
+  const outOfDate = selected?.ranked.manual?.status === 'outOfDate';
+  const editOff = entry.blocked !== null || outOfDate;
+  const edit = () => {
+    const manual = selected?.ranked.manual;
+    if (manual) entry.openSaved(manual.id);
+    else entry.openCalculated(selectedIndex);
+  };
 
   const onKeyDown = (e: KeyboardEvent) => {
     const k = TABS.indexOf(active);
@@ -81,6 +93,20 @@ export function DetailsPanel() {
         </div>
         <StaleBadge className="ml-auto" />
       </div>
+      {selected && (
+        <div className="border-b border-gray-200 px-4 py-2 dark:border-harbor-foam/40">
+          <button
+            type="button"
+            disabled={editOff}
+            aria-describedby={entry.blocked ? EDITOR_ENTRY_REASON_ID : undefined}
+            title={entry.blocked ?? undefined}
+            onClick={edit}
+            className={BUTTON}
+          >
+            Edit layout by hand
+          </button>
+        </div>
+      )}
       <div
         role="tabpanel"
         id={`details-panel-${active}`}
