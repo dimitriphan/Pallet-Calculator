@@ -25,6 +25,11 @@ export const VIEW_DIR: Vec3 = [0.9, 0.75, 1.3];
 export const LAYER_VIEW_DIR: Vec3 = [0.35, 1.25, 1];
 /** Its "Top view": straight down, tipped by a hair so the front edge stays at the bottom. */
 export const TOP_VIEW_DIR: Vec3 = [0, 1, 0.001];
+/**
+ * How far the layer step's camera may be tipped down, in radians from straight above: 80°, so
+ * it always looks at the layer from above the pallet's deck and never from under it.
+ */
+export const LAYER_MAX_POLAR = (80 * Math.PI) / 180;
 /** The vertical field of view of the editor's camera, in degrees. */
 export const EDITOR_FOV = 40;
 const MARGIN = 1.1;

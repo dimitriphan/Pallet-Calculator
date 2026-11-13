@@ -300,8 +300,8 @@ test('the pallet layer step: drag a carton with the mouse', async ({ page }) => 
   const panel = page.getByRole('tabpanel');
   const bar = page.getByRole('region', { name: 'Editing by hand' });
   const message = page.getByTestId('layer-message');
-  const left = page.getByLabel('From left edge');
-  const front = page.getByLabel('From front edge');
+  const left = page.getByRole('textbox', { name: "From the pallet's left edge" });
+  const front = page.getByRole('textbox', { name: "From the pallet's front edge" });
   // The best result mixes layer patterns; the copy is a stack of its bottom layer.
   await expect(page.getByTestId('mixed-note')).toHaveText(
     'This result mixes layer patterns. Editing by hand starts from its bottom layer: 250 boxes instead of 260.',
@@ -329,7 +329,7 @@ test('the pallet layer step: drag a carton with the mouse', async ({ page }) => 
     await expect(item(page, 0)).toHaveAttribute('data-y', '0');
     await expect(item(page, 0)).toHaveAttribute('aria-pressed', 'true');
     await expect(item(page, 0)).toHaveAccessibleName(
-      'Carton 1: 0.00 in from left, 21.00 in from front',
+      "Carton 1: 0.00 in from the pallet's left edge, 21.00 in from the pallet's front edge",
     );
     await expect(left).toHaveValue('0.00');
     await expect(message).toBeEmpty();
@@ -595,13 +595,15 @@ test('the pallet layer step: tools, keys, upper layers, save', async ({ page }) 
   // A typed position, exactly as typed; one over another carton is refused.
   // (Undo brought the selection back with the carton.)
   await expect(item(page, 8)).toHaveAttribute('aria-pressed', 'true');
-  await page.getByLabel('From left edge').fill('30');
-  await page.getByLabel('From left edge').press('Enter');
+  await page.getByRole('textbox', { name: "From the pallet's left edge" }).fill('30');
+  await page.getByRole('textbox', { name: "From the pallet's left edge" }).press('Enter');
   await expect(item(page, 8)).toHaveAttribute('data-x', '30');
-  await page.getByLabel('From left edge').fill('12');
-  await page.getByLabel('From left edge').press('Enter');
+  await page.getByRole('textbox', { name: "From the pallet's left edge" }).fill('12');
+  await page.getByRole('textbox', { name: "From the pallet's left edge" }).press('Enter');
   await expect(page.getByTestId('position-message')).toHaveText('Cartons cannot overlap');
-  await expect(page.getByLabel('From left edge')).toHaveValue('30.00');
+  await expect(page.getByRole('textbox', { name: "From the pallet's left edge" })).toHaveValue(
+    '30.00',
+  );
 
   // Upper layers: the layer is no longer the same turned half round, so the choice shows.
   const upper = bar.getByRole('radiogroup', { name: 'Upper layers' });
@@ -650,4 +652,171 @@ test('the pallet layer step: tools, keys, upper layers, save', async ({ page }) 
   expect(items[0]!.cartons[0]).toEqual({ x: 2.25, y: 0, rotated: false });
   expect(items[0]!.cartons[8]).toMatchObject({ x: 30, rotated: true });
   expect(problems).toEqual([]);
+});
+
+test('the view buttons work after a key was used in the layer view (final review F1)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  await page.getByRole('button', { name: 'Edit layout 2 by hand' }).click();
+  const scene = page.getByTestId('editor-scene');
+  await expect(scene).toHaveAttribute('data-step', 'layer');
+  await settledPicture(scene.locator('canvas'));
+  const at = await cartonCentre(page, await readLayer(page), 'angle', 0);
+  await page.mouse.click(at.x, at.y);
+  await expect(item(page, 0)).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('ArrowDown');
+  await page.getByRole('button', { name: 'Top view' }).click();
+  await expect(scene).toHaveAttribute('data-view', 'top');
+  // The press was the button's own: the carton is still selected.
+  await expect(item(page, 0)).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('scene-view').focus();
+  await page.keyboard.press('ArrowUp');
+  await page.getByRole('button', { name: 'Reset view' }).click();
+  await expect(scene).toHaveAttribute('data-view', 'angle');
+  await expect(item(page, 0)).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('a carton stays on the pallet: release outside the view, typed, nudged, dragged (F2, F3)', async ({
+  page,
+}) => {
+  const problems = watchProblems(page);
+  await openLayerStep(page);
+  await topView(page);
+  const message = page.getByTestId('layer-message');
+  const left = page.getByRole('textbox', { name: "From the pallet's left edge" });
+  await expect(page.getByRole('textbox', { name: "From the pallet's front edge" })).toBeDisabled();
+
+  // Let go outside the view: the drag is given up and the carton is where it was.
+  const layer = await readLayer(page);
+  const from = await cartonCentre(page, layer, 'top', 0);
+  const box = (await page.getByTestId('editor-scene').locator('canvas').boundingBox())!;
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 40, from.y, { steps: 4 });
+  await page.mouse.move(box.x - 60, from.y, { steps: 4 });
+  await page.mouse.up();
+  await expect(message).toHaveText('Drop the carton inside the view.');
+  await expect(item(page, 0)).toHaveAttribute('data-x', '2.5');
+  await expect(item(page, 0)).toHaveAttribute('data-y', '0');
+  await expect(
+    page.getByRole('region', { name: 'Editing by hand' }).getByRole('button', { name: 'Undo' }),
+  ).toBeDisabled();
+
+  // Typed: the carton is 9 in wide, so 9 in past the left edge it would be wholly off.
+  await expect(left).toHaveValue('2.50');
+  await left.fill('-9');
+  await left.press('Enter');
+  await expect(page.getByTestId('position-message')).toHaveText(
+    'Keep the carton at least partly on the pallet.',
+  );
+  await expect(item(page, 0)).toHaveAttribute('data-x', '2.5');
+  await left.fill('-8.5');
+  await left.press('Enter');
+  await expect(item(page, 0)).toHaveAttribute('data-x', '-8.5');
+  await expect(item(page, 0)).toHaveAccessibleName(
+    "Carton 1: -8.50 in from the pallet's left edge, 21.00 in from the pallet's front edge, outside the allowed footprint",
+  );
+
+  // Nudged: a quarter inch is still on; an inch more is not.
+  await page.getByTestId('scene-view').focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(item(page, 0)).toHaveAttribute('data-x', '-8.75');
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect(message).toHaveText('Keep the carton at least partly on the pallet.');
+  await expect(item(page, 0)).toHaveAttribute('data-x', '-8.75');
+
+  // Dragged wholly off, inside the view: refused, and back it goes.
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(message).toBeEmpty();
+  await settledPicture(page.getByTestId('editor-scene').locator('canvas'));
+  await page.getByRole('checkbox', { name: 'Snapping' }).uncheck();
+  const now = await readLayer(page);
+  const c = now.cartons[0]!;
+  await dragCarton(page, 'top', 0, { x: c.x + c.w / 2 - 6, y: c.y + c.h / 2 });
+  await expect(message).toHaveText('Keep the carton at least partly on the pallet.');
+  await expect(item(page, 0)).toHaveAttribute('data-x', '-7.75');
+  expect(problems).toEqual([]);
+});
+
+test('the layer view cannot be turned to look from under the pallet (F4)', async ({ page }) => {
+  await openLayerStep(page);
+  const canvas = page.getByTestId('editor-scene').locator('canvas');
+  const box = (await canvas.boundingBox())!;
+  // Empty space near the corner; dragging it up tips the camera down toward the floor.
+  const x = box.x + 24;
+  const tip = async (fromY: number, by: number) => {
+    await page.mouse.move(x, fromY);
+    await page.mouse.down();
+    await page.mouse.move(x, fromY - by, { steps: 6 });
+    await page.mouse.up();
+    return settledPicture(canvas);
+  };
+  const y = box.y + box.height - 24;
+  // 0.3 of the view's height is 108 degrees: well past the horizon from where the view starts.
+  const first = await tip(y, box.height * 0.3);
+  // Stopped above the deck, more of the same changes nothing.
+  expect(await tip(y, box.height * 0.1)).toBe(first);
+});
+
+for (const [width, height] of [
+  [1024, 768],
+  [1100, 700],
+  [1440, 900],
+  [768, 1024],
+] as const)
+  test(`the whole editor view fits the window at ${width} x ${height} (F5, F7)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await openLayerStep(page);
+    const fits = async () => {
+      const slot = (await page.getByTestId('scene-slot').boundingBox())!;
+      expect(slot.y).toBeGreaterThanOrEqual(0);
+      expect(slot.y + slot.height).toBeLessThanOrEqual(height);
+      expect(slot.x + slot.width).toBeLessThanOrEqual(width);
+      const view = (await page.getByTestId('editor-scene').locator('canvas').boundingBox())!;
+      expect(view.height).toBeGreaterThanOrEqual(270);
+      const caption = (await page.getByTestId('view-caption').boundingBox())!;
+      expect(caption.y + caption.height).toBeLessThanOrEqual(height);
+      // Nothing to scroll to: the page is the window, and the results column starts at its top.
+      expect(
+        await page.evaluate(() => {
+          const d = document.documentElement;
+          return [d.scrollWidth - window.innerWidth, d.scrollHeight - window.innerHeight];
+        }),
+      ).toEqual([0, 0]);
+      expect(await page.locator('main').evaluate((m) => m.scrollTop)).toBe(0);
+    };
+    await fits();
+    await page
+      .getByRole('region', { name: 'Editing by hand' })
+      .getByRole('tab', { name: /Carton/ })
+      .click();
+    await expect(page.getByTestId('editor-scene')).toHaveAttribute('data-step', 'carton');
+    await fits();
+  });
+
+test('while editing, the results are not in the tab order (F7)', async ({ page }) => {
+  await page.setViewportSize({ width: 1100, height: 700 });
+  await openLayerStep(page);
+  await page.getByTestId('scene-view').focus();
+  const where: string[] = [];
+  for (let k = 0; k < 8; k++) {
+    await page.keyboard.press('Tab');
+    where.push(
+      await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el) return 'none';
+        if (el.closest('[role=tabpanel]')) return 'panel';
+        if (el.closest('[data-testid=scene-slot]')) return 'view';
+        if (el.closest('table')) return 'table';
+        return el.tagName;
+      }),
+    );
+  }
+  expect(where).not.toContain('table');
+  // The two view buttons, then straight into the step's panel.
+  expect(where.slice(0, 3)).toEqual(['view', 'view', 'panel']);
 });

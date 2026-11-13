@@ -460,6 +460,20 @@ describe('layer step', () => {
     expect(t.s()).toMatchObject({ selected: null, canUndo: false, dirty: false });
   });
 
+  it('builds the layout again only when it changed: not for a selection, a preview or a name', async () => {
+    const t = await setup();
+    t.openLayer();
+    const build = t.s().build;
+    t.e().select(0);
+    t.e().previewMove(0, { x: 0, y: 3 });
+    t.e().setName('Another name');
+    t.e().setSnapping(false);
+    expect(t.s().build).toBe(build);
+    expect(t.e().nudge(0, -0.25)).toMatchObject({ ok: true });
+    expect(t.s().build).not.toBe(build);
+    expect(t.s().build.layout.layers[0]?.blocks[0]).toMatchObject({ x: 0, y: 3.75 });
+  });
+
   it('moves a carton, snapping to edges within 0.5 in when snapping is on', async () => {
     const t = await setup();
     t.openLayer(FOUR.slice(0, 1));
@@ -515,14 +529,48 @@ describe('layer step', () => {
     });
     expect(t.e().move(0, { x: 10, y: 10 })).toEqual({ ok: false, reason: 'overlap' });
     expect(t.s()).toMatchObject({ cartons: FOUR, canUndo: false, dirty: false });
-    // Outside the usable footprint is allowed, and flagged.
-    expect(t.e().move(0, { x: -30, y: 4 }, { snap: false })).toMatchObject({ ok: true });
-    expect(t.s().build.flags).toContainEqual({ kind: 'overhang', cartons: 1, by: 30 });
+    // Reaching outside the usable footprint is allowed, and flagged.
+    expect(t.e().move(0, { x: -20, y: 4 }, { snap: false })).toMatchObject({ ok: true });
+    expect(t.s().build.flags).toContainEqual({ kind: 'overhang', cartons: 1, by: 20 });
     expect(t.s().canSave).toBe(true);
     // Dropping a carton where it already is changes nothing.
     const depth = t.s().cartons;
     expect(t.e().move(1, { x: 25, y: 4 })).toEqual({ ok: true, position: { x: 25, y: 4 } });
     expect(t.s().cartons).toBe(depth);
+  });
+
+  it('keeps a carton at least partly on the pallet, however it is moved', async () => {
+    const t = await setup();
+    t.openLayer();
+    const { a } = t.s().base;
+    // Wholly off the footprint (its right edge on the footprint's left edge, or beyond).
+    for (const to of [
+      { x: -a, y: 4 },
+      { x: -a - 5, y: 4 },
+      { x: 4, y: 500 },
+    ]) {
+      expect(t.e().previewMove(0, to)?.valid, JSON.stringify(to)).toBe(false);
+      expect(t.e().move(0, to, { snap: false })).toEqual({ ok: false, reason: 'offPallet' });
+    }
+    expect(t.s()).toMatchObject({ cartons: FOUR, canUndo: false, dirty: false });
+    // A quarter inch of it on the pallet is enough; from there a nudge further is refused.
+    expect(t.e().move(0, { x: 0.25 - a, y: 4 }, { snap: false })).toMatchObject({ ok: true });
+    t.e().select(0);
+    expect(t.e().nudge(-0.25, 0)).toEqual({ ok: false, reason: 'offPallet' });
+    expect(t.e().nudge(-1, 0)).toEqual({ ok: false, reason: 'offPallet' });
+    expect(t.s().cartons[0]).toEqual({ x: 0.25 - a, y: 4, rotated: false });
+    expect(t.e().nudge(0.25, 0)).toMatchObject({ ok: true });
+  });
+
+  it('opens a stored layout with a carton wholly off the pallet, which can be brought back', async () => {
+    const t = await setup();
+    t.openLayer([{ x: -80, y: 4, rotated: false }, FOUR[1]!]);
+    expect(t.s().build.flags).toContainEqual(expect.objectContaining({ kind: 'overhang' }));
+    t.e().select(0);
+    expect(t.e().nudge(-1, 0)).toEqual({ ok: false, reason: 'offPallet' });
+    expect(t.e().nudge(1, 0)).toEqual({ ok: true, position: { x: -79, y: 4 } });
+    expect(t.e().previewMove(0, { x: -70, y: 4 })?.valid).toBe(true);
+    expect(t.e().move(0, { x: 0, y: 4 }, { snap: false })).toMatchObject({ ok: true });
   });
 
   it('nudges the selected carton exactly, without snapping', async () => {

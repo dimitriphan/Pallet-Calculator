@@ -15,7 +15,10 @@ import {
   type LayerActions,
 } from './layerActions';
 import { RESET_QUESTION } from './LayerTools';
-import { NOT_A_NUMBER, SELECT_TO_POSITION } from './SelectedCarton';
+import { NOT_A_NUMBER, POSITION_HINT, POSITION_LABEL, SELECT_TO_POSITION } from './SelectedCarton';
+
+const LEFT = POSITION_LABEL.left;
+const FRONT = POSITION_LABEL.front;
 
 type App = Awaited<ReturnType<typeof renderApp>>;
 
@@ -190,10 +193,10 @@ describe('the carton list', () => {
     expect(within(list()).getAllByRole('button')).toHaveLength(all.length);
     all.forEach((c, k) => {
       const depth = c.rotated ? base.a : base.b;
-      const name = `Carton ${k + 1}: ${lengthText(c.x, 'in')} from left, ${lengthText(
+      const name = `Carton ${k + 1}: ${lengthText(c.x, 'in')} from the pallet's left edge, ${lengthText(
         usable.y - c.y - depth,
         'in',
-      )} from front${c.rotated ? ', turned' : ''}`;
+      )} from the pallet's front edge${c.rotated ? ', turned' : ''}`;
       expect(item(k)).toHaveAccessibleName(name);
       expect(item(k)).toHaveAttribute('data-x', String(c.x));
       expect(item(k)).toHaveAttribute('data-y', String(c.y));
@@ -343,7 +346,7 @@ describe('the layer keys', () => {
     await app.user.keyboard(']');
     expect(cartons(app)).toBe(before);
     expect(session(app).selected).toBe(0);
-    await app.user.click(field('From left edge'));
+    await app.user.click(field(LEFT));
     await app.user.keyboard('{ArrowLeft}{Delete}r');
     expect(cartons(app)).toBe(before);
     expect(session(app).selected).toBe(0);
@@ -427,17 +430,15 @@ describe('the layer keys', () => {
 describe('the position fields', () => {
   it('are off until a carton is selected, then show where it is', async () => {
     const app = await openLayer();
-    expect(field('From left edge')).toBeDisabled();
-    expect(field('From front edge')).toBeDisabled();
-    expect(field('From left edge')).toHaveAccessibleDescription(SELECT_TO_POSITION);
+    expect(field(LEFT)).toBeDisabled();
+    expect(field(FRONT)).toBeDisabled();
+    expect(field(LEFT)).toHaveAccessibleDescription(SELECT_TO_POSITION);
     await app.user.click(item(0));
     const { usable, base } = session(app);
     const c = cartons(app)[0]!;
     const depth = c.rotated ? base.a : base.b;
-    expect(field('From left edge')).toHaveValue(lengthText(c.x, 'in').replace(' in', ''));
-    expect(field('From front edge')).toHaveValue(
-      lengthText(usable.y - c.y - depth, 'in').replace(' in', ''),
-    );
+    expect(field(LEFT)).toHaveValue(lengthText(c.x, 'in').replace(' in', ''));
+    expect(field(FRONT)).toHaveValue(lengthText(usable.y - c.y - depth, 'in').replace(' in', ''));
     expect(within(screen.getByTestId('selected-carton')).getByRole('heading')).toHaveTextContent(
       `Carton 1 of ${cartons(app).length}`,
     );
@@ -448,29 +449,29 @@ describe('the position fields', () => {
     await aloneOnThePallet(app);
     const { usable, base } = session(app);
     const depth = () => (cartons(app)[0]!.rotated ? base.a : base.b);
-    await app.user.clear(field('From left edge'));
-    await app.user.type(field('From left edge'), '3.3{Enter}');
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), '3.3{Enter}');
     // Not snapped to the edge 0.3 away... nor to anything else.
     expect(cartons(app)[0]!.x).toBeCloseTo(3.3, 12);
-    expect(field('From left edge')).toHaveValue('3.30');
+    expect(field(LEFT)).toHaveValue('3.30');
 
-    await app.user.clear(field('From front edge'));
-    await app.user.type(field('From front edge'), '2');
+    await app.user.clear(field(FRONT));
+    await app.user.type(field(FRONT), '2');
     await app.user.tab();
     expect(cartons(app)[0]!.y).toBeCloseTo(usable.y - depth() - 2, 12);
-    expect(field('From front edge')).toHaveValue('2.00');
+    expect(field(FRONT)).toHaveValue('2.00');
 
     // Leaving a field as it was shown changes nothing (the place is not rounded).
     act(() => {
       app.stores.manualEditor.getState().move(0, { x: 1.23456, y: 4 }, { snap: false });
     });
-    await app.user.click(field('From left edge'));
+    await app.user.click(field(LEFT));
     await app.user.tab();
     expect(cartons(app)[0]!.x).toBe(1.23456);
 
     // A negative distance is outside the footprint: allowed, and flagged.
-    await app.user.clear(field('From left edge'));
-    await app.user.type(field('From left edge'), '-2{Enter}');
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), '-2{Enter}');
     expect(cartons(app)[0]!.x).toBe(-2);
     expect(within(panel()).getByRole('list', { name: 'Layout flags' })).toHaveTextContent(
       'overhangs the allowed footprint by up to 2.00 in',
@@ -482,22 +483,78 @@ describe('the position fields', () => {
     await app.user.click(item(0));
     const before = cartons(app);
     const other = before[1]!;
-    const shown = (field('From left edge') as HTMLInputElement).value;
+    const shown = (field(LEFT) as HTMLInputElement).value;
     // Carton 1 is beside carton 0, in the same row: half an inch off its left edge is over it.
     expect(other.y).toBe(before[0]!.y);
-    await app.user.clear(field('From left edge'));
-    await app.user.type(field('From left edge'), `${other.x + 0.5}{Enter}`);
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), `${other.x + 0.5}{Enter}`);
     expect(cartons(app)).toBe(before);
     expect(screen.getByTestId('position-message')).toHaveTextContent(LAYER_MESSAGES.overlap);
-    expect(field('From left edge')).toHaveValue(shown);
-    expect(field('From left edge')).toHaveAccessibleDescription(LAYER_MESSAGES.overlap);
-    expect(field('From left edge')).toHaveAttribute('aria-invalid', 'true');
+    expect(field(LEFT)).toHaveValue(shown);
+    expect(field(LEFT)).toHaveAccessibleDescription(LAYER_MESSAGES.overlap);
+    expect(field(LEFT)).toHaveAttribute('aria-invalid', 'true');
 
-    await app.user.clear(field('From left edge'));
-    await app.user.type(field('From left edge'), 'abc{Enter}');
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), 'abc{Enter}');
     expect(cartons(app)).toBe(before);
     expect(screen.getByTestId('position-message')).toHaveTextContent(NOT_A_NUMBER);
-    expect(field('From left edge')).toHaveValue(shown);
+    expect(field(LEFT)).toHaveValue(shown);
+  });
+
+  it('measure from the pallet itself, not from the allowed footprint (final review F3)', async () => {
+    expect(LEFT).toBe("From the pallet's left edge");
+    expect(FRONT).toBe("From the pallet's front edge");
+    const app = await openLayer();
+    await aloneOnThePallet(app);
+    expect(field(LEFT)).toHaveAccessibleDescription(POSITION_HINT);
+    // 2 in of overhang: the footprint reaches 1 in past the pallet on every side.
+    act(() => {
+      const i = app.stores.inputs.getState();
+      if (i.parsed.ok) i.replaceInputs({ ...i.parsed.inputs, overhang: 2 });
+    });
+    await flush();
+    const s = session(app);
+    expect(s.pallet).toMatchObject({ x: 1, y: 1 });
+    const depth = s.cartons[0]!.rotated ? s.base.a : s.base.b;
+    // Flush with the pallet's left and front edges (1 in inside the footprint): both read 0.
+    act(() => {
+      app.stores.manualEditor
+        .getState()
+        .move(0, { x: 1, y: s.usable.y - 1 - depth }, { snap: false });
+    });
+    expect(field(LEFT)).toHaveValue('0.00');
+    expect(field(FRONT)).toHaveValue('0.00');
+    expect(item(0)).toHaveAccessibleName(
+      /^Carton 1: 0\.00 in from the pallet's left edge, 0\.00 in from the pallet's front edge/,
+    );
+    // Typed 1 in over the pallet's left edge: on the footprint's edge, and not flagged.
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), '-1{Enter}');
+    expect(cartons(app)[0]!.x).toBe(0);
+    expect(within(panel()).queryByRole('list', { name: 'Layout flags' })).toBeNull();
+  });
+
+  it('refuse a place wholly off the pallet, with the message', async () => {
+    const app = await openLayer();
+    await aloneOnThePallet(app);
+    const before = cartons(app);
+    const width = before[0]!.rotated ? session(app).base.b : session(app).base.a;
+    const shown = (field(LEFT) as HTMLInputElement).value;
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), `-${width}{Enter}`);
+    expect(cartons(app)).toBe(before);
+    expect(screen.getByTestId('position-message')).toHaveTextContent(
+      'Keep the carton at least partly on the pallet.',
+    );
+    expect(field(LEFT)).toHaveValue(shown);
+    // The arrow keys say the same in the tools' message line.
+    act(() => {
+      app.stores.manualEditor.getState().move(0, { x: 0.5 - width, y: 0 }, { snap: false });
+    });
+    item(0).focus();
+    await app.user.keyboard('{Shift>}{ArrowLeft}{/Shift}');
+    expect(message()).toHaveTextContent(LAYER_MESSAGES.offPallet);
+    expect(cartons(app)[0]!.x).toBe(0.5 - width);
   });
 
   it('show and take the display unit', async () => {
@@ -506,22 +563,22 @@ describe('the position fields', () => {
     await app.user.selectOptions(screen.getByRole('combobox', { name: 'Units' }), 'cm');
     await flush();
     const x = cartons(app)[0]!.x;
-    expect(field('From left edge')).toHaveValue(lengthText(x, 'cm').replace(' cm', ''));
-    await app.user.clear(field('From left edge'));
-    await app.user.type(field('From left edge'), '2.54{Enter}');
+    expect(field(LEFT)).toHaveValue(lengthText(x, 'cm').replace(' cm', ''));
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), '2.54{Enter}');
     expect(cartons(app)[0]!.x).toBeCloseTo(1, 12);
-    expect(item(0)).toHaveAccessibleName(/^Carton 1: 2\.5 cm from left/);
+    expect(item(0)).toHaveAccessibleName(/^Carton 1: 2\.5 cm from the pallet's left edge/);
   });
 
   it('Escape gives up what was typed', async () => {
     const app = await openLayer();
     await app.user.click(item(0));
     const before = cartons(app);
-    const shown = (field('From left edge') as HTMLInputElement).value;
-    await app.user.clear(field('From left edge'));
-    await app.user.type(field('From left edge'), '40{Escape}');
-    expect(field('From left edge')).toHaveValue(shown);
-    fireEvent.blur(field('From left edge'));
+    const shown = (field(LEFT) as HTMLInputElement).value;
+    await app.user.clear(field(LEFT));
+    await app.user.type(field(LEFT), '40{Escape}');
+    expect(field(LEFT)).toHaveValue(shown);
+    fireEvent.blur(field(LEFT));
     expect(cartons(app)).toBe(before);
     expect(session(app).selected).toBe(0);
   });

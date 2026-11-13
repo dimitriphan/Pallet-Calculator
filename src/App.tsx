@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { SceneSlot } from './scene/SceneSlot';
 import { BasicInputs } from './ui/BasicInputs';
 import { DetailsPanel } from './ui/DetailsPanel';
@@ -51,6 +51,14 @@ function Workspace() {
     // Nothing under the notice can be focused or pressed.
     if (sceneArea.current) sceneArea.current.inert = block !== null;
   }, [block]);
+  const main = useRef<HTMLElement>(null);
+  const results = useRef<HTMLDivElement>(null);
+  // Before the effect above: the focus goes back to a control in the results when it closes.
+  useLayoutEffect(() => {
+    if (results.current) results.current.inert = editing;
+    // The editor opens at the top of its column, whatever was scrolled to before.
+    if (editing && main.current) main.current.scrollTop = 0;
+  }, [editing, full]);
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100 text-gray-900 dark:bg-harbor-deep dark:text-harbor-foam">
       <Header />
@@ -66,23 +74,26 @@ function Workspace() {
       >
         <aside
           aria-label="Inputs"
-          className={`overflow-y-auto border-r border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel ${
+          className={`relative overflow-y-auto border-r border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel ${
             inputsFrom === null ? '' : inputsFrom === 'lg' ? 'hidden lg:block' : 'hidden xl:block'
           }`}
         >
           {full ? <InputsPanel /> : <BasicInputs />}
         </aside>
-        <main className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto p-4">
+        <main
+          ref={main}
+          className="relative flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto p-4"
+        >
           <div
             data-testid="scene-slot"
-            className={`relative flex flex-1 flex-col overflow-hidden border bg-white dark:bg-harbor-panel ${
+            className={`relative flex flex-col border bg-white dark:bg-harbor-panel ${
               editing
-                ? `${
-                    // The layer step has a row of tools more (which wraps in a narrow column), and
-                    // its view is worked in.
-                    session?.step === 'layer' ? 'min-h-[840px] xl:min-h-[680px]' : 'min-h-[520px]'
-                  } border-blue-700 dark:border-harbor-teal`
-                : 'min-h-[320px] border-gray-300 dark:border-harbor-foam/40'
+                ? // The editor takes the whole height of the column, so its tools and its view
+                  // are all in sight with nothing to scroll (a finger on the view cannot
+                  // scroll the page). Where the window is too low for that, the view keeps a
+                  // least height and the column scrolls.
+                  'h-full min-h-min shrink-0 overflow-clip border-blue-700 dark:border-harbor-teal'
+                : 'min-h-[320px] flex-1 overflow-hidden border-gray-300 dark:border-harbor-foam/40'
             }`}
           >
             {session && !block && (
@@ -92,7 +103,10 @@ function Workspace() {
               />
             )}
             {session && block && <EditorBlocked block={block} dirty={session.dirty} />}
-            <div ref={sceneArea} className="relative min-h-0 flex-1">
+            <div
+              ref={sceneArea}
+              className={`relative flex-1 ${editing ? 'min-h-[300px]' : 'min-h-0'}`}
+            >
               <div className="absolute inset-0">
                 <SceneSlot />
               </div>
@@ -101,12 +115,23 @@ function Workspace() {
               <StaleBadge className="pointer-events-none absolute bottom-2 left-2 z-10" />
             )}
           </div>
-          {full && <YourLayouts />}
-          {full && <LayoutComparisonTable />}
+          {full && (
+            // While a layout is edited the editor has the whole column: the results are put
+            // away (hidden and inert), so they are not in the tab order between the 3D view and
+            // the editor's panel, and nothing is left to scroll to under the editor.
+            <div
+              ref={results}
+              data-testid="results-region"
+              className={`shrink-0 flex-col gap-4 ${editing ? 'hidden' : 'flex'}`}
+            >
+              <YourLayouts />
+              <LayoutComparisonTable />
+            </div>
+          )}
         </main>
         <aside
           aria-label={editing ? 'Editor step' : 'Details'}
-          className="overflow-y-auto border-l border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel"
+          className="relative overflow-y-auto border-l border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel"
         >
           {session && block ? (
             <p className="p-4 text-sm text-gray-700 dark:text-harbor-mist">

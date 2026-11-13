@@ -11,11 +11,16 @@ export const NOT_A_NUMBER = 'Enter a number';
 export const SELECT_TO_POSITION = 'Select a carton to see and type its position.';
 
 type Edge = 'left' | 'front';
-const LABEL: Record<Edge, string> = { left: 'From left edge', front: 'From front edge' };
+export const POSITION_LABEL: Record<Edge, string> = {
+  left: "From the pallet's left edge",
+  front: "From the pallet's front edge",
+};
+export const POSITION_HINT =
+  'Measured from the edges of the pallet itself. A negative distance means the carton hangs over that edge.';
 
 /**
- * Where the selected carton is: its distances from the left and front edges of the allowed
- * footprint, in the display unit, each in a field that can be typed into. A typed distance is
+ * Where the selected carton is: its distances from the left and front edges of the pallet
+ * itself (the frame positions are stored in), in the display unit, each in a field that can be typed into. A typed distance is
  * applied on Enter or on leaving the field, exactly as typed (no snapping); one that would put
  * the carton over another is refused and the field goes back.
  */
@@ -23,11 +28,11 @@ export function SelectedCarton({ session }: { session: EditorSession }) {
   const unit = useUnit();
   const ids = useId();
   const move = useManualEditor((s) => s.move);
-  const { cartons, base, usable, selected } = session;
+  const { cartons, base, pallet, selected } = session;
   const carton = selected === null ? undefined : cartons[selected];
   // What is being typed, and the carton and place it was typed for: a draft for another
   // carton, or for a place the carton has since left, is dropped.
-  const at = carton ? fromLeftFront(carton, base, usable) : null;
+  const at = carton ? fromLeftFront(carton, base, pallet) : null;
   const where = carton ? `${selected}:${carton.x}:${carton.y}:${carton.rotated}` : '';
   const [draft, setDraft] = useState<{ where: string; edge: Edge; text: string } | null>(null);
   const [error, setError] = useState<{ where: string; text: string } | null>(null);
@@ -45,19 +50,27 @@ export function SelectedCarton({ session }: { session: EditorSession }) {
     setDraft(null);
     // Left as it was shown: the place is kept exactly, not cut to the digits the field shows.
     if (draft.text.trim() === shown(edge)) return;
-    // A distance may be negative: the carton then lies outside the footprint, and is flagged.
+    // A distance may be negative: the carton then hangs over that edge of the pallet.
     const typed = draft.text.trim().replace(',', '.');
     const value = /^[-+]?(\d+\.?\d*|\.\d+)$/.test(typed) ? Number(typed) : NaN;
     if (!Number.isFinite(value)) {
       setError({ where, text: NOT_A_NUMBER });
       return;
     }
-    const to = atLeftFront(carton, base, usable, { ...at, [edge]: toInches(value, unit) });
+    const to = atLeftFront(carton, base, pallet, { ...at, [edge]: toInches(value, unit) });
     const result = move(selected, to, { snap: false });
     setError(
       result.ok
         ? null
-        : { where, text: result.reason === 'overlap' ? LAYER_MESSAGES.overlap : NOT_A_NUMBER },
+        : {
+            where,
+            text:
+              result.reason === 'overlap'
+                ? LAYER_MESSAGES.overlap
+                : result.reason === 'offPallet'
+                  ? LAYER_MESSAGES.offPallet
+                  : NOT_A_NUMBER,
+          },
     );
   };
 
@@ -75,7 +88,7 @@ export function SelectedCarton({ session }: { session: EditorSession }) {
               htmlFor={`${ids}${edge}`}
               className="mb-0.5 block text-xs text-gray-700 dark:text-harbor-mist"
             >
-              {LABEL[edge]}
+              {POSITION_LABEL[edge]}
             </label>
             <div
               className={`focus-ticks-within flex items-center border ${
@@ -92,7 +105,7 @@ export function SelectedCarton({ session }: { session: EditorSession }) {
                 disabled={!carton}
                 value={text(edge)}
                 aria-invalid={shownError ? 'true' : 'false'}
-                aria-describedby={carton ? (shownError ? errorId : undefined) : hintId}
+                aria-describedby={carton && shownError ? errorId : hintId}
                 onChange={(e) => {
                   setError(null);
                   setDraft({ where, edge, text: e.target.value });
@@ -116,11 +129,9 @@ export function SelectedCarton({ session }: { session: EditorSession }) {
           </div>
         ))}
       </div>
-      {!carton && (
-        <p id={hintId} className={HINT}>
-          {SELECT_TO_POSITION}
-        </p>
-      )}
+      <p id={hintId} className={HINT}>
+        {carton ? POSITION_HINT : SELECT_TO_POSITION}
+      </p>
       <p
         id={errorId}
         role="status"

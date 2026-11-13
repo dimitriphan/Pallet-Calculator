@@ -67,7 +67,8 @@ export function LayerTools({ session }: { session: EditorSession }) {
 
   return (
     <div data-testid="layer-tools" className="space-y-2">
-      <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+      {/* The gaps are kept small so the tools fit one row beside a 360 px panel at 1100 px. */}
+      <div className="flex flex-wrap items-end gap-x-2 gap-y-2">
         <div role="group" aria-label="Layer tools" className="flex flex-wrap gap-1.5">
           <button
             ref={addButton}
@@ -145,7 +146,7 @@ export function LayerTools({ session }: { session: EditorSession }) {
                   tabIndex={checked ? 0 : -1}
                   onClick={() => chooseUpper(k)}
                   onKeyDown={(e) => onRadioKey(e, k)}
-                  className={`focus-ticks inline-flex min-h-[42px] items-center px-2.5 text-sm ${
+                  className={`focus-ticks inline-flex min-h-[42px] items-center px-2 text-sm ${
                     k > 0 ? 'border-l border-gray-300 dark:border-harbor-foam' : ''
                   } ${
                     checked

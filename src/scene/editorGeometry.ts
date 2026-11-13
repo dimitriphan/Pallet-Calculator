@@ -14,7 +14,7 @@ import {
   type ManualCarton,
   type Point,
 } from '../engine/manual/layer';
-import { usableFootprint } from '../engine/packing/geometry';
+import { usableFootprint, type Rect } from '../engine/packing/geometry';
 import { cartonPlacements, type PlacedBox } from '../engine/packing/positions';
 import { palletBounds, toSceneBounds, type SceneBounds, type Vec3 } from './transforms';
 
@@ -113,19 +113,15 @@ export function layerStepBounds(layout: Layout, inputs: Inputs): SceneBounds {
 /** How far a carton being dragged is lifted, so it is drawn over a carton it overlaps. */
 export const DRAG_LIFT = 0.3;
 
-/**
- * The cartons of the working layer as boxes standing on the pallet top, in the order given.
- * `lifted` is the index of a carton being dragged, drawn a little above the others.
- */
+/** The cartons of the working layer as boxes standing on the pallet top, in the order given. */
 export function layerBoxes(
   cartons: readonly ManualCarton[],
   base: CartonBase,
   height: number,
-  lifted: number | null = null,
 ): PlacedBox[] {
-  return cartons.map((c, k) => {
+  return cartons.map((c) => {
     const r = cartonRect(c, base);
-    return { x: r.x, y: r.y, z: k === lifted ? DRAG_LIFT : 0, dx: r.w, dy: r.h, dz: height };
+    return { x: r.x, y: r.y, z: 0, dx: r.w, dy: r.h, dz: height };
   });
 }
 
@@ -180,24 +176,29 @@ export function sceneToFootprint(sceneX: number, sceneZ: number, usable: Point):
   return { x: sceneX + usable.x / 2, y: sceneZ + usable.y / 2 };
 }
 
-/** A carton's distances from the left and front edges of the usable footprint. */
+/**
+ * A carton's distances from the left and front edges of the pallet itself (not of the usable
+ * footprint): the pallet is what can be measured from on the floor, and it is the frame the
+ * positions are stored in. `c` and `pallet` are in the usable footprint's frame (see
+ * `palletRect`). A negative distance: the carton hangs over that edge by so much.
+ */
 export function fromLeftFront(
   c: ManualCarton,
   base: CartonBase,
-  usable: Point,
+  pallet: Rect,
 ): { left: number; front: number } {
   const r = cartonRect(c, base);
   // The front is the edge at the greatest y (see layer.ts).
-  return { left: r.x, front: usable.y - (r.y + r.h) };
+  return { left: r.x - pallet.x, front: pallet.y + pallet.h - (r.y + r.h) };
 }
 
 /** The minimum corner of a carton that stands `left` and `front` from those edges. */
 export function atLeftFront(
   c: ManualCarton,
   base: CartonBase,
-  usable: Point,
+  pallet: Rect,
   at: { left: number; front: number },
 ): Point {
   const r = cartonRect(c, base);
-  return { x: at.left, y: usable.y - r.h - at.front };
+  return { x: pallet.x + at.left, y: pallet.y + pallet.h - r.h - at.front };
 }

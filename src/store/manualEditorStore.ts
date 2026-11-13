@@ -46,12 +46,13 @@ import {
   canPlace,
   cartonBase,
   cartonRect,
-  moveCarton,
   palletRect,
+  partlyOnFootprint,
   removeCarton,
   snap,
   snapTargets,
   SNAP_THRESHOLD,
+  tryMoveCarton,
   tryTurnCarton,
   type CartonBase,
   type ManualCarton,
@@ -107,6 +108,11 @@ export type EditorRefusal =
   | { reason: 'noSelection' }
   /** The carton would overlap another there: it stays where it was. */
   | { reason: 'overlap' }
+  /**
+   * The carton would be wholly off the usable footprint there. However it is moved (dragged,
+   * by the arrow keys, by a typed position) it stays at least partly over the footprint.
+   */
+  | { reason: 'offPallet' }
   /** The turned carton would overlap wherever it is put. */
   | { reason: 'turnRefused' }
   /**
@@ -241,12 +247,14 @@ export interface ManualEditorState {
   select(index: number | null): EditorResult;
   /**
    * Where carton `index` would land if dropped with its minimum corner at `to` (snapped when
-   * snapping is on) and whether it may be dropped there. Changes nothing: for showing a drag.
+   * snapping is on) and whether it may be dropped there (it overlaps nothing and is not wholly
+   * off the usable footprint). Changes nothing: for showing a drag.
    */
   previewMove(index: number, to: Point): { position: Point; valid: boolean } | null;
   /**
    * Drops carton `index` at `to`, snapped when snapping is on (`snap` overrides the toggle;
-   * a typed position passes false). Refused when it would overlap.
+   * a typed position passes false). Refused when it would overlap ('overlap') or be wholly off
+   * the usable footprint ('offPallet').
    */
   move(index: number, to: Point, opts?: { snap?: boolean }): EditorResult<{ position: Point }>;
   /** Moves the selected carton by exactly (dx, dy), without snapping. */
@@ -387,6 +395,15 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       const half = i.overhang / 2;
       return result.map((r) => kept.get(r) ?? { ...r, x: r.x - half, y: r.y - half });
     };
+    // The last build published and what it was built from.
+    let built: {
+      layer: ManualCarton[];
+      inputs: Inputs;
+      design: CartonDesign;
+      upperLayers: UpperLayers;
+      id: string;
+      build: ManualBuild;
+    } | null = null;
     // The best layer per design under one inputs object; searched once, then reused.
     let bestFor: { inputs: Inputs; byDesign: Map<string, ManualCarton[]> } | null = null;
 
@@ -432,18 +449,38 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       const { design } = core;
       const carton = designCarton(design, inputs);
       const layer = layerOf(core, inputs);
-      const build = buildManualLayout(
-        {
-          id: meta.origin.kind === 'saved' ? meta.origin.id : 'draft',
-          name: meta.name,
+      // Built again only when what is built changed: selecting a carton or typing a name
+      // leaves the layout, its flags and its rating as they are.
+      const id = meta.origin.kind === 'saved' ? meta.origin.id : 'draft';
+      const { upperLayers } = core;
+      if (
+        !built ||
+        built.layer !== layer ||
+        built.inputs !== inputs ||
+        built.design !== design ||
+        built.upperLayers !== upperLayers ||
+        built.id !== id
+      )
+        built = {
+          layer,
+          inputs,
           design,
-          // Already in the usable footprint's frame (no `frame`): built as it stands.
-          cartons: layer,
-          upperLayers: core.upperLayers,
-          madeFor: madeForOf(design, inputs),
-        },
-        inputs,
-      );
+          upperLayers,
+          id,
+          build: buildManualLayout(
+            {
+              id,
+              name: meta.name,
+              design,
+              // Already in the usable footprint's frame (no `frame`): built as it stands.
+              cartons: layer,
+              upperLayers,
+              madeFor: madeForOf(design, inputs),
+            },
+            inputs,
+          ),
+        };
+      const { build } = built;
       const session: EditorSession = {
         ...meta,
         design,
@@ -528,6 +565,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       past = [];
       future = [];
       framed = null;
+      built = null;
       stepNotice = null;
       publish();
     };
@@ -600,9 +638,9 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       if (!Number.isFinite(to.x) || !Number.isFinite(to.y)) return { ok: false, reason: 'invalid' };
       const position = snapped(s.work, s.inputs, s.base, index, to, snapping);
       if (samePoint(position, current)) return { ok: true, position };
-      const cartons = moveCarton(s.work, index, position, s.base);
-      if (!cartons) return { ok: false, reason: 'overlap' };
-      editLayer(s.core, stored(cartons, s.work, s.core, s.inputs), {
+      const moved = tryMoveCarton(s.work, index, position, s.base, usableFootprint(s.inputs));
+      if (!moved.ok) return { ok: false, reason: moved.reason };
+      editLayer(s.core, stored(moved.cartons, s.work, s.core, s.inputs), {
         lastRotated: current.rotated,
       });
       return { ok: true, position };
@@ -809,9 +847,14 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         const current = s.no ? undefined : s.work[index];
         if (s.no || !current || !Number.isFinite(to.x) || !Number.isFinite(to.y)) return null;
         const position = snapped(s.work, s.inputs, s.base, index, to, s.meta.snapping);
+        // As the drop would be judged: no overlap, and not wholly off the footprint.
+        const at = { ...current, ...position };
+        const usable = usableFootprint(s.inputs);
         return {
           position,
-          valid: canPlace(s.work, { ...current, ...position }, s.base, index),
+          valid:
+            canPlace(s.work, at, s.base, index) &&
+            (partlyOnFootprint(at, s.base, usable) || !partlyOnFootprint(current, s.base, usable)),
         };
       },
       move(index, to, opts = {}) {

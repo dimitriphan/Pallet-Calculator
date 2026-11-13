@@ -25,6 +25,7 @@ import {
   snap,
   snapTargets,
   SNAP_THRESHOLD,
+  tryMoveCarton,
   tryTurnCarton,
   turnCarton,
   type CartonBase,
@@ -153,7 +154,55 @@ describe('moveCarton', () => {
   });
 });
 
+describe('tryMoveCarton: a carton stays at least partly over the usable footprint', () => {
+  // BASE is 10 x 6 and USABLE 40 x 30.
+  const layer = [at(0, 0), at(10, 0)];
+  const move = (to: { x: number; y: number }, cartons = layer) =>
+    tryMoveCarton(cartons, 0, to, BASE, USABLE);
+  it('moves a carton that overhangs but is still partly over the footprint', () => {
+    expect(move({ x: -9.5, y: -5.5 })).toEqual({ ok: true, cartons: [at(-9.5, -5.5), at(10, 0)] });
+    expect(move({ x: 39.5, y: 29.5 })).toMatchObject({ ok: true });
+  });
+  it('refuses a place wholly off the footprint, on any side', () => {
+    for (const to of [
+      { x: -10.5, y: 3 },
+      { x: 40.5, y: 3 },
+      { x: 3, y: -6.5 },
+      { x: 3, y: 30.5 },
+      { x: -500, y: 900 },
+    ])
+      expect(move(to), JSON.stringify(to)).toEqual({ ok: false, reason: 'offPallet' });
+  });
+  it('refuses a place that only touches the footprint: nothing of the carton is over it', () => {
+    expect(move({ x: -10, y: 3 })).toEqual({ ok: false, reason: 'offPallet' });
+    expect(move({ x: 3, y: 30 })).toEqual({ ok: false, reason: 'offPallet' });
+    expect(move({ x: 40, y: 30 })).toEqual({ ok: false, reason: 'offPallet' });
+  });
+  it('still refuses an overlap, an unknown carton and a position that is not a number', () => {
+    expect(tryMoveCarton(layer, 1, { x: 9, y: 0 }, BASE, USABLE)).toEqual({
+      ok: false,
+      reason: 'overlap',
+    });
+    expect(tryMoveCarton(layer, 7, { x: 9, y: 0 }, BASE, USABLE)).toEqual({
+      ok: false,
+      reason: 'invalid',
+    });
+    expect(move({ x: NaN, y: 0 })).toEqual({ ok: false, reason: 'invalid' });
+  });
+  it('a carton already wholly off (an old stored layout) may move back, never further off', () => {
+    const lost = [at(-30, 3), at(10, 0)];
+    expect(move({ x: -29, y: 3 }, lost)).toMatchObject({ ok: true });
+    expect(move({ x: -30, y: 5 }, lost)).toMatchObject({ ok: true });
+    expect(move({ x: 4, y: 20 }, lost)).toMatchObject({ ok: true });
+    expect(move({ x: -31, y: 3 }, lost)).toEqual({ ok: false, reason: 'offPallet' });
+  });
+});
+
 describe('turnCarton', () => {
+  it('keeps an overhanging carton partly over the footprint', () => {
+    // Its minimum corner kept, the turned carton would be wholly off; the next corner is not.
+    expect(turnCarton([at(-9.5, 3)], 0, BASE, USABLE)).toEqual([at(-5.5, 3, true)]);
+  });
   it('turns a carton about its minimum corner when that is free and inside', () => {
     expect(turnCarton([at(0, 0)], 0, BASE, USABLE)).toEqual([at(0, 0, true)]);
     expect(turnCarton([at(0, 0, true)], 0, BASE, USABLE)).toEqual([at(0, 0)]);

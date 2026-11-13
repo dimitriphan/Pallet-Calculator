@@ -108,7 +108,7 @@ export function LayoutComparisonTable() {
       <StatusMessages />
       {rows.length > 0 && <MinimumNote />}
       {rows.length > 0 && (
-        <div className="overflow-x-auto border border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel">
+        <div className="relative overflow-x-auto border border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-mist">
               <tr>
@@ -144,7 +144,8 @@ export function LayoutComparisonTable() {
                 <th scope="col" className={`${th} text-right`}>
                   Score
                 </th>
-                <th scope="col" className={th}>
+                {/* Positioned, so the hidden label stays inside the table's own scroll box. */}
+                <th scope="col" className={`${th} relative`}>
                   <span className="sr-only">Edit</span>
                 </th>
               </tr>

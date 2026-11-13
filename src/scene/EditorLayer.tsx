@@ -1,13 +1,35 @@
 import { Line } from '@react-three/drei';
 import { useThree, type ThreeEvent } from '@react-three/fiber';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BufferAttribute, BufferGeometry, Color, Plane, Raycaster, Vector2, Vector3 } from 'three';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  BufferAttribute,
+  BufferGeometry,
+  Color,
+  Plane,
+  Raycaster,
+  Vector2,
+  Vector3,
+  type Group,
+  type MeshStandardMaterial,
+} from 'three';
+import type { Inputs } from '../domain/types';
 import { verticalAxis } from '../engine/manual/carton';
-import type { Point } from '../engine/manual/layer';
+import type { CartonBase, ManualCarton, Point } from '../engine/manual/layer';
+import type { PlacedBox } from '../engine/packing/positions';
 import type { EditorSession } from '../store/manualEditorStore';
 import type { LayerActions } from '../ui/editor/layerActions';
 import { useResolvedTheme } from '../ui/useTheme';
 import {
+  DRAG_LIFT,
   footprintOutline,
   layerBoxes,
   overhanging,
@@ -18,7 +40,13 @@ import { InstancedBoxes } from './InstancedBoxes';
 import { Pallet } from './Pallet';
 import { sceneTheme } from './sceneTheme';
 import { SelectionOutline } from './SelectionOutline';
-import { boundsEdges, boxEdgePositions, toSceneBounds } from './transforms';
+import {
+  boundsEdges,
+  boxEdgePositions,
+  toSceneBounds,
+  toScenePosition,
+  toSceneScale,
+} from './transforms';
 
 const EDGE_COLOR = '#6b4423';
 /** Pointer travel (px) before a press on a carton becomes a drag; less is a click or a tap. */
@@ -58,11 +86,111 @@ function Segments({ positions, color }: { positions: Float32Array; color: string
 }
 
 /** A carton as it is being dragged: where it would land, and whether it may be dropped there. */
-interface DragView {
-  index: number;
+interface DragShown {
   position: Point;
   valid: boolean;
 }
+
+/** The colours a carton of the layer can take. */
+interface CartonColors {
+  plain: Color;
+  turned: Color;
+  error: Color;
+  plainOutside: Color;
+  turnedOutside: Color;
+}
+
+interface DraggedHandle {
+  /** Draws the carton at `shown.position`; called once a frame, outside React. */
+  show(shown: DragShown): void;
+}
+
+interface DraggedProps {
+  /** The carton as it stood when the drag began, and its box there. */
+  carton: ManualCarton;
+  box: PlacedBox;
+  base: CartonBase;
+  usable: Point;
+  inputs: Inputs;
+  colors: CartonColors;
+  errorColor: string;
+  selected: boolean;
+  /** What to show as soon as this is drawn: the drag may be a frame ahead of React. */
+  first(): DragShown | null;
+}
+
+/** Inches taken off the dragged carton's faces, as `InstancedBoxes` does for the others. */
+const SHRINK = 0.02;
+
+/**
+ * The one carton being dragged, drawn on its own: its box, edges, seam and outlines are built
+ * once, where the carton stood, and a drag then only moves the group that holds them and sets
+ * the box's colour (`show`). Nothing of the rest of the layer is touched while the pointer
+ * moves, and no geometry is made per frame.
+ */
+const DraggedCarton = forwardRef<DraggedHandle, DraggedProps>(function DraggedCarton(
+  { carton, box, base, usable, inputs, colors, errorColor, selected, first },
+  ref,
+) {
+  const group = useRef<Group>(null);
+  const material = useRef<MeshStandardMaterial>(null);
+  const flagged = useRef<Group>(null);
+  const invalidate = useThree((s) => s.invalidate);
+  const bounds = useMemo(() => toSceneBounds(box, inputs), [box, inputs]);
+  const edges = useMemo(() => boxEdgePositions([box], inputs), [box, inputs]);
+  const seam = useMemo(
+    () => seamPositions([box], [carton], base, usable),
+    [box, carton, base, usable],
+  );
+  const outline = useMemo(() => boundsEdges(bounds), [bounds]);
+  const position = useMemo(() => toScenePosition(box, inputs), [box, inputs]);
+  const scale = useMemo(
+    () => toSceneScale(box).map((v) => v - SHRINK) as [number, number, number],
+    [box],
+  );
+
+  const show = useCallback(
+    (shown: DragShown) => {
+      const at = { ...carton, ...shown.position };
+      const outside = overhanging([at], base, usable)[0] ?? false;
+      // Lifted a little, so it is drawn over a carton it overlaps.
+      group.current?.position.set(at.x - carton.x, DRAG_LIFT, at.y - carton.y);
+      material.current?.color.copy(
+        !shown.valid
+          ? colors.error
+          : outside
+            ? carton.rotated
+              ? colors.turnedOutside
+              : colors.plainOutside
+            : carton.rotated
+              ? colors.turned
+              : colors.plain,
+      );
+      if (flagged.current) flagged.current.visible = outside || !shown.valid;
+      invalidate();
+    },
+    [carton, base, usable, colors, invalidate],
+  );
+  useImperativeHandle(ref, () => ({ show }), [show]);
+  useLayoutEffect(() => {
+    show(first() ?? { position: carton, valid: true });
+  }, [show, first, carton]);
+
+  return (
+    <group ref={group}>
+      <mesh position={position} scale={scale}>
+        <boxGeometry />
+        <meshStandardMaterial ref={material} roughness={0.85} />
+      </mesh>
+      <Segments positions={edges} color={EDGE_COLOR} />
+      <Segments positions={seam} color={EDGE_COLOR} />
+      <group ref={flagged} visible={false}>
+        <Line points={outline} segments color={errorColor} lineWidth={2.5} renderOrder={5} />
+      </group>
+      {selected && <SelectionOutline bounds={bounds} />}
+    </group>
+  );
+});
 
 /** A drag in progress. Kept outside React state: pointer events read and change it directly. */
 interface Drag {
@@ -78,6 +206,8 @@ interface Drag {
   moved: boolean;
   /** The last pointer position not yet shown. */
   pending: { x: number; y: number } | null;
+  /** What was last shown, for the dragged carton's first drawing. */
+  shown: DragShown | null;
   frame: number;
   end(): void;
 }
@@ -99,7 +229,10 @@ export interface LayerStepSceneProps {
  * one layer, whose cartons are selected with a click or tap and moved by dragging. A drag runs
  * on a horizontal plane at the height the carton was grabbed, keeps the grab offset, and shows
  * the carton where the session says it would land (snapped when snapping is on); only the drop
- * changes the session, so one drag is one step of undo.
+ * changes the session, so one drag is one step of undo. While the pointer moves only the
+ * dragged carton is redrawn (`DraggedCarton`): the rest of the layer, and the session's layout
+ * and rating, are worked out again when the carton is dropped. A drag let go outside the view
+ * is given up.
  */
 export function LayerStepScene({
   session,
@@ -113,24 +246,18 @@ export function LayerStepScene({
   const { cartons, base, usable, inputs, selected } = session;
   const height = session.carton.outer[verticalAxis(session.design)];
 
-  const [view, setView] = useState<DragView | null>(null);
+  // The index of the carton being dragged. It changes when a drag starts and when it ends,
+  // never while the pointer moves: a frame of a drag redraws one carton, outside React.
+  const [dragging, setDragging] = useState<number | null>(null);
   const drag = useRef<Drag | null>(null);
+  const dragged = useRef<DraggedHandle>(null);
+  const lastShown = useCallback(() => drag.current?.shown ?? null, []);
   const raycaster = useMemo(() => new Raycaster(), []);
 
-  // The carton being dragged is drawn where it would land, a little above the others.
-  const shown = useMemo(
-    () => cartons.map((c, k) => (view && view.index === k ? { ...c, ...view.position } : c)),
-    [cartons, view],
-  );
-  const lifted = view?.index ?? null;
-  const boxes = useMemo(
-    () => layerBoxes(shown, base, height, lifted),
-    [shown, base, height, lifted],
-  );
-  const outside = useMemo(() => overhanging(shown, base, usable), [shown, base, usable]);
-  const invalid = view && !view.valid ? view.index : null;
+  const boxes = useMemo(() => layerBoxes(cartons, base, height), [cartons, base, height]);
+  const outside = useMemo(() => overhanging(cartons, base, usable), [cartons, base, usable]);
 
-  const colors = useMemo(() => {
+  const colors = useMemo((): CartonColors => {
     const plain = new Color(fixed.carton);
     const turned = new Color(fixed.cartonTurned);
     const error = new Color(fixed.cartonError);
@@ -145,35 +272,51 @@ export function LayerStepScene({
   }, [fixed]);
   const colorOf = useCallback(
     (k: number) => {
-      if (k === invalid) return colors.error;
-      const turned = shown[k]?.rotated ?? false;
+      const turned = cartons[k]?.rotated ?? false;
       if (outside[k]) return turned ? colors.turnedOutside : colors.plainOutside;
       return turned ? colors.turned : colors.plain;
     },
-    [colors, shown, outside, invalid],
+    [colors, cartons, outside],
   );
 
-  const edges = useMemo(() => boxEdgePositions(boxes, inputs), [boxes, inputs]);
-  const seams = useMemo(
-    () => seamPositions(boxes, shown, base, usable),
-    [boxes, shown, base, usable],
-  );
-  const outsideEdges = useMemo(
-    () =>
-      boxes.flatMap((b, k) =>
-        outside[k] || k === invalid ? boundsEdges(toSceneBounds(b, inputs)) : [],
+  // The lines of every carton but the one being dragged, which draws its own.
+  const still = useMemo(() => {
+    const keep = (_: unknown, k: number) => k !== dragging;
+    const b = dragging === null ? boxes : boxes.filter(keep);
+    const c = dragging === null ? cartons : cartons.filter(keep);
+    return {
+      edges: boxEdgePositions(b, inputs),
+      seams: seamPositions(b, c, base, usable),
+      outsideEdges: boxes.flatMap((box, k) =>
+        outside[k] && k !== dragging ? boundsEdges(toSceneBounds(box, inputs)) : [],
       ),
-    [boxes, outside, invalid, inputs],
-  );
-  const selectedBox = selected === null ? undefined : boxes[selected];
+    };
+  }, [boxes, cartons, dragging, outside, inputs, base, usable]);
+  const selectedBox = selected === null || selected === dragging ? undefined : boxes[selected];
   const selectedBounds = useMemo(
     () => (selectedBox ? toSceneBounds(selectedBox, inputs) : null),
     [selectedBox, inputs],
   );
+  const draggedCarton = dragging === null ? undefined : cartons[dragging];
+  const draggedBox = dragging === null ? undefined : boxes[dragging];
 
   useEffect(() => {
     invalidate();
-  }, [invalidate, boxes, colorOf]);
+  }, [invalidate, boxes, colorOf, dragging]);
+
+  /** Whether a point of the screen is inside the 3D view. */
+  const inView = useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = get().gl.domElement.getBoundingClientRect();
+      return (
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom
+      );
+    },
+    [get],
+  );
 
   /** Where the carton's minimum corner is for a pointer at (clientX, clientY), or null. */
   const cornerAt = useCallback(
@@ -222,10 +365,15 @@ export function LayerStepScene({
       const d = drag.current;
       if (!d) return;
       d.end();
-      if (commit && d.moved) {
-        const to = cornerAt(d, commit.x, commit.y);
-        if (to) actions.drop(d.index, to);
+      if (!commit || !d.moved) return;
+      // Let go outside the view: the drag is given up. (The point under a pointer out there
+      // can be far off the pallet, or nowhere.)
+      if (!inView(commit.x, commit.y)) {
+        actions.dropOutside();
+        return;
       }
+      const to = cornerAt(d, commit.x, commit.y);
+      if (to) actions.drop(d.index, to);
     };
     const onMove = (ev: PointerEvent) => {
       const d = drag.current;
@@ -233,6 +381,7 @@ export function LayerStepScene({
       if (!d.moved) {
         if (Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY) < DRAG_START_PX) return;
         d.moved = true;
+        setDragging(d.index);
         onPointerState('dragging');
       }
       d.pending = { x: ev.clientX, y: ev.clientY };
@@ -241,10 +390,15 @@ export function LayerStepScene({
         d.frame = requestAnimationFrame(() => {
           d.frame = 0;
           if (drag.current !== d || !d.pending) return;
-          const to = cornerAt(d, d.pending.x, d.pending.y);
+          const { x, y } = d.pending;
+          const to = cornerAt(d, x, y);
           d.pending = null;
           const preview = to && previewMove(d.index, to);
-          if (preview) setView({ index: d.index, ...preview });
+          if (!preview) return;
+          // Outside the view it could not be dropped: shown as a place it may not go.
+          d.shown = { position: preview.position, valid: preview.valid && inView(x, y) };
+          // Only the dragged carton is redrawn: no React render, no new geometry.
+          dragged.current?.show(d.shown);
         });
     };
     const onUp = (ev: PointerEvent) => {
@@ -271,6 +425,7 @@ export function LayerStepScene({
       grab: { x: at.x - carton.x, y: at.y - carton.y },
       moved: false,
       pending: null,
+      shown: null,
       frame: 0,
       end() {
         drag.current = null;
@@ -286,7 +441,7 @@ export function LayerStepScene({
           // Already released.
         }
         if (controls) controls.enabled = true;
-        setView(null);
+        setDragging(null);
         onPointerState('idle');
       },
     };
@@ -317,20 +472,36 @@ export function LayerStepScene({
         wireframe={false}
         // A click on a carton is its own: it must not reach the pallet under it.
         onPick={NOTHING}
+        hidden={dragging}
         onPress={press}
         onHover={(over) => {
           if (!drag.current?.moved) onPointerState(over ? 'over' : 'idle');
         }}
       />
-      <Segments positions={edges} color={EDGE_COLOR} />
-      <Segments positions={seams} color={EDGE_COLOR} />
-      {outsideEdges.length > 0 && (
+      <Segments positions={still.edges} color={EDGE_COLOR} />
+      <Segments positions={still.seams} color={EDGE_COLOR} />
+      {still.outsideEdges.length > 0 && (
         <Line
-          points={outsideEdges}
+          points={still.outsideEdges}
           segments
           color={fixed.cartonError}
           lineWidth={2.5}
           renderOrder={5}
+        />
+      )}
+      {dragging !== null && draggedCarton && draggedBox && (
+        <DraggedCarton
+          ref={dragged}
+          key={dragging}
+          carton={draggedCarton}
+          box={draggedBox}
+          base={base}
+          usable={usable}
+          inputs={inputs}
+          colors={colors}
+          errorColor={fixed.cartonError}
+          selected={selected === dragging}
+          first={lastShown}
         />
       )}
       {selectedBounds && <SelectionOutline bounds={selectedBounds} />}

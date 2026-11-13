@@ -21,6 +21,10 @@ export const LAYER_MESSAGES = {
   /** A carton dropped on another: it is back where it was. */
   dropRefused: 'Cartons cannot overlap. The carton went back to where it was',
   noSelection: 'Select a carton first',
+  /** Dragged, nudged or typed to a place where nothing of it would be over the footprint. */
+  offPallet: 'Keep the carton at least partly on the pallet.',
+  /** A drag let go outside the 3D view: given up, the carton is where it was. */
+  dropOutside: 'Drop the carton inside the view.',
 } as const;
 
 /** Why Turn and Remove are off. */
@@ -56,6 +60,8 @@ export function refusalText(result: EditorResult<object>): string | null {
       return LAYER_MESSAGES.overlap;
     case 'noSelection':
       return LAYER_MESSAGES.noSelection;
+    case 'offPallet':
+      return LAYER_MESSAGES.offPallet;
     default:
       return null;
   }
@@ -74,6 +80,8 @@ export interface LayerActions {
   nudge(dx: number, dy: number): boolean;
   /** Drops carton `index` with its minimum corner at `to`, snapped when snapping is on. */
   drop(index: number, to: Point): boolean;
+  /** A drag was let go outside the view: nothing moves, and the message line says why. */
+  dropOutside(): void;
   /** Selects the next (1) or previous (-1) carton, going round. */
   cycle(by: 1 | -1): void;
   select(index: number | null): void;
@@ -107,6 +115,7 @@ export function useLayerActions(): LayerActions {
           !result.ok && result.reason === 'overlap' ? LAYER_MESSAGES.dropRefused : undefined,
         );
       },
+      dropOutside: () => useLayerMessage.getState().say(LAYER_MESSAGES.dropOutside),
       cycle: (by) => {
         const session = editor().session;
         const count = session?.cartons.length ?? 0;

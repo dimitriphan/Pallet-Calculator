@@ -8,7 +8,10 @@ import { useUnit } from '../useUnit';
 import { handleLayerKey, useLayerActions } from './layerActions';
 import { HINT, SECTION_TITLE } from './styles';
 
-/** "Carton 3: 12.50 in from left, 0.00 in from front, turned". */
+/**
+ * "Carton 3: 12.50 in from the pallet's left edge, 0.00 in from the pallet's front edge,
+ * turned". The distances are from the pallet itself, as the position fields show them.
+ */
 export function cartonSentence(
   number: number,
   at: { left: number; front: number },
@@ -17,8 +20,8 @@ export function cartonSentence(
   unit: Unit,
 ): string {
   return [
-    `Carton ${fmtCount(number)}: ${lengthText(at.left, unit)} from left`,
-    `${lengthText(at.front, unit)} from front`,
+    `Carton ${fmtCount(number)}: ${lengthText(at.left, unit)} from the pallet's left edge`,
+    `${lengthText(at.front, unit)} from the pallet's front edge`,
     ...(turned ? ['turned'] : []),
     ...(overhangs ? ['outside the allowed footprint'] : []),
   ].join(', ');
@@ -36,7 +39,7 @@ const tabStopOf = (selected: number | null) => selected ?? 0;
 export function CartonList({ session }: { session: EditorSession }) {
   const unit = useUnit();
   const actions = useLayerActions();
-  const { cartons, base, usable, selected } = session;
+  const { cartons, base, usable, pallet, selected } = session;
   const list = useRef<HTMLUListElement>(null);
   const out = useMemo(() => overhanging(cartons, base, usable), [cartons, base, usable]);
 
@@ -107,7 +110,7 @@ export function CartonList({ session }: { session: EditorSession }) {
                 aria-pressed={pressed}
                 aria-label={cartonSentence(
                   k + 1,
-                  fromLeftFront(c, base, usable),
+                  fromLeftFront(c, base, pallet),
                   c.rotated,
                   outside,
                   unit,
@@ -141,7 +144,7 @@ export function CartonList({ session }: { session: EditorSession }) {
           : current && selected !== null
             ? cartonSentence(
                 selected + 1,
-                fromLeftFront(current, base, usable),
+                fromLeftFront(current, base, pallet),
                 current.rotated,
                 out[selected] ?? false,
                 unit,

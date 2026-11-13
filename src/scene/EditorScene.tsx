@@ -10,7 +10,14 @@ import { fmtCount } from '../ui/format';
 import { useManualEditor } from '../ui/StoreContext';
 import { useResolvedTheme } from '../ui/useTheme';
 import { aspectChanged } from './aspect';
-import { EDITOR_FOV, LAYER_VIEW_DIR, perspectiveFit, TOP_VIEW_DIR, VIEW_DIR } from './cameraFit';
+import {
+  EDITOR_FOV,
+  LAYER_MAX_POLAR,
+  LAYER_VIEW_DIR,
+  perspectiveFit,
+  TOP_VIEW_DIR,
+  VIEW_DIR,
+} from './cameraFit';
 import { Cartons } from './Cartons';
 import {
   cartonPreviewLayout,
@@ -36,6 +43,8 @@ interface CameraProps {
   direction: Vec3;
   /** Bumped by "Reset view". */
   reset: number;
+  /** The furthest the camera may be tipped down, in radians from straight above. */
+  maxPolar: number;
 }
 
 /**
@@ -43,7 +52,7 @@ interface CameraProps {
  * direction; when what is shown changes size (a count is raised) the camera only moves in or
  * out to keep it framed, so the user's own view of it is kept.
  */
-function EditorCamera({ bounds, direction, reset }: CameraProps) {
+function EditorCamera({ bounds, direction, reset, maxPolar }: CameraProps) {
   const get = useThree((s) => s.get);
   const controls = useThree((s) => s.controls);
   const invalidate = useThree((s) => s.invalidate);
@@ -95,7 +104,7 @@ function EditorCamera({ bounds, direction, reset }: CameraProps) {
     if (aspectChanged(lastAspect.current, aspect)) fit(null);
   }, [size, fit]);
 
-  return <OrbitControls makeDefault onChange={() => invalidate()} />;
+  return <OrbitControls makeDefault maxPolarAngle={maxPolar} onChange={() => invalidate()} />;
 }
 
 /** The Carton step: one carton, see-through, with its boxes inside. */
@@ -165,6 +174,9 @@ function EditorContents({ session, view, layer }: ContentsProps) {
         bounds={bounds}
         direction={carton ? VIEW_DIR : view.top ? TOP_VIEW_DIR : LAYER_VIEW_DIR}
         reset={view.n}
+        // The layer is worked on from above: the view never goes under the deck, where a press
+        // would reach the cartons through it.
+        maxPolar={carton ? Math.PI : LAYER_MAX_POLAR}
       />
     </>
   );
@@ -268,7 +280,8 @@ export function EditorScene() {
             : 'One carton, drawn open with its boxes inside. Drag to look around.'
           : 'Blue outline: the allowed footprint.'}
       </p>
-      <div className="absolute right-2 top-2 flex gap-1.5">
+      {/* Above the view, which rises (z-index 1) while it shows its focus ticks. */}
+      <div className="absolute right-2 top-2 z-10 flex gap-1.5">
         {!carton && (
           <button
             type="button"

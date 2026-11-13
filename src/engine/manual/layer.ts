@@ -6,7 +6,8 @@
  * the build sheet's top view, is the edge at the greatest y; the left is x = 0.
  *
  * Two cartons may touch but never overlap (by more than the engine's tolerance). A carton may
- * lie outside the usable footprint: that is flagged, not refused. Every function here is pure
+ * reach outside the usable footprint: that is flagged, not refused. It is not moved to a place
+ * wholly off the footprint (`tryMoveCarton`). Every function here is pure
  * and returns a new list, so an editor can keep the old one for undo.
  */
 import { EPS } from '../../domain/constants';
@@ -178,6 +179,58 @@ export function moveCarton(
   return cartons.map((c, k) => (k === index ? moved : c));
 }
 
+/**
+ * How much of a rectangle lies over the usable footprint: the smaller of the overlaps along x
+ * and along y, in inches. Positive when part of it is over the footprint (with positive area);
+ * zero or less when it only touches the footprint or is clear of it, by that distance.
+ */
+function overFootprint(r: Rect, usable: Point): number {
+  return Math.min(
+    Math.min(r.x + r.w, usable.x) - Math.max(r.x, 0),
+    Math.min(r.y + r.h, usable.y) - Math.max(r.y, 0),
+  );
+}
+
+/** Whether a carton is at least partly over the usable footprint (pallet plus overhang). */
+export function partlyOnFootprint(c: ManualCarton, base: CartonBase, usable: Point): boolean {
+  return overFootprint(cartonRect(c, base), usable) > EPS;
+}
+
+/** A move of one carton: the new layer, or why it was refused. */
+export type MoveResult =
+  | { ok: true; cartons: ManualCarton[] }
+  /**
+   * 'overlap': it would overlap another carton there. 'offPallet': it would be wholly off the
+   * usable footprint there. 'invalid': no such carton, or a position that is not a number.
+   */
+  | { ok: false; reason: 'overlap' | 'offPallet' | 'invalid' };
+
+/**
+ * `moveCarton` with the rule every way of moving a carton keeps (dragging, the arrow keys, a
+ * typed position): a carton stays at least partly over the usable footprint. It may overhang
+ * (that is flagged), but a place where nothing of it is over the footprint is refused. A
+ * carton that is already wholly off (a layout stored before this rule) may be moved anywhere
+ * that is not further off, so it can be brought back by any means.
+ */
+export function tryMoveCarton(
+  cartons: readonly ManualCarton[],
+  index: number,
+  to: Point,
+  base: CartonBase,
+  usable: Point,
+): MoveResult {
+  const current = cartons[index];
+  if (!current || !Number.isFinite(to.x) || !Number.isFinite(to.y))
+    return { ok: false, reason: 'invalid' };
+  const over = overFootprint(cartonRect({ ...current, x: to.x, y: to.y }, base), usable);
+  if (!(over > EPS)) {
+    const was = overFootprint(cartonRect(current, base), usable);
+    if (was > EPS || over < was - EPS) return { ok: false, reason: 'offPallet' };
+  }
+  const moved = moveCarton(cartons, index, to, base);
+  return moved ? { ok: true, cartons: moved } : { ok: false, reason: 'overlap' };
+}
+
 function inside(r: Rect, usable: Point): boolean {
   return r.x >= -EPS && r.y >= -EPS && r.x + r.w <= usable.x + EPS && r.y + r.h <= usable.y + EPS;
 }
@@ -224,9 +277,12 @@ export function tryTurnCarton(
     .map((p): ManualCarton => ({ x: p.x, y: p.y, rotated: !current.rotated }))
     .filter((c) => canPlace(cartons, c, base, index));
   if (free.length === 0) return { ok: false, reason: 'overlap' };
+  // An overhanging carton stays at least partly over the footprint when it was (see
+  // `tryMoveCarton`).
+  const on = (c: ManualCarton) => partlyOnFootprint(c, base, usable);
   const turned =
     free.find((c) => inside(cartonRect(c, base), usable)) ??
-    (inside(before, usable) ? undefined : free[0]);
+    (inside(before, usable) ? undefined : (free.find(on) ?? (on(current) ? undefined : free[0])));
   if (!turned) return { ok: false, reason: 'noRoom' };
   return { ok: true, cartons: cartons.map((c, k) => (k === index ? turned : c)) };
 }

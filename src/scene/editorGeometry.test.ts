@@ -120,14 +120,13 @@ describe('the working layer as the editor draws it', () => {
     { x: 45, y: 30, rotated: false },
   ];
 
-  it('stands every carton on the pallet top, the dragged one a little above', () => {
-    const boxes = layerBoxes(cartons, base, 13, 1);
-    expect(boxes).toEqual([
+  it('stands every carton on the pallet top', () => {
+    expect(layerBoxes(cartons, base, 13)).toEqual([
       { x: 0, y: 0, z: 0, dx: 20, dy: 10, dz: 13 },
-      { x: 30, y: 12, z: DRAG_LIFT, dx: 10, dy: 20, dz: 13 },
+      { x: 30, y: 12, z: 0, dx: 10, dy: 20, dz: 13 },
       { x: 45, y: 30, z: 0, dx: 20, dy: 10, dz: 13 },
     ]);
-    expect(layerBoxes(cartons, base, 13).every((b) => b.z === 0)).toBe(true);
+    expect(DRAG_LIFT).toBeGreaterThan(0);
   });
 
   it('marks the cartons outside the usable footprint, touching its edge allowed', () => {
@@ -158,15 +157,29 @@ describe('the working layer as the editor draws it', () => {
     expect(tall[0]).toBeCloseTo(tall[3]!);
   });
 
-  it('measures a carton from the left and front edges, and back again', () => {
-    // The front is the edge at the greatest y.
-    expect(fromLeftFront(cartons[0]!, base, usable)).toEqual({ left: 0, front: 32 });
-    expect(fromLeftFront(cartons[1]!, base, usable)).toEqual({ left: 30, front: 10 });
-    for (const c of cartons) {
-      const at = fromLeftFront(c, base, usable);
-      expect(atLeftFront(c, base, usable, at)).toEqual({ x: c.x, y: c.y });
-    }
-    expect(atLeftFront(cartons[1]!, base, usable, { left: -2, front: 0 })).toEqual({
+  it("measures a carton from the pallet's left and front edges, and back again", () => {
+    // With no overhang the pallet is the footprint. The front is the edge at the greatest y.
+    const flush = { x: 0, y: 0, w: usable.x, h: usable.y };
+    expect(fromLeftFront(cartons[0]!, base, flush)).toEqual({ left: 0, front: 32 });
+    expect(fromLeftFront(cartons[1]!, base, flush)).toEqual({ left: 30, front: 10 });
+    // With 2 in of overhang the pallet stands 1 in inside the footprint on every side: a carton
+    // flush with the pallet's edges reads 0, and one on the footprint's edge reads -1.
+    const pallet = { x: 1, y: 1, w: usable.x - 2, h: usable.y - 2 };
+    const h = base.b;
+    expect(fromLeftFront({ x: 1, y: usable.y - 1 - h, rotated: false }, base, pallet)).toEqual({
+      left: 0,
+      front: 0,
+    });
+    expect(fromLeftFront({ x: 0, y: usable.y - h, rotated: false }, base, pallet)).toEqual({
+      left: -1,
+      front: -1,
+    });
+    for (const frame of [flush, pallet])
+      for (const c of cartons) {
+        const at = fromLeftFront(c, base, frame);
+        expect(atLeftFront(c, base, frame, at)).toEqual({ x: c.x, y: c.y });
+      }
+    expect(atLeftFront(cartons[1]!, base, flush, { left: -2, front: 0 })).toEqual({
       x: -2,
       y: 22,
     });

@@ -22,22 +22,38 @@ interface Props {
   onPress?: (instanceId: number, e: ThreeEvent<PointerEvent>) => void;
   /** Called as the pointer comes over the boxes and leaves them. */
   onHover?: (over: boolean) => void;
+  /** An instance not to draw (it is drawn elsewhere, e.g. while it is dragged). */
+  hidden?: number | null;
 }
 
-function Boxes({ boxes, inputs, colorOf, opacity, wireframe, onPick, onPress, onHover }: Props) {
+function Boxes({
+  boxes,
+  inputs,
+  colorOf,
+  opacity,
+  wireframe,
+  onPick,
+  onPress,
+  onHover,
+  hidden = null,
+}: Props) {
   const ref = useRef<InstancedMesh>(null);
   const invalidate = useThree((s) => s.invalidate);
 
   useLayoutEffect(() => {
     const mesh = ref.current;
     if (!mesh) return;
-    mesh.instanceMatrix.array.set(instanceMatrices(boxes, inputs, SHRINK));
+    const matrices = instanceMatrices(boxes, inputs, SHRINK);
+    // Shrunk to nothing where it stands (not a zero matrix, which cannot be inverted).
+    if (hidden !== null && hidden >= 0 && hidden < boxes.length)
+      for (const k of [0, 5, 10]) matrices[hidden * 16 + k] = 1e-6;
+    mesh.instanceMatrix.array.set(matrices);
     mesh.instanceMatrix.needsUpdate = true;
     for (let k = 0; k < boxes.length; k++) mesh.setColorAt(k, colorOf(k));
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
     invalidate();
-  }, [boxes, inputs, colorOf, invalidate]);
+  }, [boxes, inputs, colorOf, hidden, invalidate]);
 
   const onClick = onPick
     ? (e: ThreeEvent<MouseEvent>) => {
