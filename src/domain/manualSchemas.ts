@@ -24,6 +24,8 @@ export const manualLayoutSpecSchema: z.ZodType<ManualLayoutSpec> = z.object({
   cartons: z
     .array(z.object({ x: position, y: position, rotated: z.boolean() }))
     .max(MAX_STORED_CARTONS),
+  // Absent in data stored before positions were kept in the pallet frame (see build.ts).
+  frame: z.literal('pallet').optional(),
   upperLayers: z.enum(['same', 'alternate']),
   madeFor: z.object({
     product: z.object({ length: size, width: size, height: size }),

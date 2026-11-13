@@ -58,10 +58,52 @@ export interface ManualLayoutSpec {
   id: string;
   name: string;
   design: CartonDesign;
-  /** Where each carton of the one layer sits (see layer.ts for the frame). */
+  /**
+   * Where each carton of the one layer sits: its minimum corner, in inches. With `frame`
+   * 'pallet' the position is measured from the pallet's own minimum corner, so the layout
+   * stays where it is on the pallet when the allowed overhang or the pallet size changes.
+   */
   cartons: ManualCarton[];
+  /**
+   * The frame `cartons` are in. Everything the app saves is 'pallet'. Left out only in data
+   * stored before positions were kept in the pallet frame: those are in the frame of the usable
+   * footprint (see layer.ts) under whatever inputs they are built with, and the store moves
+   * them to the pallet frame when it first loads them (`toPalletFrame`).
+   */
+  frame?: 'pallet';
   upperLayers: UpperLayers;
   madeFor: MadeFor;
+}
+
+/**
+ * Positions in the pallet frame as positions in the usable footprint's frame under `overhang`
+ * (the footprint reaches half the overhang beyond the pallet on every side), which is the
+ * frame every layer function works in.
+ */
+export function palletToUsable(cartons: readonly ManualCarton[], overhang: number): ManualCarton[] {
+  const half = overhang / 2;
+  return half === 0 ? [...cartons] : cartons.map((c) => ({ ...c, x: c.x + half, y: c.y + half }));
+}
+
+/** The reverse of `palletToUsable`. */
+export function usableToPallet(cartons: readonly ManualCarton[], overhang: number): ManualCarton[] {
+  const half = overhang / 2;
+  return half === 0 ? [...cartons] : cartons.map((c) => ({ ...c, x: c.x - half, y: c.y - half }));
+}
+
+/**
+ * A spec with its positions in the pallet frame. One stored before the pallet frame (no
+ * `frame`) holds positions in the usable footprint's frame; `overhang` is the allowed overhang
+ * it is taken to have been made with. A spec already in the pallet frame comes back as it is.
+ */
+export function toPalletFrame(spec: ManualLayoutSpec, overhang: number): ManualLayoutSpec {
+  if (spec.frame === 'pallet') return spec;
+  return { ...spec, cartons: usableToPallet(spec.cartons, overhang), frame: 'pallet' };
+}
+
+/** The spec's cartons in the usable footprint's frame under the inputs: what is built. */
+export function cartonsInUsableFrame(spec: ManualLayoutSpec, inputs: Inputs): ManualCarton[] {
+  return spec.frame === 'pallet' ? palletToUsable(spec.cartons, inputs.overhang) : spec.cartons;
 }
 
 /** One broken limit of a manual layout (spec 6.3), with the numbers to print it. */
@@ -155,6 +197,7 @@ export function isValidSpec(spec: ManualLayoutSpec): boolean {
       (c) => !!c && Number.isFinite(c.x) && Number.isFinite(c.y) && typeof c.rotated === 'boolean',
     ) &&
     (spec.upperLayers === 'same' || spec.upperLayers === 'alternate') &&
+    (spec.frame === undefined || spec.frame === 'pallet') &&
     !!m &&
     !!m.product &&
     !!m.outer &&
@@ -263,7 +306,9 @@ export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): Manua
   const vertical = verticalAxis(spec.design);
   const base = cartonBase(carton, vertical);
   const usable = usableFootprint(built);
-  const pattern = manualPattern(spec.cartons, carton, vertical);
+  // Stored positions are relative to the pallet; the layer functions work in the footprint.
+  const placed = cartonsInUsableFrame(spec, built);
+  const pattern = manualPattern(placed, carton, vertical);
   const flags: ManualFlag[] = [];
 
   const cf = cartonFlags(carton, vertical, built);
@@ -271,7 +316,7 @@ export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): Manua
   if (cf.cannotFitFootprint) flags.push({ kind: 'cannotFit' });
   if (cf.overHeightBy !== null) flags.push({ kind: 'overHeight', by: cf.overHeightBy });
   if (cf.overMaximum.length > 0) flags.push({ kind: 'overMaximum', sides: cf.overMaximum });
-  const pairs = overlapCount(spec.cartons, base);
+  const pairs = overlapCount(placed, base);
   if (pairs > 0) flags.push({ kind: 'overlap', pairs });
 
   const fit = pattern.cartonCount === 0 ? 0 : fitsCount(usableHeight(built), pattern.height);
@@ -309,7 +354,7 @@ export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): Manua
   // Counted on the layer as built. A turned layer needs no count of its own: the half turn is
   // about the centre of the usable footprint, which maps the footprint onto itself, so the
   // turned layer has as many cartons outside it, reaching exactly as far.
-  const overhang = overhangOf(spec.cartons, base, usable);
+  const overhang = overhangOf(placed, base, usable);
   if (overhang.cartons > 0) flags.push({ kind: 'overhang', ...overhang });
   if (cf.orientationNotAllowed) flags.push({ kind: 'orientationNotAllowed' });
 
@@ -336,7 +381,10 @@ export function bestLayerFor(design: CartonDesign, inputs: Inputs): LayerPattern
   return preferredPinwheel(carton, vertical, inputs, cache, { pref }) ?? best;
 }
 
-/** `bestLayerFor` as the cartons of a manual layer, ready to edit; [] when no carton fits. */
+/**
+ * `bestLayerFor` as the cartons of a manual layer, in the usable footprint's frame, ready to
+ * edit; [] when no carton fits.
+ */
 export function bestCartonsFor(design: CartonDesign, inputs: Inputs): ManualCarton[] {
   const pattern = bestLayerFor(design, inputs);
   return pattern ? explodePattern(pattern, designCarton(design, inputs), inputs) : [];
@@ -344,7 +392,7 @@ export function bestCartonsFor(design: CartonDesign, inputs: Inputs): ManualCart
 
 /**
  * The manual copy of a calculated layout: its carton as a design, its bottom layer exploded
- * into single cartons where they stand, and 'alternate' when the layout has a turned layer.
+ * into single cartons where they stand on the pallet (pallet frame), and 'alternate' when the layout has a turned layer.
  * A layout whose layers all repeat its bottom layer is copied exactly (same boxes, weight and
  * rating); one that mixes layer patterns becomes a stack of its bottom layer only, since a
  * manual layout has one pattern.
@@ -362,7 +410,8 @@ export function specFromLayout(
     id,
     name,
     design,
-    cartons: explodePattern(bottom, layout.carton, inputs),
+    cartons: usableToPallet(explodePattern(bottom, layout.carton, inputs), inputs.overhang),
+    frame: 'pallet',
     upperLayers: layout.layers.some((layer) => layer.turned) ? 'alternate' : 'same',
     madeFor: madeForOf(design, inputs),
   };

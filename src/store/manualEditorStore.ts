@@ -20,7 +20,10 @@ import {
   buildManualLayout,
   canSave,
   madeForOf,
+  palletToUsable,
   specFromLayout,
+  toPalletFrame,
+  usableToPallet,
   type ManualBuild,
   type ManualFlag,
   type UpperLayers,
@@ -49,14 +52,14 @@ import {
   snap,
   snapTargets,
   SNAP_THRESHOLD,
-  turnCarton,
+  tryTurnCarton,
   type CartonBase,
   type ManualCarton,
   type Point,
 } from '../engine/manual/layer';
 import { usableFootprint, type Rect } from '../engine/packing/geometry';
 import type { ManualLayoutsState } from './manualLayoutsStore';
-import type { ResultsState } from './resultsStore';
+import { sameInputs, type ResultsState } from './resultsStore';
 
 export type EditorStep = 'carton' | 'layer';
 
@@ -75,6 +78,13 @@ export type EditorRefusal =
   | { reason: 'noSession' }
   /** There are no valid inputs to edit under. */
   | { reason: 'noInputs' }
+  /**
+   * The calculated result is behind the inputs (they changed and the new calculation has not
+   * finished): its layer was laid out for other inputs, so nothing is opened from it.
+   */
+  | { reason: 'resultBehind' }
+  /** The layout could not be written to the browser's storage: nothing was saved. */
+  | { reason: 'notStored' }
   /** There is no such calculated layout, saved layout or carton. */
   | { reason: 'notFound' }
   /** The saved layout is out of date: it cannot be edited, only rebuilt (see `rebuild`). */
@@ -99,6 +109,11 @@ export type EditorRefusal =
   | { reason: 'overlap' }
   /** The turned carton would overlap wherever it is put. */
   | { reason: 'turnRefused' }
+  /**
+   * The carton is inside the usable footprint and, turned, would only fit outside it: a turn
+   * must not create an overhang. It is moved first.
+   */
+  | { reason: 'turnNoRoom' }
   /** There is no room for one more carton inside the usable footprint. */
   | { reason: 'noFreeSpot' }
   /** The layout has a flag that cannot be saved (empty layer, carton cannot fit, too tall). */
@@ -129,8 +144,10 @@ export interface EditorSession {
 
   design: CartonDesign;
   /**
-   * The working layer: the cartons the layer step shows and edits (frame: see layer.ts). While
-   * `layerPending`, these still belong to the carton before the change.
+   * The working layer: the cartons the layer step shows and edits, in the frame of the usable
+   * footprint under `inputs` (see layer.ts). The session itself keeps them relative to the
+   * pallet, so they stay where they are on the pallet when the overhang or the pallet size
+   * changes mid-edit. While `layerPending`, these still belong to the carton before the change.
    */
   cartons: ManualCarton[];
   upperLayers: UpperLayers;
@@ -147,8 +164,19 @@ export interface EditorSession {
   layerPending: boolean;
   canUndo: boolean;
   canRedo: boolean;
-  /** Something differs from what the session opened with (Cancel should ask first). */
+  /**
+   * Something differs from what the session opened with, the name included (Cancel should ask
+   * first).
+   */
   dirty: boolean;
+  /**
+   * Set when a change to the inputs took the session back from the layer step to the carton
+   * step: the carton can no longer go on the pallet ('cartonBlocked'), or it is no longer the
+   * size the layer was laid out for ('cartonChanged'). Cleared by the user's next action.
+   */
+  stepNotice: 'cartonBlocked' | 'cartonChanged' | null;
+  /** The inputs on screen are invalid: the session is worked out under the last valid ones. */
+  usingLastValid: boolean;
 
   /** The inputs everything below was worked out under: the last valid ones. */
   inputs: Inputs;
@@ -235,7 +263,11 @@ export interface ManualEditorState {
   undo(): EditorResult;
   redo(): EditorResult;
 
-  /** Saves: over the saved layout the session was opened from, else as a new one. Closes. */
+  /**
+   * Saves: over the saved layout the session was opened from, else as a new one. Closes. When
+   * the layout cannot be written to the browser's storage it is refused ('notStored') and the
+   * session stays open.
+   */
   save(opts?: SaveOptions): EditorResult<{ id: string }>;
   /** Saves as a new layout whatever the session was opened from. Closes. */
   saveAsNew(opts?: SaveOptions): EditorResult<{ id: string }>;
@@ -284,12 +316,13 @@ const SIDES: readonly CartonSide[] = ['length', 'width', 'height'];
 /** Everything undo and redo put back. */
 interface Core {
   design: CartonDesign;
+  /** The working layer in the pallet frame (positions from the pallet's minimum corner). */
   cartons: ManualCarton[];
   upperLayers: UpperLayers;
   /** The carton base `cartons` were laid out for. */
   layerBase: CartonBase;
   layerEdited: boolean;
-  /** What Reset goes back to, and whether that layer is the user's own. */
+  /** What Reset goes back to (pallet frame), and whether that layer is the user's own. */
   start: ManualCarton[];
   startEdited: boolean;
   selected: number | null;
@@ -323,8 +356,37 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
     let inputs: Inputs | null = null;
     /** The snapping choice outlives a session: it is the user's way of working. */
     let snapping = true;
-    /** What the session opened with, as `contentKey` gives it. */
+    /** What the session opened with, as `contentKey` gives it, and its name then. */
     let opened = '';
+    let openedName = '';
+    let stepNotice: EditorSession['stepNotice'] = null;
+    // The working layer in the usable footprint's frame, kept per list and overhang so the
+    // session hands out the same array while neither changed.
+    let framed: { pallet: ManualCarton[]; overhang: number; usable: ManualCarton[] } | null = null;
+    const working = (cartons: ManualCarton[], i: Inputs): ManualCarton[] => {
+      if (i.overhang === 0) return cartons;
+      if (framed?.pallet !== cartons || framed.overhang !== i.overhang)
+        framed = {
+          pallet: cartons,
+          overhang: i.overhang,
+          usable: palletToUsable(cartons, i.overhang),
+        };
+      return framed.usable;
+    };
+    /**
+     * A layer the engine returned for `work` (the working layer in the usable frame), back in
+     * the pallet frame. Cartons it left alone keep their stored objects and exact numbers.
+     */
+    const stored = (
+      result: readonly ManualCarton[],
+      work: readonly ManualCarton[],
+      c: Core,
+      i: Inputs,
+    ): ManualCarton[] => {
+      const kept = new Map(work.map((w, k) => [w, c.cartons[k] as ManualCarton]));
+      const half = i.overhang / 2;
+      return result.map((r) => kept.get(r) ?? { ...r, x: r.x - half, y: r.y - half });
+    };
     // The best layer per design under one inputs object; searched once, then reused.
     let bestFor: { inputs: Inputs; byDesign: Map<string, ManualCarton[]> } | null = null;
 
@@ -340,18 +402,33 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
     };
 
     const pending = (c: Core, i: Inputs) => !sameBase(baseOf(c.design, i), c.layerBase);
-    const layerOf = (c: Core, i: Inputs) => (pending(c, i) ? best(c.design, i) : c.cartons);
+    /** The layer that is built, in the usable footprint's frame. */
+    const layerOf = (c: Core, i: Inputs) =>
+      pending(c, i) ? best(c.design, i) : working(c.cartons, i);
+    /** The same layer in the pallet frame: what is saved. */
+    const savedLayerOf = (c: Core, i: Inputs) =>
+      pending(c, i) ? usableToPallet(best(c.design, i), i.overhang) : c.cartons;
     const contentKey = (c: Core, i: Inputs) =>
-      JSON.stringify([c.design, layerOf(c, i), c.upperLayers]);
+      JSON.stringify([c.design, savedLayerOf(c, i), c.upperLayers]);
 
-    /** Publishes the session for the current core, meta and inputs. */
-    const publish = () => {
+    /**
+     * Publishes the session for the current core, meta and inputs. `inputsChanged` when it is
+     * the inputs that changed: a step back that this causes is then said (`stepNotice`).
+     */
+    const publish = (inputsChanged = false) => {
       if (!core || !meta || !inputs) {
         set({ session: null });
         return;
       }
-      // On the layer step the layer shown must be the designed carton's.
-      if (meta.step === 'layer' && pending(core, inputs)) meta = { ...meta, step: 'carton' };
+      // On the layer step the layer shown must be the designed carton's, and the carton one
+      // that can go on the pallet.
+      if (meta.step === 'layer') {
+        const blocked = designFlags(core.design, inputs).blocked !== null;
+        if (blocked || pending(core, inputs)) {
+          meta = { ...meta, step: 'carton' };
+          if (inputsChanged) stepNotice = blocked ? 'cartonBlocked' : 'cartonChanged';
+        }
+      }
       const { design } = core;
       const carton = designCarton(design, inputs);
       const layer = layerOf(core, inputs);
@@ -360,6 +437,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
           id: meta.origin.kind === 'saved' ? meta.origin.id : 'draft',
           name: meta.name,
           design,
+          // Already in the usable footprint's frame (no `frame`): built as it stands.
           cartons: layer,
           upperLayers: core.upperLayers,
           madeFor: madeForOf(design, inputs),
@@ -369,7 +447,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       const session: EditorSession = {
         ...meta,
         design,
-        cartons: core.cartons,
+        cartons: working(core.cartons, inputs),
         upperLayers: core.upperLayers,
         selected: core.selected,
         layerEdited: core.layerEdited,
@@ -377,7 +455,9 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         layerPending: pending(core, inputs),
         canUndo: past.length > 0,
         canRedo: future.length > 0,
-        dirty: contentKey(core, inputs) !== opened,
+        dirty: contentKey(core, inputs) !== opened || meta.name !== openedName,
+        stepNotice,
+        usingLastValid: manualLayouts.getState().stale,
         inputs,
         carton,
         base: cartonBase(carton, verticalAxis(design)),
@@ -405,6 +485,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       past = [...past, core].slice(-HISTORY_LIMIT);
       future = [];
       core = next;
+      stepNotice = null;
       publish();
     };
 
@@ -436,6 +517,8 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       past = [];
       future = [];
       opened = contentKey(core, i);
+      openedName = name;
+      stepNotice = null;
       publish();
     };
 
@@ -444,6 +527,8 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       meta = null;
       past = [];
       future = [];
+      framed = null;
+      stepNotice = null;
       publish();
     };
 
@@ -459,6 +544,9 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       const made = results.getState().inputs;
       const i = currentInputs();
       if (!i || !made) return { ok: false, reason: 'noInputs' };
+      // A result worked out for other inputs than the current valid ones (the new calculation
+      // has not finished) holds a layer for another carton or footprint: never opened from.
+      if (!sameInputs(made, i)) return { ok: false, reason: 'resultBehind' };
       const spec = layout ? specFromLayout(layout, made, 'draft', name) : null;
       if (!layout || !spec) return { ok: false, reason: 'notFound' };
       open(
@@ -478,7 +566,15 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       if (!core || !meta || !inputs) return { no: { ok: false, reason: 'noSession' } } as const;
       if (layerStep && meta.step !== 'layer')
         return { no: { ok: false, reason: 'notOnLayerStep' } } as const;
-      return { no: null, core, meta, inputs, base: baseOf(core.design, inputs) };
+      return {
+        no: null,
+        core,
+        meta,
+        inputs,
+        base: baseOf(core.design, inputs),
+        /** The working layer in the usable footprint's frame: what the layer functions take. */
+        work: working(core.cartons, inputs),
+      };
     };
 
     const setDesign = (design: CartonDesign): EditorResult => {
@@ -499,29 +595,32 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
     ): EditorResult<{ position: Point }> => {
       const s = need(true);
       if (s.no) return s.no;
-      const current = s.core.cartons[index];
+      const current = s.work[index];
       if (!current) return { ok: false, reason: 'noSelection' };
       if (!Number.isFinite(to.x) || !Number.isFinite(to.y)) return { ok: false, reason: 'invalid' };
-      const position = snapped(s.core, s.inputs, s.base, index, to, snapping);
+      const position = snapped(s.work, s.inputs, s.base, index, to, snapping);
       if (samePoint(position, current)) return { ok: true, position };
-      const cartons = moveCarton(s.core.cartons, index, position, s.base);
+      const cartons = moveCarton(s.work, index, position, s.base);
       if (!cartons) return { ok: false, reason: 'overlap' };
-      editLayer(s.core, cartons, { lastRotated: current.rotated });
+      editLayer(s.core, stored(cartons, s.work, s.core, s.inputs), {
+        lastRotated: current.rotated,
+      });
       return { ok: true, position };
     };
 
+    /** `to` snapped for carton `index` of `work` (the working layer in the usable frame). */
     const snapped = (
-      c: Core,
+      work: readonly ManualCarton[],
       i: Inputs,
       base: CartonBase,
       index: number,
       to: Point,
       snapping: boolean,
     ): Point => {
-      const current = c.cartons[index];
+      const current = work[index];
       if (!current || !snapping) return { x: to.x, y: to.y };
       const { w, h } = cartonRect(current, base);
-      return snap(to, { w, h }, snapTargets(c.cartons, base, i, index), SNAP_THRESHOLD);
+      return snap(to, { w, h }, snapTargets(work, base, i, index), SNAP_THRESHOLD);
     };
 
     const saveWith = (opts: SaveOptions, asNew: boolean): EditorResult<{ id: string }> => {
@@ -534,30 +633,43 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       if (!session.canSave) return { ok: false, reason: 'cannotSave', flags: session.build.flags };
       const draft = {
         design: s.core.design,
-        cartons: session.layer,
+        cartons: savedLayerOf(s.core, s.inputs),
+        frame: 'pallet' as const,
         upperLayers: s.core.upperLayers,
         madeFor: madeForOf(s.core.design, s.inputs),
       };
       const store = manualLayouts.getState();
       const { origin } = s.meta;
-      const savedOver =
-        !asNew && origin.kind === 'saved'
-          ? store.update(origin.id, draft, opts.name ?? s.meta.name)
+      // Saved over only while it is still there (another tab may have deleted it).
+      const over =
+        !asNew && origin.kind === 'saved' && store.specs.some((x) => x.id === origin.id)
+          ? origin.id
           : null;
       // A copy of a saved layout does not take its name: it gets the next default one.
       const copyOfSaved = asNew && origin.kind === 'saved';
       const spec =
-        savedOver ?? store.save(draft, opts.name ?? (copyOfSaved ? undefined : s.meta.name));
+        over !== null
+          ? store.update(over, draft, opts.name ?? s.meta.name)
+          : store.save(draft, opts.name ?? (copyOfSaved ? undefined : s.meta.name));
+      // Not written: nothing was saved, so the session stays open with the work in it.
+      if (!spec) return { ok: false, reason: 'notStored' };
       close();
       deps.onSaved?.(spec.id);
       return { ok: true, id: spec.id };
     };
 
     // The layout is re-checked as the inputs change, as saved ones are.
+    let lastValid = manualLayouts.getState().stale;
     manualLayouts.subscribe((m) => {
-      if (!core || !m.inputs || m.inputs === inputs) return;
-      inputs = m.inputs;
-      publish();
+      if (!core) return;
+      if (m.inputs && m.inputs !== inputs) {
+        inputs = m.inputs;
+        lastValid = m.stale;
+        publish(true);
+      } else if (m.stale !== lastValid) {
+        lastValid = m.stale;
+        publish();
+      }
     });
 
     return {
@@ -582,7 +694,13 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         if (buildManualLayout(spec, i).status === 'outOfDate')
           return { ok: false, reason: 'outOfDate' };
         // A saved manual layer is the user's own: replacing it is always asked about.
-        open({ kind: 'saved', id }, spec.name, step, { ...spec, layerEdited: true }, i);
+        open(
+          { kind: 'saved', id },
+          spec.name,
+          step,
+          { ...toPalletFrame(spec, i.overhang), layerEdited: true },
+          i,
+        );
         return { ok: true };
       },
       rebuild(id) {
@@ -594,6 +712,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       goToStep(step, opts = {}) {
         const s = need();
         if (s.no) return s.no;
+        stepNotice = null;
         if (step === 'carton') {
           meta = { ...s.meta, step };
           publish();
@@ -604,7 +723,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         if (pending(s.core, s.inputs)) {
           if (s.core.layerEdited && !opts.replace) return { ok: false, reason: 'layerEdited' };
           // Loaded in place: undo goes back past the carton change, to the layer as it was.
-          const cartons = structuredClone(best(s.core.design, s.inputs));
+          const cartons = usableToPallet(best(s.core.design, s.inputs), s.inputs.overhang);
           core = {
             ...s.core,
             cartons,
@@ -674,7 +793,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       select(index) {
         const s = need(true);
         if (s.no) return s.no;
-        const picked = index === null ? null : s.core.cartons[index];
+        const picked = index === null ? null : s.work[index];
         if (index !== null && !picked) return { ok: false, reason: 'noSelection' };
         // Selecting is not a change to undo.
         core = {
@@ -687,12 +806,12 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       },
       previewMove(index, to) {
         const s = need(true);
-        const current = s.no ? undefined : s.core.cartons[index];
+        const current = s.no ? undefined : s.work[index];
         if (s.no || !current || !Number.isFinite(to.x) || !Number.isFinite(to.y)) return null;
-        const position = snapped(s.core, s.inputs, s.base, index, to, s.meta.snapping);
+        const position = snapped(s.work, s.inputs, s.base, index, to, s.meta.snapping);
         return {
           position,
-          valid: canPlace(s.core.cartons, { ...current, ...position }, s.base, index),
+          valid: canPlace(s.work, { ...current, ...position }, s.base, index),
         };
       },
       move(index, to, opts = {}) {
@@ -701,7 +820,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       nudge(dx, dy) {
         const s = need(true);
         if (s.no) return s.no;
-        const current = s.core.selected === null ? undefined : s.core.cartons[s.core.selected];
+        const current = s.core.selected === null ? undefined : s.work[s.core.selected];
         if (s.core.selected === null || !current) return { ok: false, reason: 'noSelection' };
         return moveTo(s.core.selected, { x: current.x + dx, y: current.y + dy }, false);
       },
@@ -709,11 +828,14 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         const s = need(true);
         if (s.no) return s.no;
         const at = index ?? s.core.selected;
-        const current = at === null ? undefined : s.core.cartons[at];
+        const current = at === null ? undefined : s.work[at];
         if (at === null || !current) return { ok: false, reason: 'noSelection' };
-        const cartons = turnCarton(s.core.cartons, at, s.base, usableFootprint(s.inputs));
-        if (!cartons) return { ok: false, reason: 'turnRefused' };
-        editLayer(s.core, cartons, { lastRotated: !current.rotated });
+        const turned = tryTurnCarton(s.work, at, s.base, usableFootprint(s.inputs));
+        if (!turned.ok)
+          return { ok: false, reason: turned.reason === 'noRoom' ? 'turnNoRoom' : 'turnRefused' };
+        editLayer(s.core, stored(turned.cartons, s.work, s.core, s.inputs), {
+          lastRotated: !current.rotated,
+        });
         return { ok: true };
       },
       add() {
@@ -722,10 +844,10 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         const usable = usableFootprint(s.inputs);
         // The way the last carton touched lies; the other way only when that has no room.
         const added =
-          addCarton(s.core.cartons, s.core.lastRotated, s.base, usable) ??
-          addCarton(s.core.cartons, !s.core.lastRotated, s.base, usable);
+          addCarton(s.work, s.core.lastRotated, s.base, usable) ??
+          addCarton(s.work, !s.core.lastRotated, s.base, usable);
         if (!added) return { ok: false, reason: 'noFreeSpot' };
-        editLayer(s.core, added.cartons, {
+        editLayer(s.core, stored(added.cartons, s.work, s.core, s.inputs), {
           selected: added.index,
           lastRotated: added.cartons[added.index]?.rotated ?? s.core.lastRotated,
         });

@@ -64,6 +64,7 @@ export function makeStores(
     repo: createLocalStorageRepository({
       key: STORAGE_KEYS.manualLayouts,
       schema: manualLayoutSpecSchema,
+      discardFailed: true,
       storage: new FakeStorage(),
     }),
   });

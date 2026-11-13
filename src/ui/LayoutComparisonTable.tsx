@@ -62,7 +62,7 @@ export function LayoutComparisonTable() {
   const unit = useUnit();
   const belowMinimum = useBelowMinimum();
   const entry = useEditorEntry();
-  const entryOff = entry.blocked !== null;
+  const entryOff = entry.blockedCalculated !== null;
   // Weight is shown only when the result was computed with a box weight.
   const weighed = !!inputs && inputs.weights.productBox !== null;
 
@@ -102,7 +102,7 @@ export function LayoutComparisonTable() {
       </div>
       {entryOff && (
         <p id={EDITOR_ENTRY_REASON_ID} className="text-xs text-gray-600 dark:text-harbor-mist">
-          {entry.blocked}
+          {entry.blockedCalculated}
         </p>
       )}
       <StatusMessages />

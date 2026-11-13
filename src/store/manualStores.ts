@@ -20,20 +20,27 @@ export interface ManualStores {
   manualEditor: StoreApi<ManualEditorState>;
 }
 
+/** Said when another tab deletes the manual layout this tab has selected. */
+export const SELECTED_DELETED_ELSEWHERE =
+  'The layout you had selected was deleted in another tab. Showing calculated layout 1.';
+
 export function createManualStores(deps: {
   inputs: StoreApi<InputsState>;
   results: StoreApi<ResultsState>;
   repo: Repository<ManualLayoutSpec>;
+  /** Told what the user should know that no screen says, e.g. a deletion in another tab. */
+  onNotice?: (message: string) => void;
 }): ManualStores {
   const { inputs, results } = deps;
   const manualLayouts = createManualLayoutsStore(deps.repo, {
-    onListChange(ids) {
+    onListChange(ids, source) {
       const selected = results.getState().selectedManualId;
       if (selected === null || ids.includes(selected)) return;
-      // The selected manual layout is gone (deleted here, in another tab, or replaced by a
-      // scenario): the first calculated layout shows.
+      // The selected manual layout is gone (deleted here or in another tab): the first
+      // calculated layout shows. A deletion made elsewhere is said, since nothing here did it.
       results.getState().selectManual(null);
       results.getState().select(0);
+      if (source === 'external') deps.onNotice?.(SELECTED_DELETED_ELSEWHERE);
     },
   });
   const feed = (parsed: InputsState['parsed']) =>
@@ -53,9 +60,11 @@ export function createManualStores(deps: {
 const stores = createManualStores({
   inputs: useInputsStore,
   results: useResultsStore,
+  onNotice: (message) => useNoticesStore.getState().push(message),
   repo: createDefaultRepository({
     key: STORAGE_KEYS.manualLayouts,
     schema: manualLayoutSpecSchema,
+    discardFailed: true,
     onNotice: (message) => useNoticesStore.getState().push(message),
   }),
 });

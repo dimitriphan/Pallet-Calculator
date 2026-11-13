@@ -25,6 +25,7 @@ import {
   snap,
   snapTargets,
   SNAP_THRESHOLD,
+  tryTurnCarton,
   turnCarton,
   type CartonBase,
   type ManualCarton,
@@ -192,11 +193,44 @@ describe('turnCarton', () => {
     }
     expect(turnCarton(ring, 0, BASE, USABLE)).toBeNull();
   });
-  it('overhangs, rather than refusing, when no free place is inside the footprint', () => {
-    // 10 x 6 in a 10 x 6 footprint: turned it cannot be inside.
-    const turned = turnCarton([at(0, 0)], 0, BASE, { x: 10, y: 6 });
-    expect(turned).toEqual([at(0, 0, true)]);
-    expect(overhangOf(turned!, BASE, { x: 10, y: 6 })).toEqual({ cartons: 1, by: 4 });
+  it('is refused for a carton inside the footprint when every free turned place overhangs', () => {
+    // 10 x 6 in a 10 x 6 footprint: turned it cannot be inside. A turn never makes an overhang.
+    const tight = { x: 10, y: 6 };
+    expect(turnCarton([at(0, 0)], 0, BASE, tight)).toBeNull();
+    expect(tryTurnCarton([at(0, 0)], 0, BASE, tight)).toEqual({ ok: false, reason: 'noRoom' });
+    // In the front corner with the carton behind it in the way: only places past the front
+    // edge are free.
+    const cornered = [at(30, 24), at(30, 18)];
+    expect(tryTurnCarton(cornered, 0, BASE, USABLE)).toEqual({ ok: false, reason: 'noRoom' });
+  });
+  it('says overlap when the turned carton would overlap wherever it is put', () => {
+    const ring: ManualCarton[] = [at(10, 12)];
+    for (let x = -10; x <= 30; x += 10) {
+      for (let y = -6; y <= 30; y += 6) if (!(x === 10 && y === 12)) ring.push(at(x, y));
+    }
+    expect(tryTurnCarton(ring, 0, BASE, USABLE)).toEqual({ ok: false, reason: 'overlap' });
+  });
+  it('a carton that already overhangs may turn and still overhang, as before', () => {
+    const turned = turnCarton([at(-2, 0)], 0, BASE, { x: 10, y: 6 });
+    expect(turned).toEqual([at(-2, 0, true)]);
+    expect(overhangOf(turned!, BASE, { x: 10, y: 6 }).cartons).toBe(1);
+    // It comes inside when a turned place inside is free.
+    expect(turnCarton([at(36, 0)], 0, BASE, USABLE)).toEqual([at(36, 0, true)]);
+  });
+  it('a turn of a carton inside the footprint never makes an overhang (property)', () => {
+    const rnd = seeded(77);
+    for (let run = 0; run < 300; run++) {
+      const cartons: ManualCarton[] = [];
+      for (let k = 0; k < 6; k++) {
+        const c = at(pick(rnd, 0, 30, 1), pick(rnd, 0, 24, 1), rnd() < 0.5);
+        const r = cartonRect(c, BASE);
+        if (r.x + r.w <= USABLE.x && r.y + r.h <= USABLE.y && canPlace(cartons, c, BASE))
+          cartons.push(c);
+      }
+      if (cartons.length === 0) continue;
+      const turned = turnCarton(cartons, 0, BASE, USABLE);
+      if (turned) expect(overhangOf(turned, BASE, USABLE).cartons).toBe(0);
+    }
   });
   it('turns a square carton where it stands', () => {
     expect(turnCarton([at(3, 4)], 0, { a: 8, b: 8 }, USABLE)).toEqual([at(3, 4, true)]);

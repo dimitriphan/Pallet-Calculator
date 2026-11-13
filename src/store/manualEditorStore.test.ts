@@ -34,10 +34,11 @@ async function setup() {
     const spec = t.manualLayouts.getState().save({
       design: DESIGN,
       cartons,
+      frame: 'pallet',
       upperLayers: 'same',
       madeFor: madeForOf(DESIGN, t.current()),
     });
-    expect(e().openSaved(spec.id)).toEqual({ ok: true });
+    expect(e().openSaved(spec!.id)).toEqual({ ok: true });
     return spec;
   };
   return { ...t, e, s, openLayer, m: () => t.manualLayouts.getState() };
@@ -137,7 +138,7 @@ describe('opening', () => {
     const t = await setup();
     const spec = t.openLayer();
     expect(t.s()).toMatchObject({
-      origin: { kind: 'saved', id: spec.id },
+      origin: { kind: 'saved', id: spec!.id },
       name: 'Manual 1',
       step: 'layer',
       cartons: FOUR,
@@ -147,26 +148,26 @@ describe('opening', () => {
       // A saved manual layer is the user's own.
       layerEdited: true,
     });
-    expect(t.s().build.layout.id).toBe(`manual:${spec.id}`);
+    expect(t.s().build.layout.id).toBe(`manual:${spec!.id}`);
     expect(t.e().openSaved('nope')).toEqual({ ok: false, reason: 'notFound' });
     expect(t.e().rebuild('nope')).toEqual({ ok: false, reason: 'notFound' });
     t.e().cancel();
 
     t.change({ product: { ...t.current().product, length: 13 } });
     await t.calculate();
-    expect(t.e().openSaved(spec.id)).toEqual({ ok: false, reason: 'outOfDate' });
+    expect(t.e().openSaved(spec!.id)).toEqual({ ok: false, reason: 'outOfDate' });
     expect(t.e().session).toBeNull();
-    expect(t.e().rebuild(spec.id)).toEqual({ ok: true });
+    expect(t.e().rebuild(spec!.id)).toEqual({ ok: true });
     const best = t.results.getState().result!.layouts[0]!.layout;
     expect(t.s()).toMatchObject({
-      origin: { kind: 'saved', id: spec.id },
+      origin: { kind: 'saved', id: spec!.id },
       name: 'Manual 1',
       step: 'carton',
       layerEdited: false,
     });
     expect(t.s().carton).toEqual(best.carton);
     const saved = t.e().save();
-    expect(saved).toEqual({ ok: true, id: spec.id });
+    expect(saved).toEqual({ ok: true, id: spec!.id });
     expect(t.m().specs).toHaveLength(1);
     expect(t.m().entries[0]!.build.status).toBe('current');
   });
@@ -489,11 +490,16 @@ describe('layer step', () => {
   it('snaps to the edges of other cartons and to the pallet inside an overhang', async () => {
     const t = await setup();
     t.change({ overhang: 2 });
+    // Saved relative to the pallet; the session works in the footprint, 1 in further out.
     t.openLayer([
+      { x: 0, y: 0, rotated: false },
+      { x: 25.4, y: 19, rotated: false },
+    ]);
+    expect(t.s().pallet).toEqual({ x: 1, y: 1, w: 50, h: 42 });
+    expect(t.s().cartons).toEqual([
       { x: 1, y: 1, rotated: false },
       { x: 26.4, y: 20, rotated: false },
     ]);
-    expect(t.s().pallet).toEqual({ x: 1, y: 1, w: 50, h: 42 });
     // Its left edge onto the first carton's right edge (x = 26), its top onto that one's top.
     expect(t.e().move(1, { x: 26.3, y: 1.2 })).toEqual({ ok: true, position: { x: 26, y: 1 } });
     // Onto the footprint edge when that is nearer than the pallet edge.
@@ -673,8 +679,10 @@ describe('layer step', () => {
     t.openLayer();
     const before = t.s();
     t.inputs.getState().setField('pallet.height', '');
-    expect(t.s()).toBe(before);
+    // Nothing is re-checked; the session only says it is on the last valid inputs.
+    expect(t.s()).toEqual({ ...before, usingLastValid: true });
     t.inputs.getState().setField('pallet.height', '20');
+    expect(t.s().usingLastValid).toBe(false);
     expect(t.s().build.layout.layers).toHaveLength(3);
     expect(t.s().cartons).toBe(before.cartons);
   });
@@ -757,6 +765,7 @@ describe('save, save as new, cancel', () => {
       name: 'Manual 1',
       design,
       cartons,
+      frame: 'pallet',
       upperLayers,
       madeFor: madeForOf(design, t.current()),
     });
@@ -778,12 +787,12 @@ describe('save, save as new, cancel', () => {
     const t = await setup();
     const spec = t.openLayer();
     t.e().remove(3);
-    expect(t.e().save()).toEqual({ ok: true, id: spec.id });
+    expect(t.e().save()).toEqual({ ok: true, id: spec!.id });
     expect(t.m().specs).toHaveLength(1);
-    expect(t.m().specs[0]).toMatchObject({ id: spec.id, name: 'Manual 1' });
+    expect(t.m().specs[0]).toMatchObject({ id: spec!.id, name: 'Manual 1' });
     expect(t.m().specs[0]!.cartons).toEqual(FOUR.slice(0, 3));
 
-    t.e().openSaved(spec.id);
+    t.e().openSaved(spec!.id);
     t.e().remove(2);
     const copy = t.e().saveAsNew();
     expect(copy.ok).toBe(true);
@@ -793,14 +802,14 @@ describe('save, save as new, cancel', () => {
     ]);
     expect(t.results.getState().selectedManualId).toBe(t.m().specs[1]!.id);
 
-    t.e().openSaved(spec.id);
+    t.e().openSaved(spec!.id);
     t.e().save({ name: 'Renamed' });
     expect(t.m().specs[0]!.name).toBe('Renamed');
     // Saved over a layout deleted meanwhile: it is saved as a new one.
-    t.e().openSaved(spec.id);
-    t.m().remove(spec.id);
+    t.e().openSaved(spec!.id);
+    t.m().remove(spec!.id);
     const again = t.e().save();
-    expect(again.ok && again.id !== spec.id).toBe(true);
+    expect(again.ok && again.id !== spec!.id).toBe(true);
     expect(t.m().specs.map((s) => s.name)).toEqual(['Manual 2', 'Renamed']);
   });
 
@@ -834,7 +843,7 @@ describe('save, save as new, cancel', () => {
     expect(t.e().session).toBeNull();
     expect(t.m().specs).toEqual([spec]);
     // The snapping choice is kept for the next session; undo history is not.
-    t.e().openSaved(spec.id);
+    t.e().openSaved(spec!.id);
     t.e().setSnapping(false);
     t.e().remove(0);
     t.e().cancel();

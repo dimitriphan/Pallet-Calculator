@@ -9,6 +9,7 @@ import { unusedSpace } from '../engine/analytics/unusedSpace';
 import { useSceneData } from '../scene/useSceneData';
 import type { ManualLayoutDraft } from '../store/manualLayoutsStore';
 import { StoreProvider, type ResolvedStores } from './StoreContext';
+import { LOAD_CLOSES_EDITOR } from './ScenarioDrawer';
 import { flush, makeStores, renderApp, summaryTile } from './testUtils';
 import { useSelectedAnalytics } from './useSelectedAnalytics';
 import { useSelectedLayout } from './useSelectedLayout';
@@ -66,7 +67,7 @@ describe('the scene data and analytics hooks', () => {
     const before = now().selected;
     let id = '';
     act(() => {
-      id = stores.manualLayouts.getState().save(draftFor(stores), 'Dock 4').id;
+      id = stores.manualLayouts.getState().save(draftFor(stores), 'Dock 4')!.id;
     });
     // Saving one does not select it or disturb what is shown.
     expect(now().selected).toBe(before);
@@ -111,7 +112,7 @@ describe('the scene data and analytics hooks', () => {
     const { stores, now } = await hooks();
     let id = '';
     act(() => {
-      id = stores.manualLayouts.getState().save(draftFor(stores)).id;
+      id = stores.manualLayouts.getState().save(draftFor(stores))!.id;
       stores.results.getState().selectManual(id);
     });
     const made = now().scene;
@@ -129,7 +130,7 @@ describe('the scene data and analytics hooks', () => {
   it('show the last valid build, stale, while the inputs are invalid', async () => {
     const { stores, now } = await hooks();
     act(() => {
-      const { id } = stores.manualLayouts.getState().save(draftFor(stores));
+      const { id } = stores.manualLayouts.getState().save(draftFor(stores))!;
       stores.results.getState().selectManual(id);
     });
     const before = now();
@@ -143,8 +144,8 @@ describe('the scene data and analytics hooks', () => {
 describe('in the app', () => {
   const selectManual = (stores: ResolvedStores, over?: Partial<ManualLayoutDraft>) => {
     const spec = stores.manualLayouts.getState().save(draftFor(stores, over), 'Dock 4');
-    act(() => stores.results.getState().selectManual(spec.id));
-    return stores.manualLayouts.getState().entries.find((e) => e.spec.id === spec.id)!;
+    act(() => stores.results.getState().selectManual(spec!.id));
+    return stores.manualLayouts.getState().entries.find((e) => e.spec.id === spec!.id)!;
   };
 
   it('the summary shows the selected manual layout and no calculated row is selected', async () => {
@@ -196,7 +197,7 @@ describe('in the app', () => {
     expect(await csv.text()).toContain(String(entry.build.layout.totalProducts));
   });
 
-  it('a scenario is saved with the manual layouts and loading it puts them back', async () => {
+  it('a scenario is saved with the manual layouts; loading it adds them and removes none (I5)', async () => {
     const { user, stores } = await renderApp();
     const manual = () => stores.manualLayouts.getState();
     const kept = selectManual(stores).spec;
@@ -209,17 +210,68 @@ describe('in the app', () => {
     expect(scenario.manualLayouts).toEqual([kept]);
 
     // Afterwards: the saved one is renamed, and another is added.
+    let added = '';
     act(() => {
       manual().rename(kept.id, 'Changed');
-      manual().save(draftFor(stores, { upperLayers: 'same' }));
+      added = manual().save(draftFor(stores, { upperLayers: 'same' }))!.id;
     });
     expect(manual().specs).toHaveLength(2);
     await user.click(within(drawer).getByRole('button', { name: 'Load' }));
     await flush();
-    // Replaced, as the inputs and the result are: exactly what the scenario held.
-    expect(manual().specs).toEqual([kept]);
+    // Nothing is deleted: the renamed one and the new one stay, and the scenario's version of
+    // the renamed layout arrives as a copy.
+    expect(manual().specs.map((s) => s.name)).toEqual([
+      'Changed',
+      manual().specs[1]!.name,
+      `${kept.name} (from scenario)`,
+    ]);
+    expect(
+      manual()
+        .specs.map((s) => s.id)
+        .slice(0, 2),
+    ).toEqual([kept.id, added]);
+    expect(manual().specs[2]).toEqual({
+      ...kept,
+      id: manual().specs[2]!.id,
+      name: `${kept.name} (from scenario)`,
+    });
     // The scenario's calculated selection shows; the manual one is not selected.
     expect(stores.results.getState()).toMatchObject({ selectedManualId: null, selectedIndex: 0 });
+
+    // Loading it again adds nothing more.
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Scenarios' })).getByRole('button', {
+        name: 'Load',
+      }),
+    );
+    await flush();
+    expect(manual().specs).toHaveLength(3);
+  });
+
+  it('asks before a scenario load closes the editor, and keeps editing on No', async () => {
+    const { user, stores } = await renderApp();
+    const r = stores.results.getState();
+    act(() => {
+      stores.scenarios.getState().save('Saved', r.inputs!, r.result!, 0);
+      stores.manualEditor.getState().openFromCalculated(0);
+      stores.manualEditor.getState().remove(0);
+    });
+    const session = () => stores.manualEditor.getState().session;
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }));
+    const drawer = screen.getByRole('dialog', { name: 'Scenarios' });
+    await user.click(within(drawer).getByRole('button', { name: 'Load' }));
+    expect(within(drawer).getByText(LOAD_CLOSES_EDITOR)).toBeInTheDocument();
+    expect(session()).not.toBeNull();
+    await user.click(within(drawer).getByRole('button', { name: 'Keep editing' }));
+    expect(session()).not.toBeNull();
+    expect(within(drawer).queryByText(LOAD_CLOSES_EDITOR)).toBeNull();
+
+    await user.click(within(drawer).getByRole('button', { name: 'Load' }));
+    await user.click(within(drawer).getByRole('button', { name: 'Close the editor and load' }));
+    await flush();
+    expect(session()).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Scenarios' })).toBeNull();
   });
 
   it('loading a scenario saved before manual layouts existed leaves them as they are', async () => {

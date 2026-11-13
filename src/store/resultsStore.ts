@@ -41,7 +41,8 @@ function sameDims(a: Inputs['pallet'], b: Inputs['pallet']): boolean {
   return a.length === b.length && a.width === b.width && a.height === b.height;
 }
 
-function sameInputs(a: Inputs, b: Inputs): boolean {
+/** Whether two sets of inputs are the same calculation. */
+export function sameInputs(a: Inputs, b: Inputs): boolean {
   return (
     sameDims(a.pallet, b.pallet) &&
     sameDims(a.product, b.product) &&

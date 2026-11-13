@@ -13,6 +13,7 @@ export function manualRepo(storage: Storage, notices: string[] = []) {
   return createLocalStorageRepository({
     key: STORAGE_KEYS.manualLayouts,
     schema: manualLayoutSpecSchema,
+    discardFailed: true,
     storage,
     onNotice: (m) => notices.push(m),
   });
@@ -41,7 +42,12 @@ export function manualStores(storage: Storage = new FakeStorage()) {
     onSelectionReset: () => sceneResets.count++,
   });
   const notices: string[] = [];
-  const manual = createManualStores({ inputs, results, repo: manualRepo(storage, notices) });
+  const manual = createManualStores({
+    inputs,
+    results,
+    repo: manualRepo(storage, notices),
+    onNotice: (m) => notices.push(m),
+  });
   const current = (): Inputs => {
     const parsed = inputs.getState().parsed;
     if (!parsed.ok) throw new Error('The inputs are invalid');

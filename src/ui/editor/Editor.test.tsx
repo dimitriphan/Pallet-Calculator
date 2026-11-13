@@ -5,6 +5,7 @@ import { useNoticesStore } from '../../store/noticesStore';
 import { dimsText, pairText, weightText } from '../format';
 import { flush, renderApp } from '../testUtils';
 import { KEPT_UPRIGHT_REASON } from './CartonStep';
+import { COUNT_INVALID, MAX_COUNT, parseCount } from './CountStepper';
 import { CARTON_BLOCKED_NOTE, REPLACE_LAYER_QUESTION } from './EditorBar';
 import { ENTRY_REASONS } from './useEditorEntry';
 
@@ -177,12 +178,60 @@ describe('the Carton step', () => {
     expect(design(app).counts.width).toBe(2);
     expect(figure('Boxes per carton')).toBe(String(start.length * 2 * start.height));
 
-    // Nothing that is not a count of 1 or more is taken; leaving the field puts the count back.
+    // Nothing that is not a count from 1 to 99 is taken, and it is said: never silently ignored.
+    // (On the way to "100" the field held "10", a count, so that is the one in use after it.)
+    for (const [wrong, used] of [
+      ['0', 2],
+      ['', 2],
+      ['abc', 2],
+      ['2.5', 2],
+      ['-1', 2],
+      ['100', 10],
+    ] as const) {
+      await app.user.clear(count('width'));
+      if (wrong !== '') await app.user.type(count('width'), wrong);
+      expect(design(app).counts.width).toBe(used);
+      expect(count('width')).toHaveAttribute('aria-invalid', 'true');
+      expect(count('width')).toHaveAccessibleDescription(`${COUNT_INVALID} Using ${used}.`);
+      expect(within(panel()).getByRole('alert')).toHaveTextContent(COUNT_INVALID);
+      // Leaving the field keeps what was typed and the message.
+      await app.user.tab();
+      expect(count('width')).toHaveValue(wrong);
+      expect(count('width')).toHaveAttribute('aria-invalid', 'true');
+    }
+    // Put right, the message goes.
     await app.user.clear(count('width'));
-    await app.user.type(count('width'), '0');
-    expect(design(app).counts.width).toBe(2);
-    await app.user.tab();
-    expect(count('width')).toHaveValue('2');
+    await app.user.type(count('width'), '3');
+    expect(design(app).counts.width).toBe(3);
+    expect(count('width')).not.toHaveAttribute('aria-invalid');
+    expect(within(panel()).queryByRole('alert')).toBeNull();
+    // A button also clears a wrong entry.
+    await app.user.clear(count('width'));
+    await app.user.type(count('width'), 'x');
+    await app.user.click(more('width'));
+    expect(count('width')).toHaveValue('4');
+    expect(count('width')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('counts stop at 99, and a stepper that disables itself hands the focus to its field', async () => {
+    const app = await renderApp();
+    await openOwn(app);
+    expect(MAX_COUNT).toBe(99);
+    expect(parseCount('99')).toBe(99);
+    expect(parseCount('100')).toBeNull();
+    await app.user.clear(count('height'));
+    await app.user.type(count('height'), '98');
+    expect(design(app).counts.height).toBe(98);
+    await app.user.click(more('height'));
+    expect(design(app).counts.height).toBe(99);
+    expect(more('height')).toBeDisabled();
+    expect(count('height')).toHaveFocus();
+    await app.user.clear(count('height'));
+    await app.user.type(count('height'), '2');
+    await app.user.click(fewer('height'));
+    expect(design(app).counts.height).toBe(1);
+    expect(fewer('height')).toBeDisabled();
+    expect(count('height')).toHaveFocus();
   });
 
   it('offers one pictured button per facing, named by what is up and how it is turned', async () => {

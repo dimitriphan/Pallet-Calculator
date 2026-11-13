@@ -182,23 +182,36 @@ function inside(r: Rect, usable: Point): boolean {
   return r.x >= -EPS && r.y >= -EPS && r.x + r.w <= usable.x + EPS && r.y + r.h <= usable.y + EPS;
 }
 
+/** A turn of one carton: the new layer, or why it was refused. */
+export type TurnResult =
+  | { ok: true; cartons: ManualCarton[] }
+  /**
+   * 'overlap': the turned carton would overlap wherever it is put (or there is no such
+   * carton). 'noRoom': the carton is inside the usable footprint and every free place for it
+   * turned would put it outside: a turn must not create an overhang, so it is moved first.
+   */
+  | { ok: false; reason: 'overlap' | 'noRoom' };
+
 /**
- * The layer with carton `index` turned 90° flat, or null when the turned carton would overlap
- * wherever it is put (the turn is refused). A turned carton cannot cover the same rectangle,
- * so it is tried with each of its corners kept where it was (minimum corner first) and then
- * with its centre kept; the first place inside the usable footprint that overlaps nothing is
- * taken, else the first that overlaps nothing at all (the carton then overhangs, and is
- * flagged). A square carton is turned where it stands.
+ * Carton `index` turned 90° flat. A turned carton cannot cover the same rectangle, so it is
+ * tried with each of its corners kept where it was (minimum corner first) and then with its
+ * centre kept; the first place inside the usable footprint that overlaps nothing is taken.
+ * A turn never creates an overhang: for a carton that is inside the footprint, when no such
+ * place is inside the turn is refused ('noRoom'). A carton that already overhangs may turn
+ * into the first place that overlaps nothing at all (it still overhangs, and is flagged).
+ * Refused with 'overlap' when the turned carton would overlap wherever it is put. A square
+ * carton is turned where it stands.
  */
-export function turnCarton(
+export function tryTurnCarton(
   cartons: readonly ManualCarton[],
   index: number,
   base: CartonBase,
   usable: Point,
-): ManualCarton[] | null {
+): TurnResult {
   const current = cartons[index];
-  if (!current) return null;
-  const { x, y, w, h } = cartonRect(current, base);
+  if (!current) return { ok: false, reason: 'overlap' };
+  const before = cartonRect(current, base);
+  const { x, y, w, h } = before;
   // Turned, the carton is h wide and w deep.
   const places: Point[] = [
     { x, y },
@@ -210,9 +223,23 @@ export function turnCarton(
   const free = places
     .map((p): ManualCarton => ({ x: p.x, y: p.y, rotated: !current.rotated }))
     .filter((c) => canPlace(cartons, c, base, index));
-  const turned = free.find((c) => inside(cartonRect(c, base), usable)) ?? free[0];
-  if (!turned) return null;
-  return cartons.map((c, k) => (k === index ? turned : c));
+  if (free.length === 0) return { ok: false, reason: 'overlap' };
+  const turned =
+    free.find((c) => inside(cartonRect(c, base), usable)) ??
+    (inside(before, usable) ? undefined : free[0]);
+  if (!turned) return { ok: false, reason: 'noRoom' };
+  return { ok: true, cartons: cartons.map((c, k) => (k === index ? turned : c)) };
+}
+
+/** `tryTurnCarton` as the new layer, or null when the turn is refused for either reason. */
+export function turnCarton(
+  cartons: readonly ManualCarton[],
+  index: number,
+  base: CartonBase,
+  usable: Point,
+): ManualCarton[] | null {
+  const result = tryTurnCarton(cartons, index, base, usable);
+  return result.ok ? result.cartons : null;
 }
 
 /**

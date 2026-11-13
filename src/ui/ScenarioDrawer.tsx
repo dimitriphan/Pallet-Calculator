@@ -2,13 +2,21 @@ import { useState } from 'react';
 import type { Scenario } from '../domain/types';
 import { BUTTON, ModalDialog, PRIMARY_BUTTON } from './ModalDialog';
 import { NamePrompt } from './NamePrompt';
-import { useResults, useScenarios, useStores } from './StoreContext';
+import { useNoticesStore } from '../store/noticesStore';
+import { useManualEditor, useResults, useScenarios, useStores } from './StoreContext';
 
 type Mode =
   | { kind: 'list' }
   | { kind: 'save' }
   | { kind: 'rename'; id: string }
-  | { kind: 'delete'; id: string };
+  | { kind: 'delete'; id: string }
+  /** Asked before a load closes the manual layout editor. */
+  | { kind: 'load'; id: string };
+
+export const LOAD_CLOSES_EDITOR =
+  'You are editing a layout by hand. Loading a scenario will close the editor.';
+const LAYOUTS_NOT_STORED =
+  'Some of the scenario’s manual layouts could not be saved: browser storage is full or unavailable.';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -36,7 +44,8 @@ export function ScenarioDrawer() {
 }
 
 function Drawer({ onClose }: { onClose(): void }) {
-  const { inputs, results, scenarios: store, manualLayouts } = useStores();
+  const { inputs, results, scenarios: store, manualLayouts, manualEditor } = useStores();
+  const editing = useManualEditor((s) => s.session !== null);
   const scenarios = useScenarios((s) => s.scenarios);
   const ready = useResults((s) => s.status === 'ready' && s.result !== null && s.inputs !== null);
   const [mode, setMode] = useState<Mode>({ kind: 'list' });
@@ -52,12 +61,21 @@ function Drawer({ onClose }: { onClose(): void }) {
   };
 
   const load = (s: Scenario) => {
+    // The session was for the inputs being replaced; the user has agreed to close it.
+    manualEditor.getState().cancel();
     inputs.getState().replaceInputs(s.inputs);
     results.getState().restore(s.inputs, s.result, s.selectedIndex);
-    // The scenario's manual layouts take the place of the ones present, as its inputs and
-    // result do. One saved before manual layouts existed has none to give and changes none.
-    if (s.manualLayouts) manualLayouts.getState().replaceAll(s.manualLayouts);
+    // The scenario's manual layouts are added to the ones present; none present is removed
+    // or changed (a different layout of the same id arrives as a copy).
+    if (s.manualLayouts?.length) {
+      const merged = manualLayouts.getState().addFromScenario(s.manualLayouts, s.inputs.overhang);
+      if (merged.notStored > 0) useNoticesStore.getState().push(LAYOUTS_NOT_STORED);
+    }
     onClose();
+  };
+  const askLoad = (s: Scenario) => {
+    if (editing) setMode({ kind: 'load', id: s.id });
+    else load(s);
   };
 
   return (
@@ -116,9 +134,23 @@ function Drawer({ onClose }: { onClose(): void }) {
                           Cancel
                         </button>
                       </div>
+                    ) : mode.kind === 'load' && mode.id === s.id ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-900 dark:text-harbor-foam">
+                          {LOAD_CLOSES_EDITOR}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => load(s)} className={PRIMARY_BUTTON}>
+                            Close the editor and load
+                          </button>
+                          <button type="button" autoFocus onClick={toList} className={BUTTON}>
+                            Keep editing
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        <button type="button" onClick={() => load(s)} className={BUTTON}>
+                        <button type="button" onClick={() => askLoad(s)} className={BUTTON}>
                           Load
                         </button>
                         <button

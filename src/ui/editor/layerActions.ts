@@ -15,6 +15,8 @@ import { useStores } from '../StoreContext';
 export const LAYER_MESSAGES = {
   noFreeSpot: 'No free space for another carton inside the footprint',
   turnRefused: 'Cannot turn: it would overlap another carton',
+  /** Inside the footprint, and turned it would only fit outside: a turn never overhangs. */
+  turnNoRoom: 'No room to turn this carton here. Move it first.',
   overlap: 'Cartons cannot overlap',
   /** A carton dropped on another: it is back where it was. */
   dropRefused: 'Cartons cannot overlap. The carton went back to where it was',
@@ -48,6 +50,8 @@ export function refusalText(result: EditorResult<object>): string | null {
       return LAYER_MESSAGES.noFreeSpot;
     case 'turnRefused':
       return LAYER_MESSAGES.turnRefused;
+    case 'turnNoRoom':
+      return LAYER_MESSAGES.turnNoRoom;
     case 'overlap':
       return LAYER_MESSAGES.overlap;
     case 'noSelection':

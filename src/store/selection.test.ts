@@ -65,7 +65,7 @@ describe('the selected layout', () => {
     const t = await setup();
     const spec = t.manualLayouts.getState().save(t.draft(), 'Dock 4');
     const resets = t.sceneResets.count;
-    t.r().selectManual(spec.id);
+    t.r().selectManual(spec!.id);
     expect(t.sceneResets.count).toBe(resets + 1);
     const entry = t.manualLayouts.getState().entries[0]!;
     const s = t.selected()!;
@@ -74,13 +74,13 @@ describe('the selected layout', () => {
     expect(s.stale).toBe(false);
     expect(isManualRanked(s.ranked)).toBe(true);
     expect(s.ranked.manual).toEqual({
-      id: spec.id,
+      id: spec!.id,
       name: 'Dock 4',
       flags: entry.build.flags,
       status: 'current',
     });
     expect(s.ranked.manual!.flags).toContainEqual({ kind: 'overhang', cartons: 2, by: 5 });
-    expect(s.ranked.layout.id).toBe(`manual:${spec.id}`);
+    expect(s.ranked.layout.id).toBe(`manual:${spec!.id}`);
     expect(t.r().result!.layouts.map((l) => l.layout.id)).not.toContain(s.ranked.layout.id);
     expect(s.ranked).toMatchObject({ rank: 0, explanation: '', score: { total: 0 } });
     // The calculated selection is untouched underneath.
@@ -90,11 +90,11 @@ describe('the selected layout', () => {
   it('selecting a calculated layout deselects the manual one', async () => {
     const t = await setup();
     const spec = t.manualLayouts.getState().save(t.draft());
-    t.r().selectManual(spec.id);
+    t.r().selectManual(spec!.id);
     t.r().select(1);
     expect(t.r().selectedManualId).toBeNull();
     expect(t.selected()!.ranked).toBe(t.r().result!.layouts[1]);
-    t.r().selectManual(spec.id);
+    t.r().selectManual(spec!.id);
     t.r().selectManual(null);
     expect(t.selected()!.ranked).toBe(t.r().result!.layouts[1]);
   });
@@ -102,13 +102,13 @@ describe('the selected layout', () => {
   it('a manual layout stays selected through a recalculation and is re-checked', async () => {
     const t = await setup();
     const spec = t.manualLayouts.getState().save(t.draft());
-    t.r().selectManual(spec.id);
+    t.r().selectManual(spec!.id);
     const layers = t.selected()!.ranked.layout.layers.length;
     t.change({ pallet: { ...t.current().pallet, height: 30 } });
     await t.calculate();
-    expect(t.r().selectedManualId).toBe(spec.id);
+    expect(t.r().selectedManualId).toBe(spec!.id);
     const s = t.selected()!;
-    expect(s.ranked.manual!.id).toBe(spec.id);
+    expect(s.ranked.manual!.id).toBe(spec!.id);
     expect(s.ranked.layout.layers.length).toBeLessThan(layers);
     expect(s.inputs.pallet.height).toBe(30);
   });
@@ -125,11 +125,11 @@ describe('the selected layout', () => {
     const a = t.manualLayouts.getState().save(t.draft());
     const b = t.manualLayouts.getState().save(t.draft());
     t.r().select(2);
-    t.r().selectManual(a.id);
-    t.manualLayouts.getState().remove(b.id);
-    expect(t.r().selectedManualId).toBe(a.id);
+    t.r().selectManual(a!.id);
+    t.manualLayouts.getState().remove(b!.id);
+    expect(t.r().selectedManualId).toBe(a!.id);
     expect(t.r().selectedIndex).toBe(2);
-    t.manualLayouts.getState().remove(a.id);
+    t.manualLayouts.getState().remove(a!.id);
     expect(t.r().selectedManualId).toBeNull();
     expect(t.r().selectedIndex).toBe(0);
     expect(t.selected()!.ranked).toBe(t.r().result!.layouts[0]);
@@ -141,20 +141,20 @@ describe('the selected layout', () => {
     const other = manualStores(storage);
     const a = t.manualLayouts.getState().save(t.draft());
     t.r().select(1);
-    t.r().selectManual(a.id);
+    t.r().selectManual(a!.id);
     other.manualLayouts.getState().refresh();
-    other.manualLayouts.getState().remove(a.id);
+    other.manualLayouts.getState().remove(a!.id);
     t.manualLayouts.getState().refresh();
     expect(t.r()).toMatchObject({ selectedManualId: null, selectedIndex: 0 });
 
     const bare = manualStores();
     const b = bare.manualLayouts.getState().save(t.draft());
-    bare.results.getState().selectManual(b.id);
+    bare.results.getState().selectManual(b!.id);
     expect(
       selectSelectedLayout(bare.results.getState(), bare.manualLayouts.getState())!.ranked.manual!
         .id,
-    ).toBe(b.id);
-    bare.manualLayouts.getState().remove(b.id);
+    ).toBe(b!.id);
+    bare.manualLayouts.getState().remove(b!.id);
     expect(bare.results.getState().selectedManualId).toBeNull();
     expect(selectSelectedLayout(bare.results.getState(), bare.manualLayouts.getState())).toBeNull();
   });
@@ -162,7 +162,7 @@ describe('the selected layout', () => {
   it('is stale while the inputs are invalid, and shows the last valid build', async () => {
     const t = await setup();
     const spec = t.manualLayouts.getState().save(t.draft());
-    t.r().selectManual(spec.id);
+    t.r().selectManual(spec!.id);
     const before = t.selected()!;
     t.inputs.getState().setField('pallet.length', '');
     const s = t.selected()!;
@@ -177,7 +177,7 @@ describe('analytics and exports of a selected manual layout', () => {
   it('an overhanging layout: analytics, placements, payload, CSV, caption and build sheet', async () => {
     const t = await setup();
     const spec = t.manualLayouts.getState().save(t.draft(), 'Dock 4');
-    t.r().selectManual(spec.id);
+    t.r().selectManual(spec!.id);
     const { ranked, inputs } = t.selected()!;
     const layout = ranked.layout;
 
@@ -203,7 +203,7 @@ describe('analytics and exports of a selected manual layout', () => {
     expect(payload.comparison[0]!.products).toBe(layout.totalProducts);
     const json = JSON.parse(JSON.stringify(payload)) as typeof payload;
     expect((json.selectedLayout as typeof ranked).manual).toMatchObject({
-      id: spec.id,
+      id: spec!.id,
       name: 'Dock 4',
       status: 'current',
     });
@@ -226,7 +226,7 @@ describe('analytics and exports of a selected manual layout', () => {
     const t = await setup();
     const made = t.current();
     const spec = t.manualLayouts.getState().save(t.draft({ upperLayers: 'same' }), 'Old');
-    t.r().selectManual(spec.id);
+    t.r().selectManual(spec!.id);
     const madeProducts = t.selected()!.ranked.layout.totalProducts;
     t.change({ product: { ...made.product, length: 13 } });
     await t.calculate();
@@ -237,7 +237,7 @@ describe('analytics and exports of a selected manual layout', () => {
     // Its own inputs: the product it was made for, not the one the calculation now uses.
     expect(s.inputs.product).toEqual(made.product);
     expect(t.r().inputs!.product.length).toBe(13);
-    expect(s.ranked.layout.carton.outer).toEqual(spec.madeFor.outer);
+    expect(s.ranked.layout.carton.outer).toEqual(spec!.madeFor.outer);
     expect(s.ranked.layout.totalProducts).toBe(madeProducts);
 
     const analytics = computeAnalytics(s.ranked.layout, s.inputs);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { manualLayoutSpecSchema } from '../domain/manualSchemas';
 import type { ManualLayoutSpec } from '../engine/manual/build';
-import { MANUAL_ID_PREFIX, madeForOf } from '../engine/manual/build';
+import { MANUAL_ID_PREFIX, madeForOf, usableToPallet } from '../engine/manual/build';
 import {
   manualSpec,
   OVERHANG_INPUTS as I,
@@ -9,6 +9,7 @@ import {
   TEST_DESIGN,
 } from '../engine/manual/testSupport';
 import { STORAGE_KEYS } from '../persistence/keys';
+import { NOT_SAVED } from '../persistence/localStorageRepository';
 import { createMemoryRepository } from '../persistence/repository';
 import { FakeStorage } from '../persistence/testStorage';
 import {
@@ -18,19 +19,24 @@ import {
 } from './manualLayoutsStore';
 import { manualRepo, manualStores } from './manualTestSupport';
 
+/** Everything the app saves is in the pallet frame: the overhanging layer, placed as ever. */
 const DRAFT: ManualLayoutDraft = {
   design: TEST_DESIGN,
-  cartons: OVERHANGING_CARTONS,
+  cartons: usableToPallet(OVERHANGING_CARTONS, I.overhang),
+  frame: 'pallet',
   upperLayers: 'alternate',
   madeFor: madeForOf(TEST_DESIGN, I),
 };
 /** Two cartons side by side, wholly inside the footprint. */
 const INSIDE: ManualLayoutDraft = {
   ...DRAFT,
-  cartons: [
-    { x: 0, y: 0, rotated: false },
-    { x: 25, y: 0, rotated: false },
-  ],
+  cartons: usableToPallet(
+    [
+      { x: 0, y: 0, rotated: false },
+      { x: 25, y: 0, rotated: false },
+    ],
+    I.overhang,
+  ),
   upperLayers: 'same',
 };
 
@@ -60,8 +66,8 @@ describe('storage', () => {
     const { storage, s } = setup();
     const saved = s().save(DRAFT, 'Mine');
     expect(stored(storage)).toEqual({ version: 1, items: [{ id: 'id1', name: 'Mine', ...DRAFT }] });
-    expect(Object.keys(saved).sort()).toEqual(
-      ['cartons', 'design', 'id', 'madeFor', 'name', 'upperLayers'].sort(),
+    expect(Object.keys(saved!).sort()).toEqual(
+      ['cartons', 'design', 'frame', 'id', 'madeFor', 'name', 'upperLayers'].sort(),
     );
     expect(setup(storage).s().specs).toEqual([saved]);
   });
@@ -100,19 +106,40 @@ describe('storage', () => {
       const { s, notices } = setup(storage);
       expect(s().specs).toEqual([]);
       expect(notices).toHaveLength(1);
-      expect(s().save(INSIDE).name).toBe('Manual 1');
+      expect(s().save(INSIDE)!.name).toBe('Manual 1');
       expect(storage.getItem(`${STORAGE_KEYS.manualLayouts}.backup`)).toBe(raw);
     },
   );
 
-  it('works when storage cannot be read or written', () => {
+  it('says so, and keeps nothing, when a layout cannot be written (review I6)', () => {
     const storage = new FakeStorage();
-    storage.failReads = true;
-    storage.failWrites = true;
-    const { s, store } = setup(storage);
+    const { s, store, notices } = setup(storage);
     store.getState().setInputs(I);
-    s().save(INSIDE);
+    const kept = s().save(INSIDE, 'Kept')!;
+    storage.failWrites = true;
+
+    // Nothing is reported saved, renamed, copied or deleted, and the list stays what is stored.
+    expect(s().save(INSIDE)).toBeNull();
+    expect(s().saveAsNew(INSIDE)).toBeNull();
+    expect(s().update(kept.id, DRAFT)).toBeNull();
+    expect(s().rename(kept.id, 'Other')).toBe(false);
+    expect(s().duplicate(kept.id)).toBeNull();
+    expect(s().remove(kept.id)).toBe(false);
+    expect(s().specs).toEqual([kept]);
     expect(s().entries).toHaveLength(1);
+    expect(notices).toEqual(Array(6).fill(NOT_SAVED));
+
+    // Once storage works again nothing that failed comes back on its own.
+    storage.failWrites = false;
+    expect(s().rename(kept.id, 'Renamed')).toBe(true);
+    expect(stored(storage)!.items).toEqual([{ ...kept, name: 'Renamed' }]);
+  });
+
+  it('with no browser storage at all, layouts are kept for the session', () => {
+    const store = createManualLayoutsStore(createMemoryRepository<ManualLayoutSpec>());
+    store.getState().setInputs(I);
+    expect(store.getState().save(INSIDE)).not.toBeNull();
+    expect(store.getState().entries).toHaveLength(1);
   });
 
   it('a spec that gets past the schema but is not valid is flagged, never built, never fatal', () => {
@@ -149,12 +176,12 @@ describe('storage', () => {
     expect(there.s().specs).toEqual([]);
     there.s().refresh();
     expect(there.s().specs).toEqual([a]);
-    there.s().rename(a.id, 'B');
+    there.s().rename(a!.id, 'B');
     there.s().save(DRAFT);
     here.s().refresh();
     expect(here.s().specs.map((x) => x.name)).toEqual(['B', 'Manual 1']);
     expect(here.s().entries.map((e) => e.ranked.manual.name)).toEqual(['B', 'Manual 1']);
-    there.s().remove(a.id);
+    there.s().remove(a!.id);
     here.s().refresh();
     expect(here.s().specs.map((x) => x.name)).toEqual(['Manual 1']);
     expect(here.changes.at(-1)).toEqual(here.s().specs.map((x) => x.id));
@@ -187,11 +214,11 @@ describe('default names', () => {
     const a = s().save(INSIDE);
     const b = s().save(INSIDE, '   ');
     const c = s().saveAsNew(INSIDE);
-    expect([a.name, b.name, c.name]).toEqual(['Manual 1', 'Manual 2', 'Manual 3']);
-    s().remove(b.id);
+    expect([a!.name, b!.name, c!.name]).toEqual(['Manual 1', 'Manual 2', 'Manual 3']);
+    s().remove(b!.id);
     expect(s().nextName()).toBe('Manual 2');
-    expect(s().save(INSIDE).name).toBe('Manual 2');
-    expect(s().save(INSIDE, '  Top shelf ').name).toBe('Top shelf');
+    expect(s().save(INSIDE)!.name).toBe('Manual 2');
+    expect(s().save(INSIDE, '  Top shelf ')!.name).toBe('Top shelf');
   });
 });
 
@@ -200,8 +227,8 @@ describe('save, update, rename, duplicate, delete', () => {
     const real = createManualLayoutsStore(manualRepo(new FakeStorage()));
     real.getState().setInputs(I);
     const a = real.getState().save(INSIDE);
-    const b = real.getState().duplicate(a.id)!;
-    expect(a.id).not.toBe(b.id);
+    const b = real.getState().duplicate(a!.id)!;
+    expect(a!.id).not.toBe(b.id);
     for (const e of real.getState().entries) {
       expect(e.build.layout.id).toBe(MANUAL_ID_PREFIX + e.spec.id);
       expect(e.ranked.layout.id.startsWith('manual:')).toBe(true);
@@ -211,10 +238,10 @@ describe('save, update, rename, duplicate, delete', () => {
   it('update saves over, keeping the id and (unless one is given) the name', () => {
     const { s } = setup();
     const a = s().save(INSIDE, 'Mine');
-    const next = s().update(a.id, DRAFT);
-    expect(next).toEqual({ id: a.id, name: 'Mine', ...DRAFT });
+    const next = s().update(a!.id, DRAFT);
+    expect(next).toEqual({ id: a!.id, name: 'Mine', ...DRAFT });
     expect(s().specs).toEqual([next]);
-    expect(s().update(a.id, DRAFT, 'Other')!.name).toBe('Other');
+    expect(s().update(a!.id, DRAFT, 'Other')!.name).toBe('Other');
     expect(s().update('nope', DRAFT)).toBeNull();
     expect(s().specs).toHaveLength(1);
   });
@@ -222,14 +249,14 @@ describe('save, update, rename, duplicate, delete', () => {
   it('renames (ignoring a blank name), duplicates and deletes', () => {
     const { s, changes } = setup();
     const a = s().save(INSIDE);
-    s().rename(a.id, '  Dock 4 ');
-    s().rename(a.id, '   ');
+    s().rename(a!.id, '  Dock 4 ');
+    s().rename(a!.id, '   ');
     expect(s().specs[0]!.name).toBe('Dock 4');
-    const copy = s().duplicate(a.id)!;
+    const copy = s().duplicate(a!.id)!;
     expect(copy).toEqual({ ...s().specs[0]!, id: copy.id, name: 'Dock 4 (copy)' });
-    expect(copy.id).not.toBe(a.id);
+    expect(copy.id).not.toBe(a!.id);
     expect(s().duplicate('nope')).toBeNull();
-    s().remove(a.id);
+    s().remove(a!.id);
     expect(s().specs).toEqual([copy]);
     expect(changes.at(-1)).toEqual([copy.id]);
   });
@@ -240,20 +267,65 @@ describe('save, update, rename, duplicate, delete', () => {
     const a = s().save({ ...INSIDE, cartons });
     cartons[0]!.x = 99;
     expect(s().specs[0]!.cartons[0]!.x).toBe(0);
-    expect(a.cartons).not.toBe(cartons);
+    expect(a!.cartons).not.toBe(cartons);
   });
 
-  it('replaceAll puts the given layouts in place of all present', () => {
+  it("adding a scenario's layouts never removes or changes one that is present (review I5)", () => {
     const { s, storage } = setup();
-    const a = s().save(INSIDE);
-    const b = s().save(INSIDE);
-    const incoming = [{ ...b, name: 'B again' }, manualSpec({ id: 'new', name: 'New' })];
-    s().replaceAll(incoming);
-    expect(s().specs.find((x) => x.id === a.id)).toBeUndefined();
-    expect(s().specs).toHaveLength(2);
-    expect(s().specs).toEqual(expect.arrayContaining(incoming));
-    expect(stored(storage)!.items).toHaveLength(2);
-    s().replaceAll([]);
+    const a = s().save(INSIDE, 'A')!;
+    const b = s().save(INSIDE, 'B')!;
+    const changed = { ...b, name: 'B', upperLayers: 'alternate' as const };
+    const fresh = { ...manualSpec({ id: 'new', name: 'New' }), frame: 'pallet' as const };
+
+    expect(s().addFromScenario([a, changed, fresh], 0)).toEqual({
+      added: 2,
+      skipped: 1,
+      notStored: 0,
+    });
+    // A is as it was (same id, same content: skipped); B is kept and the scenario's different
+    // B arrives as a copy; the new one is added.
+    expect(s().specs.map((x) => x.name)).toEqual(['A', 'B', 'B (from scenario)', 'New']);
+    expect(s().specs.slice(0, 2)).toEqual([a, b]);
+    const copy = s().specs[2]!;
+    expect(copy.id).not.toBe(b.id);
+    expect(copy).toEqual({ ...changed, id: copy.id, name: 'B (from scenario)' });
+    expect(stored(storage)!.items).toHaveLength(4);
+
+    // Loading the same scenario again adds nothing more.
+    expect(s().addFromScenario([a, changed, fresh], 0)).toEqual({
+      added: 0,
+      skipped: 3,
+      notStored: 0,
+    });
+    expect(s().specs).toHaveLength(4);
+    // A scenario with no layouts takes nothing away.
+    expect(s().addFromScenario([], 0).added).toBe(0);
+    expect(s().specs).toHaveLength(4);
+  });
+
+  it('a scenario layout stored before the pallet frame is moved to it by the scenario overhang', () => {
+    const { s } = setup();
+    const legacy = manualSpec({
+      id: 'old',
+      name: 'Old',
+      cartons: [{ x: 3, y: 5, rotated: false }],
+    });
+    expect(legacy).not.toHaveProperty('frame');
+    s().addFromScenario([legacy], 4);
+    expect(s().specs).toEqual([
+      { ...legacy, frame: 'pallet', cartons: [{ x: 1, y: 3, rotated: false }] },
+    ]);
+  });
+
+  it('reports scenario layouts that could not be written', () => {
+    const storage = new FakeStorage();
+    const { s } = setup(storage);
+    storage.failWrites = true;
+    expect(s().addFromScenario([manualSpec({ id: 'x' })], 0)).toEqual({
+      added: 0,
+      skipped: 0,
+      notStored: 1,
+    });
     expect(s().specs).toEqual([]);
   });
 
@@ -371,7 +443,7 @@ describe('builds under the current inputs', () => {
     expect(s().entries[0]).toBe(first);
     s().setInputs(I);
     expect(s().entries[0]).toBe(first);
-    s().rename(a.id, 'Renamed');
+    s().rename(a!.id, 'Renamed');
     expect(s().entries[0]).not.toBe(first);
     expect(s().entries[0]!.ranked.manual.name).toBe('Renamed');
   });
