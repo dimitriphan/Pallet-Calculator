@@ -1,7 +1,7 @@
 import { SCORE_WEIGHTS } from '../domain/constants';
 import type { RankedLayout } from '../domain/types';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
-import { UPPER_LAYERS_TEXT } from '../export/csv';
+import { upperLayersText } from '../export/csv';
 import { MANUAL_OUT_OF_DATE_NOTE } from '../export/exportData';
 import type { ManualMarker } from '../store/manualLayoutsStore';
 import type { SelectedRanked } from '../store/selection';
@@ -47,7 +47,7 @@ function ManualExplanation({ ranked, manual }: { ranked: SelectedRanked; manual:
       `${fmtCount(layout.carton.boxesPerCarton)} ${layout.carton.boxesPerCarton === 1 ? 'box' : 'boxes'}, ${dimsText(cartonDisplayDims(layout, 'outer'), unit)} outside`,
     ],
     ['Boxes along the box length × width × height', describeBoxCounts(layout.carton.counts)],
-    ['Upper layers', UPPER_LAYERS_TEXT[manual.upperLayers]],
+    ['Upper layers', upperLayersText(manual)],
     ['Total boxes', fmtCount(layout.totalProducts)],
     ...(best !== null && !outOfDate
       ? ([['Compared', differenceText(layout.totalProducts, best)]] as [string, string][])

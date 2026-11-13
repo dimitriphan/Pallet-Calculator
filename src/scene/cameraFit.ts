@@ -67,7 +67,8 @@ export function perspectiveFit(
 /**
  * An orthographic camera that frames the bounds at `aspect` (width / height) with `margin`:
  * 'top' looks straight down with the length across and the far side at the top;
- * 'side' looks along +Z at the length x height face with height vertical.
+ * 'side' looks from the front (the edge at the greatest z, at the bottom of the top view) at
+ * the length x height face with height vertical, so left and right are as in the top view.
  */
 export function orthoFit(
   bounds: Bounds,
@@ -88,7 +89,7 @@ export function orthoFit(
 
   const standoff = depth / 2 + 10;
   const position: Vec3 =
-    view === 'top' ? [c[0], c[1] + standoff, c[2]] : [c[0], c[1], c[2] - standoff];
+    view === 'top' ? [c[0], c[1] + standoff, c[2]] : [c[0], c[1], c[2] + standoff];
   return {
     position,
     target: c,

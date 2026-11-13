@@ -216,10 +216,12 @@ describe('carton step', () => {
     expect(t.s().dirty).toBe(true);
 
     expect(t.e().setFacing('WLH')).toEqual({ ok: true });
-    expect(t.s().figures.outer).toEqual({ length: 17, width: 25, height: 13 });
+    // Written as it stands: longer side of the base, shorter side, height (final review F12).
+    expect(t.s().figures.outer).toEqual({ length: 25, width: 17, height: 13 });
     expect(t.e().setSideDown('side')).toEqual({ ok: true });
     expect(t.s().base).toEqual({ a: 17, b: 13 });
     expect(t.s().build.layout.layers[0]!.height).toBe(25);
+    expect(t.s().figures.outer).toEqual({ length: 17, width: 13, height: 25 });
 
     expect(t.e().undo()).toEqual({ ok: true });
     expect(t.s().design.sideDown).toBe('base');
@@ -853,10 +855,11 @@ describe('save, save as new, cancel', () => {
     t.e().openSaved(spec!.id);
     t.e().save({ name: 'Renamed' });
     expect(t.m().specs[0]!.name).toBe('Renamed');
-    // Saved over a layout deleted meanwhile: it is saved as a new one.
+    // A layout deleted meanwhile is not saved again without asking; asked, it is a new one.
     t.e().openSaved(spec!.id);
     t.m().remove(spec!.id);
-    const again = t.e().save();
+    expect(t.e().save()).toEqual({ ok: false, reason: 'changedElsewhere', change: 'deleted' });
+    const again = t.e().save({ overwrite: true });
     expect(again.ok && again.id !== spec!.id).toBe(true);
     expect(t.m().specs.map((s) => s.name)).toEqual(['Manual 2', 'Renamed']);
   });

@@ -212,14 +212,111 @@ describe('layouts stored before the pallet frame are migrated on load', () => {
     expect(toPalletFrame(spec, 10)).toBe(spec);
   });
 
-  it('a migration that cannot be written leaves the layout as it was, still shown', () => {
+  it('a migration that cannot be written is said once and kept in memory (final review F17)', () => {
     const storage = new FakeStorage();
-    storage.setItem(STORAGE_KEYS.manualLayouts, JSON.stringify({ version: 1, items: [legacy()] }));
-    const store = createManualLayoutsStore(manualRepo(storage));
+    const raw = JSON.stringify({ version: 1, items: [legacy()] });
+    storage.setItem(STORAGE_KEYS.manualLayouts, raw);
+    const notices: string[] = [];
+    const store = createManualLayoutsStore(manualRepo(storage, notices));
+    const asMade = buildManualLayout(legacy(), OVERHANG_INPUTS);
     storage.failWrites = true;
     store.getState().setInputs(OVERHANG_INPUTS);
-    expect(store.getState().specs).toEqual([legacy()]);
+    const migrated = {
+      ...legacy(),
+      frame: 'pallet',
+      cartons: usableToPallet(legacy().cartons, OVERHANG_INPUTS.overhang),
+    };
+    expect(store.getState().specs).toEqual([migrated]);
     expect(store.getState().entries).toHaveLength(1);
+    expect(notices).toEqual([NOT_SAVED]);
+    expect(storage.getItem(STORAGE_KEYS.manualLayouts)).toBe(raw);
+
+    // Every later change of the inputs: no new attempt, no new notice, and the layout stays
+    // where it was put on the pallet instead of being built in the wrong frame.
+    for (const overhang of [6, 0, 3]) {
+      store.getState().setInputs({ ...OVERHANG_INPUTS, overhang });
+      expect(store.getState().specs).toEqual([migrated]);
+      expect(onPallet(store.getState().entries[0]!.build)).toEqual(onPallet(asMade));
+    }
+    store.getState().refresh();
+    expect(store.getState().specs).toEqual([migrated]);
+    expect(notices).toEqual([NOT_SAVED]);
+
+    // A change the user makes later writes the migrated layout.
+    storage.failWrites = false;
+    expect(store.getState().rename('old', 'Old one')).toBe(true);
+    expect(JSON.parse(storage.getItem(STORAGE_KEYS.manualLayouts)!).items).toEqual([
+      { ...migrated, name: 'Old one' },
+    ]);
+  });
+});
+
+describe('two tabs: the saved layout being edited changed in storage (final review F9)', () => {
+  /** A second tab on the same storage, with its own stores. */
+  const otherTab = (storage: FakeStorage) => {
+    const other = manualStores(storage);
+    return other.manualLayouts.getState;
+  };
+  const start = async () => {
+    const storage = new FakeStorage();
+    const t = await setup(storage);
+    t.e().openFromCalculated(0);
+    const id = (t.e().save({ name: 'Dock' }) as { id: string }).id;
+    expect(t.e().openSaved(id)).toEqual({ ok: true });
+    t.e().remove(0);
+    return { t, id, there: otherTab(storage) };
+  };
+
+  it('Save does not silently overwrite a layout another tab changed', async () => {
+    const { t, id, there } = await start();
+    there().rename(id, 'Renamed elsewhere');
+    const before = there().specs[0]!;
+    expect(t.e().save()).toEqual({ ok: false, reason: 'changedElsewhere', change: 'changed' });
+    expect(t.e().session).not.toBeNull();
+    expect(there().specs).toEqual([before]);
+    there().refresh();
+    expect(there().specs).toEqual([before]);
+
+    // Overwrite, once asked for, saves over it under the session's name.
+    const cartons = t.s().layer.length;
+    expect(t.e().save({ overwrite: true })).toEqual({ ok: true, id });
+    expect(t.m().specs).toHaveLength(1);
+    expect(t.m().specs[0]).toMatchObject({ id, name: 'Dock' });
+    expect(t.m().specs[0]!.cartons).toHaveLength(cartons);
+  });
+
+  it('Save as new leaves the changed layout alone', async () => {
+    const { t, id, there } = await start();
+    there().rename(id, 'Renamed elsewhere');
+    expect(t.e().save().ok).toBe(false);
+    const saved = t.e().saveAsNew();
+    expect(saved.ok).toBe(true);
+    expect(t.m().specs.map((x) => x.name)).toEqual(['Renamed elsewhere', 'Manual 1']);
+    expect(t.m().specs[0]!.cartons).toHaveLength(t.m().specs[1]!.cartons.length + 1);
+  });
+
+  it('Save does not silently re-create a layout another tab deleted', async () => {
+    const { t, id, there } = await start();
+    there().remove(id);
+    expect(t.e().save()).toEqual({ ok: false, reason: 'changedElsewhere', change: 'deleted' });
+    expect(t.e().session).not.toBeNull();
+    expect(t.m().specs).toEqual([]);
+    const again = t.e().save({ overwrite: true });
+    expect(again.ok).toBe(true);
+    expect(t.m().specs.map((x) => x.name)).toEqual(['Dock']);
+  });
+
+  it('a layout nobody else touched saves as ever, and so does a rebuild', async () => {
+    const { t, id } = await start();
+    expect(t.e().save()).toEqual({ ok: true, id });
+    // Rebuild of an out-of-date layout that another tab then renames.
+    const storage = new FakeStorage();
+    const u = await setup(storage);
+    u.e().openFromCalculated(0);
+    const old = (u.e().save({ name: 'Old' }) as { id: string }).id;
+    expect(u.e().rebuild(old)).toEqual({ ok: true });
+    otherTab(storage)().rename(old, 'Theirs');
+    expect(u.e().save()).toMatchObject({ ok: false, reason: 'changedElsewhere' });
   });
 });
 

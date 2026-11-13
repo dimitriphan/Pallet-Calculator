@@ -3,7 +3,7 @@
  * the results list and the build sheet all say a flag the same way. Lengths and weights arrive
  * in inches and pounds and are shown in the display unit through format.ts.
  */
-import type { ManualFlag } from '../engine/manual/build';
+import { BLOCKING_FLAGS, type ManualFlag } from '../engine/manual/build';
 import type { CartonFlags, OverMaximumSide, RankedSide } from '../engine/manual/carton';
 import { fmtCount, lengthText, weightText, type Unit } from './format';
 
@@ -62,21 +62,13 @@ export function flagText(flag: ManualFlag, unit: Unit): string {
   }
 }
 
-const BLOCKING: ReadonlySet<ManualFlag['kind']> = new Set([
-  'overHeight',
-  'cannotFit',
-  'empty',
-  'overlap',
-  'invalid',
-]);
-
 /** Every flag as a line to show, broken limits first, in the order given otherwise. */
 export function flagLines(flags: readonly ManualFlag[], unit: Unit): FlagLine[] {
   const lines = flags.map((flag): FlagLine => ({
     key: flag.kind,
     text: flagText(flag, unit),
     tone: flag.kind === 'orientationNotAllowed' ? 'note' : 'error',
-    blocking: BLOCKING.has(flag.kind),
+    blocking: BLOCKING_FLAGS.has(flag.kind),
   }));
   return [...lines.filter((l) => l.tone === 'error'), ...lines.filter((l) => l.tone === 'note')];
 }

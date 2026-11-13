@@ -3,11 +3,12 @@ import type { OrientationCode } from '../../domain/types';
 import {
   canonicalFacing,
   designCarton,
-  designedSize,
   sideDownChoices,
+  verticalAxis,
   type CartonSide,
   type SideDown,
 } from '../../engine/manual/carton';
+import { standingDims } from '../../engine/analytics/analytics';
 import { calculatedCartons, type EditorSession } from '../../store/manualEditorStore';
 import { DetailRows } from '../DetailRows';
 import { dimsText, fmtCount, fmtPct, lengthText, pairText, weightText } from '../format';
@@ -18,6 +19,7 @@ import { CountStepper } from './CountStepper';
 import { facingCaption, facingName } from './facing';
 import { FacingPicture } from './FacingPicture';
 import { FlagList } from './FlagList';
+import { MixedNote } from './MixedNote';
 import { RadioCards, type RadioCard } from './RadioCards';
 import { ERROR_BOX, HINT, SECTION_TITLE } from './styles';
 
@@ -32,6 +34,10 @@ const SIDE_DOWN_LABEL: Record<SideDown, string> = {
   side: 'On its side',
   end: 'On its end',
 };
+
+/** How every carton size is written here, as in the results table and the exports. */
+export const SIZE_AS_IT_STANDS =
+  'Sizes are written as the carton stands on the pallet: longer side × shorter side × height.';
 
 export const KEPT_UPRIGHT_REASON = 'Keep cartons upright is on, so the carton stays on its base.';
 
@@ -95,8 +101,10 @@ export function CartonStep({ session }: { session: EditorSession }) {
 
   return (
     <div className="space-y-5">
+      <MixedNote session={session} />
       <section className="space-y-2">
         <DetailRows title="This carton" rows={rows} />
+        <p className={HINT}>{SIZE_AS_IT_STANDS}</p>
         {blocked && (
           <p data-flag="blocked" className={ERROR_BOX}>
             {blocked}
@@ -166,7 +174,10 @@ export function CartonStep({ session }: { session: EditorSession }) {
           <ul role="list" aria-labelledby={`${ids}calculated`} className="space-y-1.5">
             {calculated.map((c) => {
               const inUse = JSON.stringify(c.design) === designKey;
-              const outer = designedSize(c.design, designCarton(c.design, inputs), 'outer');
+              const outer = standingDims(
+                designCarton(c.design, inputs).outer,
+                verticalAxis(c.design),
+              );
               return (
                 <li key={c.index}>
                   <button

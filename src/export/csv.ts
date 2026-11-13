@@ -23,6 +23,7 @@ import {
 import { LAYER_PATTERN_LABEL } from '../ui/layerPattern';
 import { BELOW_MINIMUM, MIN_STABILITY_LABEL } from '../ui/minStability';
 import { flagLines } from '../ui/manualFlags';
+import { outsideVolume } from '../ui/outsideVolume';
 import { isManualSelected, type ExportPayload } from './exportData';
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
@@ -57,6 +58,24 @@ export const UPPER_LAYERS_TEXT = {
   alternate: 'Alternate layers turned',
 } as const;
 
+/** Added to the choice where it changes nothing, wherever the choice is reported. */
+export const UPPER_LAYERS_NO_EFFECT = 'no effect: the layer is the same after a half turn';
+
+/**
+ * A manual layout's upper-layers choice in words. "Alternate layers turned" is said to have no
+ * effect when the layer is the same after a half turn, so that no report claims layers are
+ * turned while the stability figures say none is.
+ */
+export function upperLayersText(manual: {
+  upperLayers: keyof typeof UPPER_LAYERS_TEXT;
+  upperLayersNoEffect?: boolean;
+}): string {
+  const text = UPPER_LAYERS_TEXT[manual.upperLayers];
+  return manual.upperLayers === 'alternate' && manual.upperLayersNoEffect
+    ? `${text} (${UPPER_LAYERS_NO_EFFECT})`
+    : text;
+}
+
 const RATING: Record<StabilityRating, string> = { good: 'Good', fair: 'Fair', poor: 'Poor' };
 
 /**
@@ -76,6 +95,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   const ratio = (v: number) => ratioText(v);
   const share = (v: number) => shareText(v);
   const st = a.stability;
+  const outside = outsideVolume(a);
   // A manual layout was not ranked or scored: it is named, with its flags, and nothing of a
   // ranking is written (no rank, no score rows, no comparison table).
   const manual = isManualSelected(sel) ? sel.manual : null;
@@ -83,11 +103,15 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ? [
         [
           'Manual layout flags',
-          flagLines(manual.flags, unit)
-            .map((f) => f.text)
-            .join('; ') || 'None',
+          // As on screen: an out-of-date layout is shown as it was made and is not checked
+          // against inputs that no longer apply.
+          manual.status === 'outOfDate'
+            ? 'Not checked: this layout is out of date'
+            : flagLines(manual.flags, unit)
+                .map((f) => f.text)
+                .join('; ') || 'None',
         ],
-        ['Upper layers', UPPER_LAYERS_TEXT[manual.upperLayers]],
+        ['Upper layers', upperLayersText(manual)],
         ...(manual.status === 'outOfDate'
           ? ([
               ['Made for product', dimsText(manual.madeFor.product, unit)],
@@ -141,6 +165,8 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     [L('Load width'), len(a.pallet.loadWidth)],
     [L('Load total height'), len(a.pallet.totalLoadHeight)],
     [V('Volume used'), vol(a.totals.volumeUsed)],
+    // Only for a layout placed by hand with cartons outside: "Volume used" leaves this out.
+    ...(outside ? ([[V(outside.label), vol(outside.volume)]] as Row[]) : []),
     [V('Volume available'), vol(a.totals.volumeAvailable)],
     ['Utilization (%)', n(a.totals.utilizationPct)],
     [V('Remaining volume'), vol(a.totals.remainingVolume)],

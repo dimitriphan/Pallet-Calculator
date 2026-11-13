@@ -20,13 +20,22 @@ import { describeWarning } from '../engine/analytics/stability';
 import { cartonPlacements } from '../engine/packing/positions';
 import { footprintAxes } from '../engine/packing/stacking';
 import type { Unit } from '../engine/units/units';
-import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
+import {
+  dimsText,
+  fmtCount,
+  lengthText,
+  pairText,
+  roomText,
+  volumeText,
+  weightText,
+} from '../ui/format';
+import { outsideVolume } from '../ui/outsideVolume';
 import { settingsSummary } from '../ui/settingsSummary';
 import { flagLines } from '../ui/manualFlags';
 import { BELOW_MINIMUM, isBelowMinimum } from '../ui/minStability';
 import { resultNotes } from '../ui/resultNotes';
 import type { ManualMarker } from '../store/manualLayoutsStore';
-import { UPPER_LAYERS_TEXT } from './csv';
+import { upperLayersText } from './csv';
 import { STALE_NOTE } from './exportData';
 
 export interface SheetRow {
@@ -348,6 +357,7 @@ export function buildSheetContent(a: {
     };
   });
 
+  const outside = outsideVolume(analytics);
   const palletAndLoad: SheetRow[] = [
     {
       label: 'Pallet',
@@ -366,11 +376,11 @@ export function buildSheetContent(a: {
       label: 'Finished load',
       value: `${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} including pallet`,
     },
+    // A layout placed by hand with cartons outside: the volume the totals leave out.
+    ...(outside ? [{ label: outside.label, value: volumeText(outside.volume, unit) }] : []),
     ...(weight ? weightRows(weight, weightOf) : []),
     ...stabilityRows(layout, notes.belowMinimum !== null || manualBelow),
-    ...(a.manual
-      ? [{ label: 'Upper layers', value: UPPER_LAYERS_TEXT[a.manual.upperLayers] }]
-      : []),
+    ...(a.manual ? [{ label: 'Upper layers', value: upperLayersText(a.manual) }] : []),
     // What the minimum stability and the layer pattern setting did, as the screen says it.
     ...(notes.belowMinimum ? [{ label: 'Minimum stability', value: notes.belowMinimum }] : []),
     ...(notes.patternFallback ? [{ label: 'Layer pattern', value: notes.patternFallback }] : []),

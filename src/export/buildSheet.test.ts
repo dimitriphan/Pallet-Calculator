@@ -295,7 +295,7 @@ describe('buildSheetContent in another unit', () => {
   it('writes every length in centimetres', () => {
     const s = sheet('cm', { overhang: 2 });
     expect(s.unit).toBe('cm');
-    expect(sheet('cm').carton[0]?.value).toBe('53.3 × 33.0 × 22.9 cm');
+    expect(sheet('cm').carton[0]?.value).toBe('53.3 × 22.9 × 33.0 cm');
     expect(s.palletAndLoad).toEqual([
       { label: 'Pallet', value: '127.0 × 106.7 cm, 12.7 cm tall' },
       { label: 'Overhang', value: '5.1 cm total, 2.5 cm each side' },

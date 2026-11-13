@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../../domain/constants';
 import type { Inputs, Layout } from '../../domain/types';
 import { optimize } from '../optimize';
-import { computeAnalytics, cartonDisplayDims, layerOrientations } from './analytics';
+import { computeAnalytics, cartonDisplayDims, layerOrientations, standingDims } from './analytics';
 import { trimToWeight } from './weight';
 
 const CASE_I: Inputs = {
@@ -112,23 +112,23 @@ describe('computeAnalytics, target', () => {
 });
 
 describe('cartonDisplayDims', () => {
-  it('uses the shared vertical axis as height, rest sorted descending', () => {
+  it('writes the carton as the bottom layer stands: longer side, shorter side, height', () => {
     const l = winner(DEFAULT_INPUTS);
     const v = l.layers[0]?.vertical;
     if (!v) throw new Error('no layer');
-    const shared = l.layers.every((x) => x.vertical === v);
     const o = l.carton.outer;
     const d = cartonDisplayDims(l, 'outer');
-    if (shared) {
-      expect(d.height).toBe(o[v]);
-      expect(d.length).toBeGreaterThanOrEqual(d.width);
-    } else {
-      expect([d.length, d.width, d.height]).toEqual([o.L, o.W, o.H].sort((p, q) => q - p));
-    }
+    expect(d.height).toBe(o[v]);
+    expect(d.length).toBeGreaterThanOrEqual(d.width);
     expect([d.length, d.width, d.height].sort()).toEqual([o.L, o.W, o.H].sort());
+    // The default best layout stands its cartons two ways up; its bottom layer's way is used,
+    // which is how the editor's copy of that layer stands too (final review F12).
+    expect(l.layers.some((x) => x.vertical !== v)).toBe(true);
+    expect(d).toEqual({ length: 21, width: 9, height: 13 });
+    expect(standingDims(o, v)).toEqual(d);
   });
 
-  it('sorts descending when layers mix vertical axes', () => {
+  it('uses the bottom layer when layers mix vertical axes; sorts only a layout with no layers', () => {
     const base = winner(CASE_I);
     const layer = base.layers[0];
     if (!layer) throw new Error('no layer');
@@ -140,8 +140,11 @@ describe('cartonDisplayDims', () => {
         { ...layer, vertical: 'W' },
       ],
     };
-    expect(cartonDisplayDims(mixed, 'outer')).toEqual({ length: 10, width: 7, height: 6 });
-    expect(cartonDisplayDims(mixed, 'inner')).toEqual({ length: 9, width: 5, height: 4 });
+    // Bottom layer: L up, so W and H lie on the pallet.
+    expect(cartonDisplayDims(mixed, 'outer')).toEqual({ length: 10, width: 6, height: 7 });
+    expect(cartonDisplayDims(mixed, 'inner')).toEqual({ length: 9, width: 4, height: 5 });
+    const empty = { ...mixed, layers: [] };
+    expect(cartonDisplayDims(empty, 'outer')).toEqual({ length: 10, width: 7, height: 6 });
   });
 
   it('puts a shared vertical axis in height even when it is not the smallest', () => {

@@ -15,6 +15,7 @@ import { FakeStorage } from '../persistence/testStorage';
 import {
   createManualLayoutsStore,
   nextManualName,
+  uniqueName,
   type ManualLayoutDraft,
 } from './manualLayoutsStore';
 import { manualRepo, manualStores } from './manualTestSupport';
@@ -43,12 +44,14 @@ const INSIDE: ManualLayoutDraft = {
 function setup(storage = new FakeStorage(), prefix = 'id') {
   const notices: string[] = [];
   const changes: string[][] = [];
+  const adjusted: [string, string][] = [];
   let n = 0;
   const store = createManualLayoutsStore(manualRepo(storage, notices), {
     onListChange: (ids) => changes.push(ids),
+    onNameAdjusted: (wanted, given) => adjusted.push([wanted, given]),
     newId: () => `${prefix}${++n}`,
   });
-  return { storage, notices, changes, store, s: () => store.getState() };
+  return { storage, notices, changes, adjusted, store, s: () => store.getState() };
 }
 
 const stored = (storage: Storage) =>
@@ -120,14 +123,13 @@ describe('storage', () => {
 
     // Nothing is reported saved, renamed, copied or deleted, and the list stays what is stored.
     expect(s().save(INSIDE)).toBeNull();
-    expect(s().saveAsNew(INSIDE)).toBeNull();
     expect(s().update(kept.id, DRAFT)).toBeNull();
     expect(s().rename(kept.id, 'Other')).toBe(false);
     expect(s().duplicate(kept.id)).toBeNull();
     expect(s().remove(kept.id)).toBe(false);
     expect(s().specs).toEqual([kept]);
     expect(s().entries).toHaveLength(1);
-    expect(notices).toEqual(Array(6).fill(NOT_SAVED));
+    expect(notices).toEqual(Array(5).fill(NOT_SAVED));
 
     // Once storage works again nothing that failed comes back on its own.
     storage.failWrites = false;
@@ -213,7 +215,7 @@ describe('default names', () => {
     const { s } = setup();
     const a = s().save(INSIDE);
     const b = s().save(INSIDE, '   ');
-    const c = s().saveAsNew(INSIDE);
+    const c = s().save(INSIDE);
     expect([a!.name, b!.name, c!.name]).toEqual(['Manual 1', 'Manual 2', 'Manual 3']);
     s().remove(b!.id);
     expect(s().nextName()).toBe('Manual 2');
@@ -259,6 +261,62 @@ describe('save, update, rename, duplicate, delete', () => {
     s().remove(a!.id);
     expect(s().specs).toEqual([copy]);
     expect(changes.at(-1)).toEqual([copy.id]);
+  });
+
+  it('no two layouts have the same name: a taken name gets (2), (3), ... and it is said (F14)', () => {
+    expect(uniqueName('A', [])).toBe('A');
+    expect(uniqueName('A', ['A', 'B'])).toBe('A (2)');
+    expect(uniqueName('A', ['A', 'A (2)', 'A (4)'])).toBe('A (3)');
+    const { s, adjusted, storage } = setup();
+    const a = s().save(INSIDE, 'Dock')!;
+    // save (which is also "save as new")
+    const b = s().save(INSIDE, ' Dock ')!;
+    expect(b.name).toBe('Dock (2)');
+    expect(adjusted).toEqual([['Dock', 'Dock (2)']]);
+    // update: its own name is its own; another layout's is not
+    expect(s().update(b.id, DRAFT, 'Dock (2)')!.name).toBe('Dock (2)');
+    expect(s().update(b.id, DRAFT)!.name).toBe('Dock (2)');
+    expect(s().update(b.id, DRAFT, 'Dock')!.name).toBe('Dock (2)');
+    expect(adjusted).toHaveLength(2);
+    // rename
+    const c = s().save(INSIDE, 'Other')!;
+    expect(s().rename(c.id, 'Dock')).toBe(true);
+    expect(s().specs.map((x) => x.name)).toEqual(['Dock', 'Dock (2)', 'Dock (3)']);
+    expect(adjusted.at(-1)).toEqual(['Dock', 'Dock (3)']);
+    expect(s().rename(c.id, 'Dock (3)')).toBe(true);
+    expect(adjusted).toHaveLength(3);
+    // duplicate, twice
+    expect(s().duplicate(a.id)!.name).toBe('Dock (copy)');
+    expect(s().duplicate(a.id)!.name).toBe('Dock (copy) (2)');
+    expect(adjusted.at(-1)).toEqual(['Dock (copy)', 'Dock (copy) (2)']);
+    // a scenario's layout of another id under a taken name
+    s().addFromScenario([{ ...manualSpec({ id: 'new', name: 'Dock' }), frame: 'pallet' }], 0);
+    expect(s().specs.at(-1)!.name).toBe('Dock (4)');
+    expect(adjusted.at(-1)).toEqual(['Dock', 'Dock (4)']);
+    const names = s().specs.map((x) => x.name);
+    expect(new Set(names).size).toBe(names.length);
+    // Nothing is said about a name when the layout was not written.
+    const said = adjusted.length;
+    storage.failWrites = true;
+    expect(s().save(INSIDE, 'Dock')).toBeNull();
+    expect(s().duplicate(a.id)).toBeNull();
+    expect(adjusted).toHaveLength(said);
+  });
+
+  it('a renamed layout is still the same layout to a scenario that holds it (F13)', () => {
+    const { s } = setup();
+    const a = s().save(INSIDE, 'A')!;
+    s().rename(a.id, 'Renamed');
+    // The scenario was saved before the rename: same id, same content, another name.
+    expect(s().addFromScenario([a], 0)).toEqual({ added: 0, skipped: 1, notStored: 0 });
+    expect(s().specs.map((x) => x.name)).toEqual(['Renamed']);
+    // Changed content is still added beside it, once.
+    const changed = { ...a, upperLayers: 'alternate' as const };
+    expect(s().addFromScenario([changed], 0).added).toBe(1);
+    expect(s().specs.map((x) => x.name)).toEqual(['Renamed', 'A (from scenario)']);
+    s().rename(s().specs[1]!.id, 'Copy kept');
+    expect(s().addFromScenario([changed], 0)).toEqual({ added: 0, skipped: 1, notStored: 0 });
+    expect(s().specs).toHaveLength(2);
   });
 
   it('keeps no reference to what it was given', () => {
@@ -357,6 +415,7 @@ describe('builds under the current inputs', () => {
       flags: over!.build.flags,
       status: 'current',
       upperLayers: 'alternate',
+      upperLayersNoEffect: false,
       madeFor: DRAFT.madeFor,
     });
     expect(over!.ranked.layout).toBe(over!.build.layout);
@@ -413,6 +472,43 @@ describe('builds under the current inputs', () => {
     s().setInputs({ ...I });
     expect(s().entries[0]!.build.status).toBe('current');
     expect(s().specs).toHaveLength(1);
+  });
+
+  it('an out-of-date layout carries no flags to show or export (F16)', () => {
+    const { s } = setup();
+    s().setInputs(I);
+    s().save(DRAFT);
+    const current = s().entries[0]!;
+    expect(current.ranked.manual.flags).toEqual(current.build.flags);
+    expect(current.build.flags.map((f) => f.kind)).toContain('overhang');
+    s().setInputs({ ...I, leeway: 1 });
+    const stale = s().entries[0]!;
+    expect(stale.ranked.manual).toMatchObject({ status: 'outOfDate', flags: [] });
+    // The build itself still knows them (the editor's Rebuild does not use them).
+    expect(stale.build.flags.map((f) => f.kind)).toContain('overhang');
+  });
+
+  it('says when "alternate layers turned" changes nothing (F10)', () => {
+    const { s } = setup();
+    s().setInputs({ ...I, overhang: 0 });
+    // Two cartons side by side, centred on the pallet: the same after a half turn.
+    const base = { a: INSIDE.madeFor.outer.L, b: INSIDE.madeFor.outer.W };
+    const y = (I.pallet.width - base.b) / 2;
+    const x = I.pallet.length / 2;
+    const centred = [
+      { x: x - base.a, y, rotated: false },
+      { x, y, rotated: false },
+    ];
+    s().save({ ...INSIDE, cartons: centred, upperLayers: 'alternate' }, 'Symmetric');
+    s().save({ ...INSIDE, cartons: centred, upperLayers: 'same' }, 'Same');
+    s().save({ ...INSIDE, upperLayers: 'alternate' }, 'Off centre');
+    const by = Object.fromEntries(s().entries.map((e) => [e.spec.name, e]));
+    expect(by['Symmetric']!.build.alternateHasNoEffect).toBe(true);
+    expect(by['Symmetric']!.ranked.manual.upperLayersNoEffect).toBe(true);
+    expect(by['Symmetric']!.build.layout.layers.some((l) => l.turned)).toBe(false);
+    expect(by['Same']!.ranked.manual.upperLayersNoEffect).toBe(false);
+    expect(by['Off centre']!.ranked.manual.upperLayersNoEffect).toBe(false);
+    expect(by['Off centre']!.build.layout.layers.some((l) => l.turned)).toBe(true);
   });
 
   it('keeps the last builds and says they are stale while the inputs are invalid', () => {

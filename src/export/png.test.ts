@@ -95,7 +95,7 @@ describe('captionLines in another unit', () => {
 
   it('gives the load and carton in the unit', () => {
     expect(captionLines(p, 'cm')[1]).toBe('Load: 119.4 × 106.7 × 182.9 cm (including pallet)');
-    expect(captionLines(p, 'mm')[2]).toBe('Carton: 533 × 330 × 229 mm (outer)');
+    expect(captionLines(p, 'mm')[2]).toBe('Carton: 533 × 229 × 330 mm (outer)');
   });
 });
 

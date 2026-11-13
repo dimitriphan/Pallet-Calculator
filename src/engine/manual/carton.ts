@@ -40,7 +40,8 @@ export interface CartonDesign {
 }
 
 const SIDES: CartonSide[] = ['length', 'width', 'height'];
-const FACINGS: OrientationCode[] = ['LWH', 'WLH', 'LHW', 'HLW', 'WHL', 'HWL'];
+/** Every way a box can face in a carton, in the order the facing buttons are offered. */
+export const FACINGS: readonly OrientationCode[] = ['LWH', 'WLH', 'LHW', 'HLW', 'WHL', 'HWL'];
 const UPRIGHT_SIDE: Record<SideDown, CartonSide> = { base: 'height', side: 'width', end: 'length' };
 
 /** The box dimension that lies along one of the carton's directions. */

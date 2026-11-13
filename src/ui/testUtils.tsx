@@ -28,12 +28,16 @@ afterEach(() => {
 export interface StoreOptions {
   /** The view mode the prefs store starts in; tests default to Full. */
   viewMode?: ViewMode;
+  /** The storage the manual layouts are kept in (to act as another tab on it). */
+  manualStorage?: Storage;
+  /** Told what the manual stores would tell the user in a notice. */
+  onNotice?: (message: string) => void;
 }
 
 /** Real stores around a runner that resolves optimize(inputs) immediately. */
 export function makeStores(
   run: RunOptimizer = (i: Inputs) => Promise.resolve(optimize(i)),
-  { viewMode = 'full' }: StoreOptions = {},
+  { viewMode = 'full', manualStorage = new FakeStorage(), onNotice }: StoreOptions = {},
 ): ResolvedStores {
   const scene = createSceneStore();
   const inputs = createInputsStore(new FakeStorage());
@@ -61,11 +65,12 @@ export function makeStores(
   const manual = createManualStores({
     inputs,
     results,
+    onNotice,
     repo: createLocalStorageRepository({
       key: STORAGE_KEYS.manualLayouts,
       schema: manualLayoutSpecSchema,
       discardFailed: true,
-      storage: new FakeStorage(),
+      storage: manualStorage,
     }),
   });
   return { inputs, results, scene, presets, scenarios, prefs, ...manual };

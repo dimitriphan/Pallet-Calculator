@@ -356,6 +356,6 @@ describe('exports follow the display unit', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Save PDF' }));
     const [sheet] = mocks.renderBuildSheetPdf.mock.calls[0] as [BuildSheet];
     expect(sheet.unit).toBe('cm');
-    expect(sheet.carton[0]?.value).toBe('53.3 × 33.0 × 22.9 cm');
+    expect(sheet.carton[0]?.value).toBe('53.3 × 22.9 × 33.0 cm');
   });
 });

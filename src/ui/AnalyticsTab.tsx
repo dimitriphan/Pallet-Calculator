@@ -21,6 +21,7 @@ import {
   weightText,
   type Unit,
 } from './format';
+import { outsideVolume } from './outsideVolume';
 import { useUnit } from './useUnit';
 
 const TARGET_LABEL = {
@@ -66,6 +67,7 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
   const pct = (v: number) => fmtPct(v);
   const p = a.pallet;
   const t = a.target;
+  const outside = outsideVolume(a);
   const target: [string, string][] =
     t.status === 'none'
       ? []
@@ -135,6 +137,8 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Total products', String(a.totals.products)],
           ['Total cartons', String(a.totals.cartons)],
           ['Volume used', volume(a.totals.volumeUsed)],
+          // A layout placed by hand with cartons outside: "Volume used" leaves that part out.
+          ...(outside ? ([[outside.label, volume(outside.volume)]] as [string, string][]) : []),
           ['Volume available', volume(a.totals.volumeAvailable)],
           ['Utilization', pct(a.totals.utilizationPct)],
           ['Remaining volume', volume(a.totals.remainingVolume)],

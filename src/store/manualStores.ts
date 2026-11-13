@@ -24,6 +24,11 @@ export interface ManualStores {
 export const SELECTED_DELETED_ELSEWHERE =
   'The layout you had selected was deleted in another tab. Showing calculated layout 1.';
 
+/** Said when a layout was saved under another name because the one asked for was taken. */
+export function nameAdjustedNotice(wanted: string, given: string): string {
+  return `Another layout is already named “${wanted}”. This one was named “${given}”.`;
+}
+
 export function createManualStores(deps: {
   inputs: StoreApi<InputsState>;
   results: StoreApi<ResultsState>;
@@ -33,6 +38,7 @@ export function createManualStores(deps: {
 }): ManualStores {
   const { inputs, results } = deps;
   const manualLayouts = createManualLayoutsStore(deps.repo, {
+    onNameAdjusted: (wanted, given) => deps.onNotice?.(nameAdjustedNotice(wanted, given)),
     onListChange(ids, source) {
       const selected = results.getState().selectedManualId;
       if (selected === null || ids.includes(selected)) return;

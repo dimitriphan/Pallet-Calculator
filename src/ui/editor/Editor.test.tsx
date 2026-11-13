@@ -4,7 +4,7 @@ import { calculatedCartons } from '../../store/manualEditorStore';
 import { useNoticesStore } from '../../store/noticesStore';
 import { dimsText, pairText, weightText } from '../format';
 import { flush, renderApp } from '../testUtils';
-import { KEPT_UPRIGHT_REASON } from './CartonStep';
+import { KEPT_UPRIGHT_REASON, SIZE_AS_IT_STANDS } from './CartonStep';
 import { COUNT_INVALID, MAX_COUNT, parseCount } from './CountStepper';
 import { CARTON_BLOCKED_NOTE, REPLACE_LAYER_QUESTION } from './EditorBar';
 import { ENTRY_REASONS } from './useEditorEntry';
@@ -287,12 +287,26 @@ describe('the Carton step', () => {
       pairText(Math.max(outer.length, outer.height), Math.min(outer.length, outer.height), 'in'),
     );
     expect(side).toHaveTextContent('9.00 in high');
+    // The size is written as the carton stands, as the results table writes it for the same
+    // layout (final review F12).
+    const table = within(screen.getByRole('complementary', { name: 'Editor step' }));
+    expect(table.getByText(SIZE_AS_IT_STANDS)).toBeInTheDocument();
+    expect(outer).toEqual({ length: 21, width: 9, height: 13 });
+    const row = screen.getByRole('table', { name: 'Layout comparison' }).querySelector('tbody tr');
+    expect(row?.querySelectorAll('td')[1]).toHaveTextContent(
+      dimsText(outer, 'in').replace(' in', ''),
+    );
 
     await app.user.click(side);
     expect(design(app).sideDown).toBe('side');
     expect(side).toHaveAttribute('aria-checked', 'true');
-    // The carton itself is the same carton.
-    expect(session(app)!.figures.outer).toEqual(outer);
+    // The same carton, written as it now stands.
+    const now = session(app)!.figures.outer;
+    expect([now.length, now.width, now.height].sort()).toEqual(
+      [outer.length, outer.width, outer.height].sort(),
+    );
+    expect(now).toEqual({ length: 21, width: 13, height: 9 });
+    expect(table.getByText(dimsText(now, 'in'))).toBeInTheDocument();
   });
 
   it('keeps the carton on its base, saying why, when Keep cartons upright is on', async () => {

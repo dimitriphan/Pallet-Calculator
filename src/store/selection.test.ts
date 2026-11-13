@@ -84,6 +84,7 @@ describe('the selected layout', () => {
       flags: entry.build.flags,
       status: 'current',
       upperLayers: entry.spec.upperLayers,
+      upperLayersNoEffect: false,
       madeFor: entry.spec.madeFor,
     });
     expect(s.ranked.manual!.flags).toContainEqual({ kind: 'overhang', cartons: 2, by: 5 });

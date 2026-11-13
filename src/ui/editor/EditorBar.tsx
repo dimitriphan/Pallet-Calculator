@@ -26,6 +26,14 @@ export const STEP_NOTICES = {
 export const USING_LAST_VALID =
   'An input has a mistake. The editor is using the last valid inputs until it is fixed.';
 
+/** Said when Save finds the saved layout changed, or gone, since the editor opened on it. */
+export const CHANGED_ELSEWHERE = {
+  changed: 'This layout was changed in another tab.',
+  deleted: 'This layout was deleted in another tab.',
+} as const;
+export const CHANGED_ELSEWHERE_CHOICE =
+  'Save as new keeps both. Overwrite saves your version in its place.';
+
 /** What was asked for when the store answered that the hand-edited layer would be replaced. */
 type Pending = 'layer' | 'save' | 'saveAsNew';
 
@@ -55,6 +63,8 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
   const [confirmCancel, setConfirmCancel] = useState(false);
   // Why the last Save did nothing, when storage refused it; gone at the next attempt.
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Save found the layout changed or deleted in another tab: the user chooses what to do.
+  const [elsewhere, setElsewhere] = useState<'changed' | 'deleted' | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const undoRef = useRef<HTMLButtonElement>(null);
   const redoRef = useRef<HTMLButtonElement>(null);
@@ -84,21 +94,36 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
       : cannotSaveText(session.build.flags, unit);
   const reasonId = `${ids}reason`;
 
-  const run = (what: Pending, replace = false) => {
-    const opts = replace ? { replace: true } : {};
+  // What the user has already agreed to in this attempt to save, kept while a second question
+  // (replace the layer, overwrite the other tab's change) is asked.
+  const agreed = useRef<{ replace?: boolean; overwrite?: boolean }>({});
+  const run = (what: Pending, more: { replace?: boolean; overwrite?: boolean } = {}) => {
+    const opts = { ...agreed.current, ...more };
+    agreed.current = opts;
     const result: EditorResult<{ id?: string }> =
       what === 'layer' ? goToStep('layer', opts) : what === 'save' ? save(opts) : saveAsNew(opts);
     setSaveError(null);
-    if (result.ok) return;
+    setElsewhere(null);
+    if (result.ok) {
+      agreed.current = {};
+      return;
+    }
     if (result.reason === 'layerEdited') setPending(what);
+    else if (result.reason === 'changedElsewhere') setElsewhere(result.change);
     // Nothing was saved: the editor stays open with the work in it, and says so.
     else if (result.reason === 'notStored') setSaveError(NOT_SAVED);
+  };
+
+  /** A fresh attempt, from one of the bar's own buttons: nothing is agreed to yet. */
+  const begin = (what: Pending) => {
+    agreed.current = {};
+    run(what);
   };
 
   const choose = (step: EditorStep) => {
     if (step === session.step) return;
     if (step === 'carton') goToStep('carton');
-    else if (!blocked) run('layer');
+    else if (!blocked) begin('layer');
   };
 
   const onTabKey = (e: KeyboardEvent, index: number) => {
@@ -240,7 +265,7 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
             type="button"
             disabled={!session.canSave}
             aria-describedby={reason ? reasonId : undefined}
-            onClick={() => run('save')}
+            onClick={() => begin('save')}
             className={EDITOR_PRIMARY}
           >
             Save
@@ -250,7 +275,7 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
               type="button"
               disabled={!session.canSave}
               aria-describedby={reason ? reasonId : undefined}
-              onClick={() => run('saveAsNew')}
+              onClick={() => begin('saveAsNew')}
               className={EDITOR_BUTTON}
             >
               Save as new
@@ -278,6 +303,29 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
           {saveError}
         </p>
       )}
+      {elsewhere && (
+        <div
+          role="alert"
+          data-testid="changed-elsewhere"
+          className={`mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 ${NOTE_BOX}`}
+        >
+          <p className="min-w-[12rem] flex-1">
+            {CHANGED_ELSEWHERE[elsewhere]} {CHANGED_ELSEWHERE_CHOICE}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" onClick={() => run('saveAsNew')} className={EDITOR_BUTTON}>
+              Save as new
+            </button>
+            <button
+              type="button"
+              onClick={() => run('save', { overwrite: true })}
+              className={EDITOR_BUTTON}
+            >
+              Overwrite
+            </button>
+          </div>
+        </div>
+      )}
       {(session.stepNotice || session.usingLastValid) && (
         <div role="status" className="space-y-1.5 px-3 pb-2">
           {session.stepNotice && (
@@ -304,11 +352,14 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
           title="Replace the layer?"
           confirm="Replace layer"
           keep="Keep my layer"
-          onKeep={() => setPending(null)}
+          onKeep={() => {
+            agreed.current = {};
+            setPending(null);
+          }}
           onConfirm={() => {
             const what = pending;
             setPending(null);
-            run(what, true);
+            run(what, { replace: true });
           }}
         >
           <p>{REPLACE_LAYER_QUESTION}</p>

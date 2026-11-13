@@ -51,6 +51,18 @@ function Workspace() {
     // Nothing under the notice can be focused or pressed.
     if (sceneArea.current) sceneArea.current.inert = block !== null;
   }, [block]);
+  // Leaving or reloading the page with unsaved work in the editor asks first.
+  const dirty = session?.dirty ?? false;
+  useEffect(() => {
+    if (!dirty) return;
+    const ask = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome asks only when this is set as well.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', ask);
+    return () => window.removeEventListener('beforeunload', ask);
+  }, [dirty]);
   const main = useRef<HTMLElement>(null);
   const results = useRef<HTMLDivElement>(null);
   // Before the effect above: the focus goes back to a control in the results when it closes.

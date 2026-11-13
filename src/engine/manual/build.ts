@@ -24,6 +24,7 @@ import { fitsCount } from '../packing/tolerance';
 import {
   cartonFlags,
   designCarton,
+  FACINGS,
   designOf,
   verticalAxis,
   type CartonDesign,
@@ -136,7 +137,7 @@ export type ManualFlag =
   | { kind: 'invalid' };
 
 /** The flags that stop a layout being saved. */
-const BLOCKING: ReadonlySet<ManualFlag['kind']> = new Set([
+export const BLOCKING_FLAGS: ReadonlySet<ManualFlag['kind']> = new Set([
   'overHeight',
   'cannotFit',
   'empty',
@@ -146,7 +147,7 @@ const BLOCKING: ReadonlySet<ManualFlag['kind']> = new Set([
 
 /** Whether a build may be saved: no flag that the spec says cannot be saved. */
 export function canSave(flags: readonly ManualFlag[]): boolean {
-  return flags.every((f) => !BLOCKING.has(f.kind));
+  return flags.every((f) => !BLOCKING_FLAGS.has(f.kind));
 }
 
 export interface ManualBuild {
@@ -161,9 +162,13 @@ export interface ManualBuild {
    * leeway are the stored ones (the pallet, limits and weights are still the current ones).
    */
   inputs: Inputs;
+  /**
+   * True when the upper layers are 'alternate' and that changes nothing: the layer is the same
+   * after a half turn, so no layer is turned (see `stack`). Said wherever the choice is.
+   */
+  alternateHasNoEffect: boolean;
 }
 
-const FACINGS: readonly string[] = ['LWH', 'LHW', 'WLH', 'WHL', 'HLW', 'HWL'];
 const SIDES_DOWN: readonly string[] = ['base', 'side', 'end'];
 const isCount = (n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 1;
 const isSize = (n: unknown) => typeof n === 'number' && Number.isFinite(n) && n > 0;
@@ -177,7 +182,7 @@ export function isValidDesign(design: CartonDesign): boolean {
     isCount(c.length) &&
     isCount(c.width) &&
     isCount(c.height) &&
-    FACINGS.includes(design.facing) &&
+    (FACINGS as readonly string[]).includes(design.facing) &&
     SIDES_DOWN.includes(design.sideDown)
   );
 }
@@ -226,6 +231,7 @@ function invalidBuild(spec: ManualLayoutSpec, inputs: Inputs): ManualBuild {
     flags: [{ kind: 'invalid' }],
     status: 'current',
     inputs,
+    alternateHasNoEffect: false,
   };
 }
 
@@ -254,7 +260,7 @@ export function isOutOfDate(spec: ManualLayoutSpec, inputs: Inputs): boolean {
  * The layers of one manual pattern stacked `count` high. With 'alternate', every second layer
  * is the pattern turned half a turn about the centre of the usable footprint (by the turn the
  * automatic interlock uses) and marked `turned`, unless the turn leaves every carton where it
- * was. Layers of one pattern share one block list.
+ * was (`noEffect`: the choice then changes nothing). Layers of one pattern share one block list.
  */
 function stack(
   pattern: LayerPattern,
@@ -262,7 +268,7 @@ function stack(
   upperLayers: UpperLayers,
   carton: CartonCandidate,
   inputs: Inputs,
-): Layer[] {
+): { layers: Layer[]; noEffect: boolean } {
   let turned: LayerPattern | null = null;
   if (upperLayers === 'alternate' && pattern.blocks.length > 0) {
     const { a, b } = cartonBase(carton, pattern.vertical);
@@ -276,7 +282,10 @@ function stack(
     const z = k * pattern.height;
     layers.push(k % 2 === 1 && turned ? { ...turned, z, turned: true } : { ...pattern, z });
   }
-  return layers;
+  return {
+    layers,
+    noEffect: upperLayers === 'alternate' && pattern.blocks.length > 0 && turned === null,
+  };
 }
 
 /**
@@ -322,7 +331,7 @@ export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): Manua
   const fit = pattern.cartonCount === 0 ? 0 : fitsCount(usableHeight(built), pattern.height);
   // A carton over the height limit still stands as one layer, flagged, so there is a load to show.
   const count = pattern.cartonCount === 0 ? 0 : Math.max(1, fit);
-  const layers = stack(pattern, count, spec.upperLayers, carton, built);
+  const { layers, noEffect } = stack(pattern, count, spec.upperLayers, carton, built);
   const id = MANUAL_ID_PREFIX + spec.id;
   const totalCartons = count * pattern.cartonCount;
   let layout: Layout = {
@@ -359,7 +368,7 @@ export function buildManualLayout(spec: ManualLayoutSpec, inputs: Inputs): Manua
   if (cf.orientationNotAllowed) flags.push({ kind: 'orientationNotAllowed' });
 
   layout.stability = assessStability(layout, built);
-  return { layout, flags, status, inputs: built };
+  return { layout, flags, status, inputs: built, alternateHasNoEffect: noEffect };
 }
 
 /**

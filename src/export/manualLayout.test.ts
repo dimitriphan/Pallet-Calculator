@@ -10,7 +10,7 @@ import {
   OVERHANG_INPUTS as I,
   resultOf,
 } from '../engine/manual/testSupport';
-import type { ManualMarker } from '../store/manualLayoutsStore';
+import { manualMarker, type ManualMarker } from '../store/manualLayoutsStore';
 import { buildSheetContent, drawingBounds } from './buildSheet';
 import { renderBuildSheetPdf } from './buildSheetPdf';
 import { buildCsv } from './csv';
@@ -171,19 +171,107 @@ describe('exports of a manual layout', () => {
   });
 });
 
+describe('exports say what the screen says (final review F10, F11, F16)', () => {
+  const exportsOf = (spec: ReturnType<typeof manualSpec>, inputs: typeof I) => {
+    const build = buildManualLayout(spec, inputs);
+    const manual = manualMarker(spec, build);
+    const stale = build.status === 'outOfDate';
+    const result = resultOf(build.layout);
+    const payload = buildExportPayload(build.inputs, result, 0, NOW, stale, manual);
+    const sheet = buildSheetContent({
+      inputs: build.inputs,
+      result,
+      selectedIndex: 0,
+      jobName: '',
+      stale,
+      now: NOW,
+      manual,
+    });
+    return { build, payload, sheet, csv: buildCsv(payload).split('\r\n') };
+  };
+  const NO_EFFECT = 'Alternate layers turned (no effect: the layer is the same after a half turn)';
+
+  it('"Alternate layers turned" with no layer turned is said to have no effect', () => {
+    // Two cartons side by side in the middle of the footprint: the same after a half turn.
+    const centred = manualSpec({
+      cartons: [
+        { x: 1, y: 13.5, rotated: false },
+        { x: 26, y: 13.5, rotated: false },
+      ],
+    });
+    const { build, payload, sheet, csv } = exportsOf(centred, I);
+    expect(build.layout.layers.some((l) => l.turned)).toBe(false);
+    expect(csv).toContain(`Upper layers,${NO_EFFECT}`);
+    expect(csv).toContain('Layers turned half a turn (180°),');
+    expect(sheet.palletAndLoad).toContainEqual({ label: 'Upper layers', value: NO_EFFECT });
+    expect(JSON.parse(JSON.stringify(payload)).selectedLayout.manual).toMatchObject({
+      upperLayers: 'alternate',
+      upperLayersNoEffect: true,
+    });
+    // A layer that does turn says so plainly; "All the same" never says it.
+    const turned = exportsOf(manualSpec(), I);
+    expect(turned.csv).toContain('Upper layers,Alternate layers turned');
+    expect(turned.sheet.palletAndLoad).toContainEqual({
+      label: 'Upper layers',
+      value: 'Alternate layers turned',
+    });
+    const same = exportsOf({ ...centred, upperLayers: 'same' as never }, I);
+    expect(same.csv).toContain('Upper layers,All the same');
+  });
+
+  it('the carton volume outside the allowed footprint has its own row, only when there is some', () => {
+    const { payload, sheet, csv } = exportsOf(manualSpec(), I);
+    const outside = payload.analytics.totals.volumeOutsideEnvelope!;
+    expect(outside).toBeGreaterThan(0);
+    const label = 'Carton volume outside the allowed footprint';
+    expect(csv.find((l) => l.startsWith(label))).toBe(`${label} (in³),${outside.toFixed(2)}`);
+    const row = sheet.palletAndLoad.find((r) => r.label === label)!;
+    expect(row.value).toMatch(/in³$/);
+    expect(row.value.replace(/,/g, '')).toContain(outside.toFixed(2));
+
+    const inside = exportsOf(
+      manualSpec({
+        cartons: [
+          { x: 1, y: 1, rotated: false },
+          { x: 26, y: 1, rotated: false },
+        ],
+      }),
+      I,
+    );
+    expect(inside.payload.analytics.totals.volumeOutsideEnvelope).toBe(0);
+    expect(inside.csv.some((l) => l.startsWith(label))).toBe(false);
+    expect(inside.sheet.palletAndLoad.some((r) => r.label === label)).toBe(false);
+  });
+
+  it('an out-of-date layout lists no flags: the note and what it was made for instead', () => {
+    const current = exportsOf(manualSpec(), I);
+    expect(current.sheet.manual!.flags.length).toBeGreaterThan(0);
+    expect(current.csv.find((l) => l.startsWith('Manual layout flags'))).toContain('overhang');
+
+    const { build, payload, sheet, csv } = exportsOf(manualSpec(), {
+      ...I,
+      product: { ...I.product, length: 13 },
+    });
+    expect(build.status).toBe('outOfDate');
+    expect(build.flags.length).toBeGreaterThan(0);
+    expect(sheet.manual).toMatchObject({ flags: [], notes: [] });
+    expect(sheet.staleNote).toContain('Out of date: this layout was made for a product of');
+    expect(csv).toContain('Manual layout flags,Not checked: this layout is out of date');
+    expect(csv.join('\n')).not.toContain('overhang the allowed footprint');
+    expect(csv.some((l) => l.startsWith('Made for product,'))).toBe(true);
+    expect(csv.find((l) => l.startsWith('Status,'))).toContain('Out of date');
+    const json = JSON.parse(JSON.stringify(payload)).selectedLayout.manual;
+    expect(json).toMatchObject({ status: 'outOfDate', flags: [] });
+    expect(json.madeFor.product.length).toBe(12);
+  });
+});
+
 describe('"Below your minimum" on the exports of a manual layout', () => {
   // The overhanging layout rates Poor, so Good only puts it under the minimum.
   const spec = manualSpec();
   const exportsUnder = (inputs: typeof I) => {
     const build = buildManualLayout(spec, inputs);
-    const manual: ManualMarker = {
-      id: spec.id,
-      name: spec.name,
-      flags: build.flags,
-      status: build.status,
-      upperLayers: spec.upperLayers,
-      madeFor: spec.madeFor,
-    };
+    const manual: ManualMarker = manualMarker(spec, build);
     const stale = build.status === 'outOfDate';
     const result = resultOf(build.layout);
     const payload = buildExportPayload(build.inputs, result, 0, NOW, stale, manual);

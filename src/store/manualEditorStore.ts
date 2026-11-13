@@ -15,6 +15,7 @@ import type {
   OrientationCode,
 } from '../domain/types';
 import { createStore, type StoreApi } from 'zustand/vanilla';
+import { standingDims } from '../engine/analytics/analytics';
 import {
   bestCartonsFor,
   buildManualLayout,
@@ -26,14 +27,15 @@ import {
   usableToPallet,
   type ManualBuild,
   type ManualFlag,
+  type ManualLayoutSpec,
   type UpperLayers,
 } from '../engine/manual/build';
 import {
   cartonWeight,
   designCarton,
-  designedSize,
   designFlags,
   designOf,
+  FACINGS,
   facingsFor,
   verticalAxis,
   type CartonDesign,
@@ -59,7 +61,7 @@ import {
   type Point,
 } from '../engine/manual/layer';
 import { usableFootprint, type Rect } from '../engine/packing/geometry';
-import type { ManualLayoutsState } from './manualLayoutsStore';
+import { contentKey as layoutKey, type ManualLayoutsState } from './manualLayoutsStore';
 import { sameInputs, type ResultsState } from './resultsStore';
 
 export type EditorStep = 'carton' | 'layer';
@@ -122,6 +124,12 @@ export type EditorRefusal =
   | { reason: 'turnNoRoom' }
   /** There is no room for one more carton inside the usable footprint. */
   | { reason: 'noFreeSpot' }
+  /**
+   * The saved layout being edited is no longer what it was when the session opened: another
+   * tab changed it ('changed') or deleted it ('deleted'). Nothing was saved. Ask, then save
+   * again with `{ overwrite: true }`, or save as new.
+   */
+  | { reason: 'changedElsewhere'; change: 'changed' | 'deleted' }
   /** The layout has a flag that cannot be saved (empty layer, carton cannot fit, too tall). */
   | { reason: 'cannotSave'; flags: ManualFlag[] }
   | { reason: 'nothingToUndo' }
@@ -132,7 +140,10 @@ export type EditorResult<T = object> = ({ ok: true } & T) | ({ ok: false } & Edi
 /** The carton step's live figures (spec 6.2a), in inches and pounds. */
 export interface CartonFigures {
   boxesPerCarton: number;
-  /** Along the carton's own length, width and height. */
+  /**
+   * As the carton stands on the pallet (the chosen side down): the longer side of its base,
+   * the shorter side, its height. The way the results table and the exports write a carton.
+   */
   inner: Dims;
   outer: Dims;
   /** One full carton's weight, or null when the box weight is blank. */
@@ -211,6 +222,11 @@ export interface SaveOptions {
   name?: string;
   /** Confirms replacing a hand-edited layer after a carton change (see 'layerEdited'). */
   replace?: boolean;
+  /**
+   * Confirms saving over a layout that another tab changed since the session opened, or saving
+   * again one that another tab deleted (see 'changedElsewhere').
+   */
+  overwrite?: boolean;
 }
 
 export interface ManualEditorState {
@@ -274,7 +290,8 @@ export interface ManualEditorState {
   /**
    * Saves: over the saved layout the session was opened from, else as a new one. Closes. When
    * the layout cannot be written to the browser's storage it is refused ('notStored') and the
-   * session stays open.
+   * session stays open. Saving over a layout that was changed or deleted in another tab since
+   * the session opened is refused ('changedElsewhere') until asked for with `overwrite`.
    */
   save(opts?: SaveOptions): EditorResult<{ id: string }>;
   /** Saves as a new layout whatever the session was opened from. Closes. */
@@ -317,7 +334,6 @@ export function calculatedCartons(result: OptimizeResult | null): CalculatedCart
 /** Undo steps kept; older ones are dropped. */
 export const HISTORY_LIMIT = 200;
 
-const FACINGS: readonly OrientationCode[] = ['LWH', 'LHW', 'WLH', 'WHL', 'HLW', 'HWL'];
 const SIDES_DOWN: readonly SideDown[] = ['base', 'side', 'end'];
 const SIDES: readonly CartonSide[] = ['length', 'width', 'height'];
 
@@ -367,6 +383,12 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
     /** What the session opened with, as `contentKey` gives it, and its name then. */
     let opened = '';
     let openedName = '';
+    /**
+     * The saved layout the session was opened from, as it was stored then (its content and its
+     * name as text), to tell at Save whether another tab has changed it since.
+     */
+    let openedStored: string | null = null;
+    const storedKey = (spec: ManualLayoutSpec) => JSON.stringify([spec.name, layoutKey(spec)]);
     let stepNotice: EditorSession['stepNotice'] = null;
     // The working layer in the usable footprint's frame, kept per list and overhang so the
     // session hands out the same array while neither changed.
@@ -503,8 +525,8 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         facings: facingsFor(inputs.product),
         figures: {
           boxesPerCarton: carton.boxesPerCarton,
-          inner: designedSize(design, carton, 'inner'),
-          outer: designedSize(design, carton, 'outer'),
+          inner: standingDims(carton.inner, verticalAxis(design)),
+          outer: standingDims(carton.outer, verticalAxis(design)),
           weight: cartonWeight(carton, inputs),
           fill: carton.utilization,
         },
@@ -555,6 +577,11 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       future = [];
       opened = contentKey(core, i);
       openedName = name;
+      const source =
+        origin.kind === 'saved'
+          ? manualLayouts.getState().specs.find((x) => x.id === origin.id)
+          : undefined;
+      openedStored = source ? storedKey(source) : null;
       stepNotice = null;
       publish();
     };
@@ -566,6 +593,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
       future = [];
       framed = null;
       built = null;
+      openedStored = null;
       stepNotice = null;
       publish();
     };
@@ -676,13 +704,19 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         upperLayers: s.core.upperLayers,
         madeFor: madeForOf(s.core.design, s.inputs),
       };
-      const store = manualLayouts.getState();
       const { origin } = s.meta;
-      // Saved over only while it is still there (another tab may have deleted it).
-      const over =
-        !asNew && origin.kind === 'saved' && store.specs.some((x) => x.id === origin.id)
-          ? origin.id
-          : null;
+      // What is stored now, not what this tab last read: another tab may have changed it.
+      if (!asNew && origin.kind === 'saved') manualLayouts.getState().refresh();
+      const store = manualLayouts.getState();
+      const now =
+        !asNew && origin.kind === 'saved' ? store.specs.find((x) => x.id === origin.id) : undefined;
+      if (!asNew && origin.kind === 'saved' && !opts.overwrite) {
+        // Never silently saved over, or saved again after a deletion: the user is asked.
+        if (!now) return { ok: false, reason: 'changedElsewhere', change: 'deleted' };
+        if (openedStored !== null && storedKey(now) !== openedStored)
+          return { ok: false, reason: 'changedElsewhere', change: 'changed' };
+      }
+      const over = now ? now.id : null;
       // A copy of a saved layout does not take its name: it gets the next default one.
       const copyOfSaved = asNew && origin.kind === 'saved';
       const spec =

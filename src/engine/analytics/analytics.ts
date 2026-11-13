@@ -128,20 +128,29 @@ export interface Analytics {
 }
 
 /**
- * Carton size as length >= width plus height. When every layer stands the carton on the
- * same product axis, that axis is the height; otherwise the three sizes are sorted descending.
+ * A carton's size as it stands with `vertical` up: the longer side of its base, the shorter
+ * side, then its height. The one way a carton's size is written, on screen and in exports.
+ */
+export function standingDims(size: Record<ProductAxis, number>, vertical: ProductAxis): Dims {
+  const [a, b] = footprintAxes(vertical);
+  return {
+    length: Math.max(size[a], size[b]),
+    width: Math.min(size[a], size[b]),
+    height: size[vertical],
+  };
+}
+
+/**
+ * The carton's size as the layout's cartons stand: `standingDims` for the way up of the bottom
+ * layer. A layout whose layers stand the carton different ways up is written by its bottom
+ * layer too, so the results table, the editor (which copies the bottom layer) and the exports
+ * all write the same carton the same way; "Product side facing up" lists the other layers.
+ * A layout with no layers has no way up: its three sizes are sorted, longest first.
  */
 export function cartonDisplayDims(l: Layout, which: 'inner' | 'outer'): Dims {
   const size = l.carton[which];
   const first = l.layers[0]?.vertical;
-  if (first !== undefined && l.layers.every((layer) => layer.vertical === first)) {
-    const [a, b] = footprintAxes(first);
-    return {
-      length: Math.max(size[a], size[b]),
-      width: Math.min(size[a], size[b]),
-      height: size[first],
-    };
-  }
+  if (first !== undefined) return standingDims(size, first);
   const axes: ProductAxis[] = ['L', 'W', 'H'];
   const sorted = axes.map((k) => size[k]).sort((p, q) => q - p);
   return { length: sorted[0] ?? 0, width: sorted[1] ?? 0, height: sorted[2] ?? 0 };

@@ -215,17 +215,17 @@ describe('in the app', () => {
     const scenario = stores.scenarios.getState().scenarios[0]!;
     expect(scenario.manualLayouts).toEqual([kept]);
 
-    // Afterwards: the saved one is renamed, and another is added.
+    // Afterwards: the saved one is changed (and renamed), and another is added.
     let added = '';
     act(() => {
-      manual().rename(kept.id, 'Changed');
+      manual().update(kept.id, draftFor(stores, { upperLayers: 'same' }), 'Changed');
       added = manual().save(draftFor(stores, { upperLayers: 'same' }))!.id;
     });
     expect(manual().specs).toHaveLength(2);
     await user.click(within(drawer).getByRole('button', { name: 'Load' }));
     await flush();
-    // Nothing is deleted: the renamed one and the new one stay, and the scenario's version of
-    // the renamed layout arrives as a copy.
+    // Nothing is deleted: the changed one and the new one stay, and the scenario's version of
+    // the changed layout arrives as a copy.
     expect(manual().specs.map((s) => s.name)).toEqual([
       'Changed',
       manual().specs[1]!.name,

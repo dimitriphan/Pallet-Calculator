@@ -28,6 +28,11 @@ export interface ManualMarker {
   status: 'current' | 'outOfDate';
   /** What the upper layers do, and the inputs the carton was made for: for the exports. */
   upperLayers: UpperLayers;
+  /**
+   * True when the choice is 'alternate' and it changes nothing: the layer is the same after a
+   * half turn, so no layer is turned. Wherever the choice is reported, this is said with it.
+   */
+  upperLayersNoEffect: boolean;
   madeFor: MadeFor;
 }
 
@@ -79,8 +84,13 @@ export interface ManualLayoutsState {
   /** "Manual N" with the lowest number no saved layout is named with. */
   nextName(): string;
   /**
-   * Saves a new layout. A blank or missing name gives the next default name. Null when it
-   * could not be written to the browser's storage: nothing was saved.
+   * Saves a new layout (under a new id: this is also "Save as new"). A blank or missing name
+   * gives the next default name. Null when it could not be written to the browser's storage:
+   * nothing was saved.
+   *
+   * No two layouts have the same name: wherever a name is given here (save, update, rename,
+   * duplicate, a scenario's layouts) one that another layout already has gets " (2)", " (3)",
+   * ... added, and `onNameAdjusted` is told.
    */
   save(draft: ManualLayoutDraft, name?: string): ManualLayoutSpec | null;
   /**
@@ -88,8 +98,6 @@ export interface ManualLayoutsState {
    * layout, or when it could not be written (the stored layout is unchanged).
    */
   update(id: string, draft: ManualLayoutDraft, name?: string): ManualLayoutSpec | null;
-  /** Saves a copy under a new id while editing a saved layout; otherwise as `save`. */
-  saveAsNew(draft: ManualLayoutDraft, name?: string): ManualLayoutSpec | null;
   /**
    * Renames a layout. False when nothing was renamed: no such layout, a blank name, or the
    * change could not be written.
@@ -102,9 +110,10 @@ export interface ManualLayoutsState {
   /**
    * Adds a loaded scenario's manual layouts to the ones present; nothing present is removed or
    * changed. One whose id is not present is added. One whose id is present with the same
-   * content is skipped. One whose id is present with different content is added as a copy
-   * named "<name> (from scenario)" (unless that very copy is already there from an earlier
-   * load). `overhang` is the scenario's allowed overhang, for layouts stored before positions
+   * content is skipped, whatever either is now named (a rename is not a different layout).
+   * One whose id is present with different content is added as a copy named
+   * "<name> (from scenario)" (unless a layout with that content is already there, as after an
+   * earlier load). `overhang` is the scenario's allowed overhang, for layouts stored before positions
    * were kept in the pallet frame.
    */
   addFromScenario(specs: readonly ManualLayoutSpec[], overhang: number): ScenarioMerge;
@@ -120,6 +129,11 @@ export interface ManualLayoutsOptions {
    * change made through this store and 'external' for one read back from storage (another tab).
    */
   onListChange?: (ids: string[], source: 'local' | 'external') => void;
+  /**
+   * Called when a layout was saved under another name than the one asked for, because another
+   * layout already has that name.
+   */
+  onNameAdjusted?: (wanted: string, given: string) => void;
   newId?: () => string;
 }
 
@@ -137,6 +151,18 @@ export function nextManualName(names: readonly string[]): string {
   return `Manual ${n}`;
 }
 
+/**
+ * `name` when no layout in `taken` has it, else the first of "<name> (2)", "<name> (3)", ...
+ * that none has.
+ */
+export function uniqueName(name: string, taken: readonly string[]): string {
+  const used = new Set(taken);
+  if (!used.has(name)) return name;
+  let n = 2;
+  while (used.has(`${name} (${n})`)) n++;
+  return `${name} (${n})`;
+}
+
 const NO_SCORE = {
   quantity: 0,
   utilization: 0,
@@ -146,6 +172,21 @@ const NO_SCORE = {
   spaceContribution: 0,
   total: 0,
 };
+
+/** What marks a built layout as a manual one, for the screens and the exports. */
+export function manualMarker(spec: ManualLayoutSpec, build: ManualBuild): ManualMarker {
+  return {
+    id: spec.id,
+    name: spec.name,
+    // An out-of-date layout is shown as it was made, for inputs that no longer apply: what it
+    // would break under them is not said anywhere, on screen or in an export.
+    flags: build.status === 'outOfDate' ? [] : build.flags,
+    status: build.status,
+    upperLayers: spec.upperLayers,
+    upperLayersNoEffect: build.alternateHasNoEffect,
+    madeFor: spec.madeFor,
+  };
+}
 
 function entryOf(spec: ManualLayoutSpec, inputs: Inputs): ManualEntry | null {
   let build: ManualBuild;
@@ -163,14 +204,7 @@ function entryOf(spec: ManualLayoutSpec, inputs: Inputs): ManualEntry | null {
       layout: build.layout,
       score: NO_SCORE,
       explanation: '',
-      manual: {
-        id: spec.id,
-        name: spec.name,
-        flags: build.flags,
-        status: build.status,
-        upperLayers: spec.upperLayers,
-        madeFor: spec.madeFor,
-      },
+      manual: manualMarker(spec, build),
     },
   };
 }
@@ -203,19 +237,38 @@ export function createManualLayoutsStore(
       return entries;
     };
 
+    // The frame-less layouts already moved to the pallet frame this session, by id, with the
+    // stored text each was moved from. Kept so that a move that could not be written is not
+    // tried (and its failure not said) again at every change of the inputs, and so that the
+    // layout meanwhile stays where it was put on the pallet.
+    const moved = new Map<string, { from: string; spec: ManualLayoutSpec }>();
+
     /**
      * Layouts stored before positions were kept in the pallet frame are moved to it as soon as
      * there are valid inputs to say where the pallet was (their positions were relative to the
-     * usable footprint under the inputs in force). Returns the list to use.
+     * usable footprint under the inputs in force). Each is written once; if that fails it is
+     * said once (by the repository) and the moved layout is kept in memory for the session.
+     * Returns the list to use.
      */
     const migrated = (specs: ManualLayoutSpec[], inputs: Inputs | null): ManualLayoutSpec[] => {
-      if (!inputs || specs.every((s) => s.frame !== undefined || !isValidSpec(s))) return specs;
-      for (const spec of specs)
-        // One that cannot be read as a layout at all is left for the build to flag.
-        if (spec.frame === undefined && isValidSpec(spec))
-          repo.save(toPalletFrame(spec, inputs.overhang));
-      // A write that failed leaves that layout as it was; it is tried again next time.
-      return repo.list();
+      // One that cannot be read as a layout at all is left for the build to flag.
+      const due = (s: ManualLayoutSpec) => s.frame === undefined && isValidSpec(s);
+      if (!inputs || !specs.some(due)) return specs;
+      let wrote = false;
+      const place = (list: ManualLayoutSpec[], write: boolean) =>
+        list.map((spec) => {
+          if (!due(spec)) return spec;
+          const from = JSON.stringify(spec);
+          const kept = moved.get(spec.id);
+          if (kept && kept.from === from) return kept.spec;
+          const next = toPalletFrame(spec, inputs.overhang);
+          moved.set(spec.id, { from, spec: next });
+          if (write && repo.save(next)) wrote = true;
+          return next;
+        });
+      const placed = place(specs, true);
+      // After a write the stored list is read back (it is merged with other tabs' changes).
+      return wrote ? place(repo.list(), false) : placed;
     };
 
     // The repository merges each change with what other tabs stored, so read the list back.
@@ -228,9 +281,29 @@ export function createManualLayoutsStore(
       );
     };
     const find = (id: string) => get().specs.find((s) => s.id === id);
-    const named = (name: string | undefined, fallback: () => string) => {
+    /**
+     * The name to save under: the one given (the fallback when it is blank), made different
+     * from every other layout's. `self` is the id of the layout being named, which may keep
+     * its own name.
+     */
+    const named = (name: string | undefined, fallback: () => string, self?: string) => {
       const trimmed = name?.trim() ?? '';
-      return trimmed === '' ? fallback() : trimmed;
+      const wanted = trimmed === '' ? fallback() : trimmed;
+      const given = uniqueName(
+        wanted,
+        get()
+          .specs.filter((s) => s.id !== self)
+          .map((s) => s.name),
+      );
+      if (given !== wanted) adjusted.push([wanted, given]);
+      return given;
+    };
+    // Names changed by `named`, told once the layout is known to have been written.
+    let adjusted: [string, string][] = [];
+    const tellAdjusted = (written: boolean) => {
+      const list = adjusted;
+      adjusted = [];
+      if (written) for (const [wanted, given] of list) opts.onNameAdjusted?.(wanted, given);
     };
     const fields = (draft: ManualLayoutDraft): ManualLayoutDraft =>
       structuredClone({
@@ -244,6 +317,7 @@ export function createManualLayoutsStore(
     const store = (spec: ManualLayoutSpec): ManualLayoutSpec | null => {
       const written = repo.save(spec);
       sync();
+      tellAdjusted(written);
       return written ? spec : null;
     };
     const add = (draft: ManualLayoutDraft, name: string | undefined) =>
@@ -257,22 +331,25 @@ export function createManualLayoutsStore(
       stale: false,
       nextName: () => nextManualName(get().specs.map((s) => s.name)),
       save: (draft, name) => add(draft, name),
-      saveAsNew: (draft, name) => add(draft, name),
       update(id, draft, name) {
         const existing = find(id);
         if (!existing) return null;
-        return store({ id, name: named(name, () => existing.name), ...fields(draft) });
+        return store({ id, name: named(name, () => existing.name, id), ...fields(draft) });
       },
       rename(id, name) {
         const existing = find(id);
         const trimmed = name.trim();
         if (!existing || trimmed === '') return false;
-        return store({ ...existing, name: trimmed }) !== null;
+        return store({ ...existing, name: named(trimmed, () => existing.name, id) }) !== null;
       },
       duplicate(id) {
         const source = find(id);
         if (!source) return null;
-        return store({ ...structuredClone(source), id: newId(), name: `${source.name} (copy)` });
+        return store({
+          ...structuredClone(source),
+          id: newId(),
+          name: named(`${source.name} (copy)`, get().nextName),
+        });
       },
       remove(id) {
         const removed = repo.remove(id);
@@ -286,21 +363,27 @@ export function createManualLayoutsStore(
           const spec = toPalletFrame(structuredClone(given), overhang);
           const present = repo.list();
           const same = present.find((s) => s.id === spec.id);
-          let toAdd: ManualLayoutSpec;
-          if (!same) toAdd = spec;
-          else if (contentKey(same) === contentKey(spec)) {
+          // The same layout under another name (renamed here, or since the scenario was
+          // saved) is still the same layout.
+          if (same && contentKey(same) === contentKey(spec)) {
             outcome.skipped++;
             continue;
-          } else {
-            toAdd = { ...spec, id: newId(), name: `${spec.name} (from scenario)` };
-            // The copy an earlier load of this scenario made is not made again.
-            if (present.some((s) => contentKey(s) === contentKey(toAdd))) {
-              outcome.skipped++;
-              continue;
-            }
           }
-          if (repo.save(toAdd)) outcome.added++;
-          else outcome.notStored++;
+          // The copy an earlier load of this scenario made is not made again.
+          if (same && present.some((s) => contentKey(s) === contentKey(spec))) {
+            outcome.skipped++;
+            continue;
+          }
+          const wanted = same ? `${spec.name} (from scenario)` : spec.name;
+          const name = uniqueName(
+            wanted,
+            present.map((s) => s.name),
+          );
+          const toAdd: ManualLayoutSpec = same ? { ...spec, id: newId(), name } : { ...spec, name };
+          if (repo.save(toAdd)) {
+            outcome.added++;
+            if (name !== wanted) opts.onNameAdjusted?.(wanted, name);
+          } else outcome.notStored++;
         }
         sync();
         return outcome;
@@ -326,14 +409,14 @@ export function createManualLayoutsStore(
 }
 
 /**
- * What a stored layout holds, without its id, as text: two layouts with the same text are the
- * same layout. Written out field by field so the order the fields were stored in cannot matter.
+ * What a stored layout holds, without its id and its name, as text: two layouts with the same
+ * text are the same layout, whatever each is called. Written out field by field so the order
+ * the fields were stored in cannot matter.
  */
 export function contentKey(spec: ManualLayoutSpec): string {
   const { counts } = spec.design;
   const m = spec.madeFor;
   return JSON.stringify([
-    spec.name,
     [counts.length, counts.width, counts.height, spec.design.facing, spec.design.sideDown],
     spec.frame ?? 'usable',
     spec.cartons.map((c) => [c.x, c.y, c.rotated]),

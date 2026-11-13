@@ -249,9 +249,9 @@ export interface Scenario {
   selectedIndex: number;
   analytics: Analytics | null;
   /**
-   * The manual layouts present when the scenario was saved; loading the scenario puts these
-   * in place of the ones present. Absent on a scenario saved before manual layouts existed:
-   * loading that one leaves the manual layouts as they are.
+   * The manual layouts present when the scenario was saved. Loading the scenario adds them to
+   * the ones present and never removes or changes any of those (see `addFromScenario`).
+   * Absent on a scenario saved before manual layouts existed: loading that one adds none.
    */
   manualLayouts?: ManualLayoutSpec[];
 }

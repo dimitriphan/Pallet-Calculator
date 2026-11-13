@@ -346,6 +346,71 @@ describe('a selected manual layout', () => {
     expect(flags).toHaveTextContent('1 carton overhangs the allowed footprint by up to 3.00 in');
   });
 
+  it('out of date: no flags anywhere, the note and what it was made for instead (F16)', async () => {
+    const app = await renderApp();
+    const id = saveCopy(app, 'Wide', () => {
+      editor(app).move(0, { x: -3, y: editor(app).session!.cartons[0]!.y }, { snap: false });
+    });
+    await app.user.click(screen.getByRole('tab', { name: 'Explanation' }));
+    expect(
+      within(screen.getByRole('tabpanel')).getByRole('list', { name: 'Layout flags' }),
+    ).toBeInTheDocument();
+    await setField(app, 'product.height', '5');
+    const entry = manual(app).entries.find((e) => e.spec.id === id)!;
+    expect(entry.build.status).toBe('outOfDate');
+    expect(entry.ranked.manual.flags).toEqual([]);
+    const panel = screen.getByRole('tabpanel');
+    expect(within(panel).queryByRole('list', { name: 'Layout flags' })).toBeNull();
+    expect(panel).not.toHaveTextContent('overhangs the allowed footprint');
+    expect(panel).toHaveTextContent('Out of date');
+    expect(panel).toHaveTextContent('It was made for a product of 12.00 × 8.00 × 4.00 in');
+    expect(within(row('Wide')).queryByRole('list')).toBeNull();
+    expect(within(row('Wide')).getByTestId('made-for')).toHaveTextContent(
+      'Made for a product of 12.00 × 8.00 × 4.00 in',
+    );
+  });
+
+  it('says "no effect" beside Alternate layers turned when no layer is turned (F10)', async () => {
+    const app = await renderApp();
+    // The best layout's bottom layer is two rows of five: the same after a half turn.
+    saveCopy(app, 'Symmetric', () => editor(app).setUpperLayers('alternate'));
+    expect(manual(app).entries[0]!.ranked.manual.upperLayersNoEffect).toBe(true);
+    await app.user.click(screen.getByRole('tab', { name: 'Explanation' }));
+    expect(screen.getByRole('tabpanel')).toHaveTextContent(
+      'Alternate layers turned (no effect: the layer is the same after a half turn)',
+    );
+    await app.user.click(screen.getByRole('tab', { name: 'Analytics' }));
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Layers turned half a turn (180°)None');
+    // In the editor, beside the choice.
+    await app.user.click(action('Symmetric', 'Edit'));
+    const upper = screen.getByRole('radiogroup', { name: 'Upper layers' });
+    expect(upper).toHaveAccessibleDescription(
+      'Alternate layers turned: no effect: the layer is the same after a half turn.',
+    );
+    act(() => {
+      editor(app).remove(0);
+    });
+    expect(screen.queryByTestId('upper-layers-note')).toBeNull();
+    expect(upper).not.toHaveAccessibleDescription();
+  });
+
+  it('shows the carton volume outside the allowed footprint in Analytics (F11)', async () => {
+    const app = await renderApp();
+    saveCopy(app, 'Inside');
+    await app.user.click(screen.getByRole('tab', { name: 'Analytics' }));
+    const label = 'Carton volume outside the allowed footprint';
+    expect(screen.getByRole('tabpanel')).not.toHaveTextContent(label);
+    saveCopy(app, 'Wide', () => {
+      editor(app).move(0, { x: -3, y: editor(app).session!.cartons[0]!.y }, { snap: false });
+    });
+    const panel = screen.getByRole('tabpanel');
+    const dt = within(panel).getByText(label, { selector: 'dt' });
+    // 3 in of a 21 in deep, 13 in high carton, in each of 5 layers.
+    expect(dt.nextElementSibling).toHaveTextContent('4095.00 in³');
+    const used = within(panel).getByText('Volume used', { selector: 'dt' }).nextElementSibling;
+    expect(used).toHaveTextContent(/^\d+\.\d\d in³$/);
+  });
+
   it('is marked Out of date wherever its numbers show when it is (review I3)', async () => {
     const app = await renderApp();
     saveCopy(app, 'Old');

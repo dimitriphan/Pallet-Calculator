@@ -4,8 +4,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { madeForOf } from '../../engine/manual/build';
 import { TEST_DESIGN } from '../../engine/manual/testSupport';
 import { NOT_SAVED } from '../../persistence/localStorageRepository';
+import { FakeStorage } from '../../persistence/testStorage';
+import { nameAdjustedNotice } from '../../store/manualStores';
 import { useNoticesStore } from '../../store/noticesStore';
-import { flush, renderApp } from '../testUtils';
+import { flush, makeStores, renderApp } from '../testUtils';
 import { STEP_NOTICES, USING_LAST_VALID } from './EditorBar';
 import { EDITOR_BLOCKS } from './EditorBlocked';
 import { LAYER_MESSAGES } from './layerActions';
@@ -259,5 +261,144 @@ describe('Turn 90°', () => {
     );
     expect(LAYER_MESSAGES.turnNoRoom).toBe('No room to turn this carton here. Move it first.');
     expect(editor(app).session!.canUndo).toBe(false);
+  });
+});
+
+describe('the final review of round 5', () => {
+  const unload = () => {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  it('asks before the page is left with unsaved work, and only then (F8)', async () => {
+    const app = await renderApp();
+    expect(unload()).toBe(false);
+    await app.user.click(screen.getByRole('button', { name: 'Edit layout 2 by hand' }));
+    // Open and unchanged: nothing would be lost.
+    expect(unload()).toBe(false);
+    act(() => {
+      editor(app).remove(0);
+    });
+    expect(editor(app).session!.dirty).toBe(true);
+    expect(unload()).toBe(true);
+    act(() => {
+      editor(app).undo();
+    });
+    expect(unload()).toBe(false);
+    act(() => {
+      editor(app).remove(0);
+    });
+    expect(unload()).toBe(true);
+    await app.user.click(inBar('Save'));
+    expect(editor(app).session).toBeNull();
+    expect(unload()).toBe(false);
+    // Cancelled with changes: the guard goes with the session.
+    await app.user.click(screen.getByRole('button', { name: 'Edit layout 2 by hand' }));
+    act(() => {
+      editor(app).remove(0);
+      editor(app).cancel();
+    });
+    expect(unload()).toBe(false);
+  });
+
+  it('Save says when another tab changed the layout, and offers Save as new or Overwrite (F9)', async () => {
+    const manualStorage = new FakeStorage();
+    const app = await renderApp(undefined, { manualStorage });
+    const other = makeStores(undefined, { manualStorage }).manualLayouts.getState;
+    const open = async () => {
+      let id = '';
+      act(() => {
+        editor(app).openFromCalculated(1);
+        const saved = editor(app).save({ name: `Dock ${manual(app).specs.length + 1}` });
+        if (saved.ok) id = saved.id;
+        editor(app).openSaved(id);
+        editor(app).remove(0);
+      });
+      return id;
+    };
+    const manual = (a: App) => a.stores.manualLayouts.getState();
+
+    // Changed elsewhere, then "Save as new": both are kept.
+    const first = await open();
+    act(() => {
+      other().refresh();
+      other().rename(first, 'Theirs');
+    });
+    await app.user.click(inBar('Save'));
+    const alert = screen.getByTestId('changed-elsewhere');
+    expect(alert).toHaveAttribute('role', 'alert');
+    expect(alert).toHaveTextContent('This layout was changed in another tab.');
+    expect(editor(app).session).not.toBeNull();
+    expect(manual(app).specs.map((s) => s.name)).toEqual(['Theirs']);
+    await app.user.click(within(alert).getByRole('button', { name: 'Save as new' }));
+    expect(editor(app).session).toBeNull();
+    expect(manual(app).specs.map((s) => s.name)).toEqual(['Theirs', 'Manual 1']);
+
+    // Changed elsewhere, then "Overwrite": this tab's version takes its place.
+    const second = await open();
+    act(() => {
+      other().refresh();
+      other().rename(second, 'Theirs too');
+    });
+    await app.user.click(inBar('Save'));
+    await app.user.click(
+      within(screen.getByTestId('changed-elsewhere')).getByRole('button', { name: 'Overwrite' }),
+    );
+    expect(editor(app).session).toBeNull();
+    expect(manual(app).specs.map((s) => s.name)).toEqual(['Theirs', 'Manual 1', 'Dock 3']);
+
+    // Deleted elsewhere: said, and not saved again unasked.
+    const third = await open();
+    act(() => {
+      other().refresh();
+      other().remove(third);
+    });
+    await app.user.click(inBar('Save'));
+    expect(screen.getByTestId('changed-elsewhere')).toHaveTextContent(
+      'This layout was deleted in another tab.',
+    );
+    expect(manual(app).specs.some((s) => s.id === third)).toBe(false);
+    expect(editor(app).session).not.toBeNull();
+  });
+
+  it('the mixed-pattern note is on the Carton step too while it applies (F12)', async () => {
+    const app = await renderApp();
+    await app.user.click(screen.getByRole('button', { name: 'Design my own carton' }));
+    expect(editor(app).session!.step).toBe('carton');
+    const note = 'Editing by hand starts from its bottom layer: 250 boxes instead of 260.';
+    expect(screen.getByTestId('mixed-note')).toHaveTextContent(note);
+    // Saved straight from here it holds 250, as the note said.
+    await app.user.click(inBar('Save'));
+    expect(app.stores.manualLayouts.getState().entries[0]!.build.layout.totalProducts).toBe(250);
+    // Another carton is another layout: the note goes.
+    await app.user.click(screen.getByRole('button', { name: 'Design my own carton' }));
+    await app.user.click(
+      screen.getByRole('button', { name: "One more: boxes along the carton's height" }),
+    );
+    expect(screen.queryByTestId('mixed-note')).toBeNull();
+  });
+
+  it('a taken name is made different, and a notice says so (F14)', async () => {
+    const said: string[] = [];
+    const app = await renderApp(undefined, { onNotice: (m) => said.push(m) });
+    for (let k = 0; k < 2; k++) {
+      await app.user.click(screen.getByRole('button', { name: 'Edit layout 2 by hand' }));
+      await app.user.clear(screen.getByRole('textbox', { name: 'Layout name' }));
+      await app.user.type(screen.getByRole('textbox', { name: 'Layout name' }), 'Dock');
+      await app.user.click(inBar('Save'));
+    }
+    expect(app.stores.manualLayouts.getState().specs.map((s) => s.name)).toEqual([
+      'Dock',
+      'Dock (2)',
+    ]);
+    expect(said).toEqual([nameAdjustedNotice('Dock', 'Dock (2)')]);
+    expect(said[0]).toBe('Another layout is already named “Dock”. This one was named “Dock (2)”.');
+    // Every button that names a layout names one layout.
+    expect(screen.getAllByRole('button', { name: 'Edit Dock' })).toHaveLength(1);
+    await app.user.click(screen.getByRole('button', { name: 'Duplicate Dock' }));
+    await app.user.click(screen.getByRole('button', { name: 'Duplicate Dock' }));
+    const names = app.stores.manualLayouts.getState().specs.map((s) => s.name);
+    expect(names).toEqual(['Dock', 'Dock (2)', 'Dock (copy)', 'Dock (copy) (2)']);
   });
 });

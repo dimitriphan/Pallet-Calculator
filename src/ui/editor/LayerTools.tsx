@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { UpperLayers } from '../../engine/manual/build';
+import { UPPER_LAYERS_NO_EFFECT } from '../../export/csv';
 import type { EditorSession } from '../../store/manualEditorStore';
 import { ConfirmDialog } from './ConfirmDialog';
 import { NEEDS_SELECTION, useLayerActions, useLayerMessage } from './layerActions';
@@ -15,6 +16,8 @@ export const UPPER_LAYERS_LABEL: Record<UpperLayers, string> = {
 export const RESET_QUESTION =
   'Every carton goes back to where it was when this layer was loaded. Undo brings your layer back.';
 const NOTHING_TO_RESET = 'The layer is as it started.';
+/** Beside the choice when it changes nothing (the wording the exports use, as a sentence). */
+export const ALTERNATE_NO_EFFECT = `Alternate layers turned: ${UPPER_LAYERS_NO_EFFECT}.`;
 
 /**
  * The Pallet layer step's row of tools, in the editor bar above the 3D view (spec 6.2b): add,
@@ -40,6 +43,10 @@ export function LayerTools({ session }: { session: EditorSession }) {
   }, [confirmReset, session.layerChanged]);
   const reasonId = `${ids}reason`;
   const resetReasonId = `${ids}reset`;
+  const noEffectId = `${ids}no-effect`;
+  // "Alternate layers turned" on a layer that is the same after a half turn: said here as it
+  // is in the Explanation tab and the exports.
+  const noEffect = session.upperLayers === 'alternate' && session.build.alternateHasNoEffect;
 
   // What was said goes when the layer next changes, and with the session.
   const { cartons, upperLayers } = session;
@@ -130,6 +137,7 @@ export function LayerTools({ session }: { session: EditorSession }) {
           <div
             role="radiogroup"
             aria-labelledby={`${ids}upper`}
+            aria-describedby={noEffect ? noEffectId : undefined}
             className="inline-flex border border-gray-300 dark:border-harbor-foam"
           >
             {UPPER_LAYERS.map((option, k) => {
@@ -167,6 +175,15 @@ export function LayerTools({ session }: { session: EditorSession }) {
         {none && (
           <p id={reasonId} className="text-gray-700 dark:text-harbor-mist">
             {NEEDS_SELECTION}
+          </p>
+        )}
+        {noEffect && (
+          <p
+            id={noEffectId}
+            data-testid="upper-layers-note"
+            className="text-gray-700 dark:text-harbor-mist"
+          >
+            {ALTERNATE_NO_EFFECT}
           </p>
         )}
         <p
