@@ -78,7 +78,7 @@ test('design my own carton: counts, facing, flag, save, reload', async ({ page }
   const canvas = page.getByTestId('editor-scene').locator('canvas');
   await expect(canvas).toBeVisible();
   await expect(figure('Boxes per carton')).toHaveText('5');
-  await expect(figure('Outer size')).toHaveText('21.00 × 9.00 × 13.00 in');
+  await expect(figure('Outer size, as stacked')).toHaveText('21.00 × 9.00 × 13.00 in');
   const first = await settledPicture(canvas);
 
   // Nothing is exported while editing (the hidden view of the selected layout is another
@@ -97,7 +97,7 @@ test('design my own carton: counts, facing, flag, save, reload', async ({ page }
   await expect(flags).toHaveCount(0);
   await page.getByRole('button', { name: "One more: boxes along the carton's length" }).click();
   await expect(figure('Boxes per carton')).toHaveText('6');
-  await expect(figure('Outer size')).toHaveText('25.00 × 9.00 × 13.00 in');
+  await expect(figure('Outer size, as stacked')).toHaveText('25.00 × 9.00 × 13.00 in');
   await expect(flags.getByRole('listitem')).toHaveText([
     'Carton is over the maximum carton size by 1.00 in (longest side)',
   ]);
@@ -112,7 +112,7 @@ test('design my own carton: counts, facing, flag, save, reload', async ({ page }
   const facing = page.getByRole('radiogroup', { name: 'Box facing' });
   await expect(facing.getByRole('radio')).toHaveCount(6);
   await facing.getByRole('radio', { name: /^Box height up, not turned/ }).click();
-  await expect(figure('Outer size')).toHaveText('73.00 × 17.00 × 5.00 in');
+  await expect(figure('Outer size, as stacked')).toHaveText('73.00 × 17.00 × 5.00 in');
   // Now it cannot go on the pallet at all: the next step and Save are closed, with the reason.
   await expect(panel.locator('[data-flag="blocked"]')).toContainText(
     'too big for the allowed footprint',
@@ -127,7 +127,7 @@ test('design my own carton: counts, facing, flag, save, reload', async ({ page }
 
   // Back to a carton that fits (3 × 2 × 1 flat boxes), named and saved.
   await page.getByLabel('Boxes along the length').fill('3');
-  await expect(figure('Outer size')).toHaveText('37.00 × 17.00 × 5.00 in');
+  await expect(figure('Outer size, as stacked')).toHaveText('37.00 × 17.00 × 5.00 in');
   await expect(bar.getByRole('button', { name: 'Save', exact: true })).toBeEnabled();
   await page.getByLabel('Layout name').fill('Flat sixes');
   expect(await stored(page)).toBeNull();
@@ -820,3 +820,70 @@ test('while editing, the results are not in the tab order (F7)', async ({ page }
   // The two view buttons, then straight into the step's panel.
   expect(where.slice(0, 3)).toEqual(['view', 'view', 'panel']);
 });
+
+for (const [width, height] of [
+  [1024, 768],
+  [1100, 700],
+  [1440, 900],
+  [768, 1024],
+] as const)
+  test(`the layer view never moves or changes size as messages come and go at ${width} x ${height} (re-review R1)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await openLayerStep(page);
+    await topView(page);
+    const canvas = page.getByTestId('editor-scene').locator('canvas');
+    const message = page.getByTestId('layer-message');
+    const start = await canvas.boundingBox();
+    const same = async (after: string) => expect(await canvas.boundingBox(), after).toEqual(start);
+    // The default layer is the same after a half turn: the no-effect note is showing.
+    await expect(page.getByTestId('upper-layers-note')).toBeAttached();
+
+    await item(page, 0).click();
+    await same('select');
+    await item(page, 0).click();
+    await expect(item(page, 0)).toHaveAttribute('aria-pressed', 'false');
+    await same('deselect');
+
+    // A refused drop: carton 1 on to carton 2.
+    const layer = await readLayer(page);
+    const onto = layer.cartons[1]!;
+    await dragCarton(page, 'top', 0, { x: onto.x + onto.w / 2, y: onto.y + onto.h / 2 });
+    await expect(message).toHaveText(
+      'Cartons cannot overlap. The carton went back to where it was',
+    );
+    await same('refused drop');
+    await page.mouse.click(start!.x + 12, start!.y + start!.height - 12);
+    await same('press on nothing after a refused drop');
+
+    // Other messages: no room to add, a nudge off the pallet's neighbour, a release outside.
+    await page.getByRole('button', { name: 'Add carton' }).click();
+    await expect(message).toHaveText('No free space for another carton inside the footprint');
+    await same('no room');
+    await item(page, 0).click();
+    await page.getByTestId('scene-view').focus();
+    await page.keyboard.press('Shift+ArrowRight');
+    await expect(message).toHaveText('Cartons cannot overlap');
+    await same('refused nudge');
+    await page.keyboard.press('Escape');
+    await same('escape');
+
+    // The no-effect note goes when the layer is no longer the same after a half turn.
+    await item(page, 9).click();
+    await page.getByRole('button', { name: 'Remove', exact: true }).click();
+    await expect(page.getByTestId('upper-layers-note')).toHaveCount(0);
+    await same('no-effect note gone');
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect(page.getByTestId('upper-layers-note')).toBeAttached();
+    await same('no-effect note back');
+    await page.getByRole('radio', { name: 'All the same' }).click();
+    await same('all the same');
+    // The message line is one line, whatever it holds.
+    expect(
+      await page
+        .getByTestId('layer-message')
+        .locator('..')
+        .evaluate((el) => el.clientHeight),
+    ).toBe(20);
+  });

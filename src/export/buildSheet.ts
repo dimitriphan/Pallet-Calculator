@@ -36,7 +36,7 @@ import { BELOW_MINIMUM, isBelowMinimum } from '../ui/minStability';
 import { resultNotes } from '../ui/resultNotes';
 import type { ManualMarker } from '../store/manualLayoutsStore';
 import { upperLayersText } from './csv';
-import { STALE_NOTE } from './exportData';
+import { NOT_CHECKED, STALE_NOTE } from './exportData';
 
 export interface SheetRow {
   label: string;
@@ -245,7 +245,11 @@ export function buildSheetContent(a: {
   const sizeText = (x: number, y: number) => pairText(x, y, unit);
   const ranked = result.layouts[selectedIndex];
   if (!ranked) throw new Error(`No layout at index ${selectedIndex}`);
-  const layout = ranked.layout;
+  const outOfDate = a.manual?.status === 'outOfDate';
+  // An out-of-date manual layout is drawn as it was made, and nothing is said of its rating,
+  // its warnings or what it would break under inputs that no longer apply.
+  const { stability: rated, ...unrated } = ranked.layout;
+  const layout: Layout = outOfDate || !rated ? unrated : ranked.layout;
   const best = result.layouts[0];
   const analytics = computeAnalytics(layout, inputs);
   const { summary, pallet, weight } = analytics;
@@ -255,7 +259,6 @@ export function buildSheetContent(a: {
     ? { belowMinimum: null, patternFallback: null, autoMore: null }
     : resultNotes(inputs, result);
   const manualLines = a.manual ? flagLines(a.manual.flags, unit) : [];
-  const outOfDate = a.manual?.status === 'outOfDate';
   // As on screen: an out-of-date layout is not judged against the minimum now set.
   const manualBelow =
     !!a.manual && !outOfDate && isBelowMinimum(layout.stability?.rating, inputs.minStability);
@@ -357,7 +360,7 @@ export function buildSheetContent(a: {
     };
   });
 
-  const outside = outsideVolume(analytics);
+  const outside = outOfDate ? null : outsideVolume(analytics);
   const palletAndLoad: SheetRow[] = [
     {
       label: 'Pallet',
@@ -379,6 +382,7 @@ export function buildSheetContent(a: {
     // A layout placed by hand with cartons outside: the volume the totals leave out.
     ...(outside ? [{ label: outside.label, value: volumeText(outside.volume, unit) }] : []),
     ...(weight ? weightRows(weight, weightOf) : []),
+    ...(outOfDate ? [{ label: 'Stability', value: NOT_CHECKED }] : []),
     ...stabilityRows(layout, notes.belowMinimum !== null || manualBelow),
     ...(a.manual ? [{ label: 'Upper layers', value: upperLayersText(a.manual) }] : []),
     // What the minimum stability and the layer pattern setting did, as the screen says it.

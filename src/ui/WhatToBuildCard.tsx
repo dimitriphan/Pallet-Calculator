@@ -73,6 +73,9 @@ export function WhatToBuildCard() {
   // calculation failed; a card for the previous inputs would contradict them.
   if (error || empty) return null;
 
+  // An out-of-date manual layout is shown as it was made: no rating, no warnings and no
+  // comparison with a calculated layout that is for other inputs.
+  const outOfDate = manual?.status === 'outOfDate';
   let body: ReactNode;
   if (selected) {
     const { ranked, analytics } = selected;
@@ -103,7 +106,9 @@ export function WhatToBuildCard() {
             </p>
             <p className="tabular-nums">
               {`Made by hand. ${fmtCount(layout.totalProducts)} ${layout.totalProducts === 1 ? 'box' : 'boxes'} on the pallet.`}
-              {best && ` Calculated layout 1 fits ${fmtCount(best.layout.totalProducts)} boxes.`}
+              {best &&
+                !outOfDate &&
+                ` Calculated layout 1 fits ${fmtCount(best.layout.totalProducts)} boxes.`}
             </p>
             {manual.status === 'outOfDate' && (
               <p>{`Made for a product of ${dimsText(manual.madeFor.product, unit)}; the inputs have changed since. It is shown as it was made.`}</p>
@@ -203,7 +208,7 @@ export function WhatToBuildCard() {
               )}
             </>
           )}
-          {layout.stability && (
+          {layout.stability && !outOfDate && (
             <div className="space-y-1">
               <p className="flex flex-wrap items-center gap-1.5">
                 <StabilityBadge stability={layout.stability} className="px-2 py-0.5 text-sm" />

@@ -76,7 +76,7 @@ describe('Basic mode', () => {
       'Layers 2–7: 7 cartons each, product width side up',
     ]);
     expect(c.getByText('Outer size').nextElementSibling?.textContent).toBe(
-      '21.00 × 9.00 × 13.00 in',
+      '21.00 × 13.00 × 9.00 in',
     );
     expect(c.getByText('Boxes per carton').nextElementSibling?.textContent).toBe('5');
     expect(c.getByText('Boxes inside').nextElementSibling?.textContent).toBe(

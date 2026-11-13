@@ -356,7 +356,10 @@ describe('analytics and exports of a selected manual layout', () => {
     expect(payload.status).toBe(MANUAL_OUT_OF_DATE_NOTE);
     expect(payload.inputs.product).toEqual(made.product);
     expect((payload.selectedLayout as typeof s.ranked).manual!.status).toBe('outOfDate');
-    expect(payload.analytics).toEqual(analytics);
+    // As made, but not checked: no rating and no outside-volume figure (re-review R3).
+    expect(payload.analytics.totals.products).toBe(analytics.totals.products);
+    expect(payload.analytics.stability).toBeNull();
+    expect(payload.analytics.totals.volumeOutsideEnvelope).toBeUndefined();
     const lines = buildCsv(payload, 'in').split('\r\n');
     expect(lines).toContain('Selected layout,Manual: Old');
     expect(lines).toContain(`Status,${csvField(MANUAL_OUT_OF_DATE_NOTE)}`);

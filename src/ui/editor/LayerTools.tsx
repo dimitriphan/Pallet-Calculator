@@ -131,8 +131,10 @@ export function LayerTools({ session }: { session: EditorSession }) {
         </label>
 
         <div>
-          <p id={`${ids}upper`} className="mb-0.5 text-xs text-gray-700 dark:text-harbor-mist">
-            Upper layers
+          <p className="mb-0.5 text-xs text-gray-700 dark:text-harbor-mist">
+            <span id={`${ids}upper`}>Upper layers</span>
+            {/* In the label's own line, which is always there: nothing moves when it shows. */}
+            {noEffect && <span data-testid="upper-layers-short"> (no effect here)</span>}
           </p>
           <div
             role="radiogroup"
@@ -170,10 +172,26 @@ export function LayerTools({ session }: { session: EditorSession }) {
         </div>
       </div>
 
-      {/* Always one line high, so the 3D view below does not jump as a carton is selected. */}
-      <div className="flex min-h-5 flex-wrap gap-x-4 gap-y-1 text-sm">
+      {/*
+        Always exactly one line high, whatever it holds, so the 3D view below never moves or
+        changes size as a carton is selected or a message comes and goes. What does not fit is
+        cut short on screen; the whole text is each part's title and is read out in full.
+      */}
+      <div className="flex h-5 gap-x-4 overflow-hidden whitespace-nowrap text-sm leading-5">
+        <p
+          role="status"
+          data-testid="layer-message"
+          title={message ?? undefined}
+          className="max-w-full shrink-0 truncate text-red-800 empty:hidden dark:text-harbor-coral-text"
+        >
+          {message}
+        </p>
         {none && (
-          <p id={reasonId} className="text-gray-700 dark:text-harbor-mist">
+          <p
+            id={reasonId}
+            title={NEEDS_SELECTION}
+            className="min-w-0 shrink truncate text-gray-700 dark:text-harbor-mist"
+          >
             {NEEDS_SELECTION}
           </p>
         )}
@@ -181,18 +199,12 @@ export function LayerTools({ session }: { session: EditorSession }) {
           <p
             id={noEffectId}
             data-testid="upper-layers-note"
-            className="text-gray-700 dark:text-harbor-mist"
+            title={ALTERNATE_NO_EFFECT}
+            className="min-w-0 shrink truncate text-gray-700 dark:text-harbor-mist"
           >
             {ALTERNATE_NO_EFFECT}
           </p>
         )}
-        <p
-          role="status"
-          data-testid="layer-message"
-          className="text-red-800 empty:hidden dark:text-harbor-coral-text"
-        >
-          {message}
-        </p>
       </div>
 
       {confirmReset && (

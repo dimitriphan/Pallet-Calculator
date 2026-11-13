@@ -35,9 +35,9 @@ const SIDE_DOWN_LABEL: Record<SideDown, string> = {
   end: 'On its end',
 };
 
-/** How every carton size is written here, as in the results table and the exports. */
+/** How every carton size is written in the editor and for a layout made by hand. */
 export const SIZE_AS_IT_STANDS =
-  'Sizes are written as the carton stands on the pallet: longer side × shorter side × height.';
+  'As stacked: length × width × height, with the carton standing as it does on the pallet. A calculated result that stands its cartons more than one way up lists its sizes longest first instead.';
 
 export const KEPT_UPRIGHT_REASON = 'Keep cartons upright is on, so the carton stays on its base.';
 
@@ -68,8 +68,8 @@ export function CartonStep({ session }: { session: EditorSession }) {
 
   const rows: [string, string][] = [
     ['Boxes per carton', fmtCount(figures.boxesPerCarton)],
-    ['Outer size', dimsText(figures.outer, unit)],
-    ['Inner size', dimsText(figures.inner, unit)],
+    ['Outer size, as stacked', dimsText(figures.outer, unit)],
+    ['Inner size, as stacked', dimsText(figures.inner, unit)],
     ...(figures.weight === null
       ? []
       : ([['Carton weight', weightText(figures.weight, unit)]] as [string, string][])),

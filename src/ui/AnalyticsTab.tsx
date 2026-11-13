@@ -6,6 +6,7 @@ import {
   type LayerOrientation,
 } from '../engine/analytics/analytics';
 import { describeWarning } from '../engine/analytics/stability';
+import { NOT_CHECKED } from '../export/exportData';
 import { DetailRows } from './DetailRows';
 import { StabilityBadge } from './StabilityBadge';
 import {
@@ -58,7 +59,17 @@ function LayerWeightLines({ perLayer, unit }: { perLayer: number[]; unit: Unit }
 }
 
 /** Every analytics figure of the selected layout. */
-export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
+export function AnalyticsTab({
+  analytics: a,
+  unchecked = false,
+}: {
+  analytics: Analytics;
+  /**
+   * The layout is an out-of-date manual one: shown as it was made, and not checked against
+   * inputs that no longer apply (no rating, no warnings, no outside-volume row).
+   */
+  unchecked?: boolean;
+}) {
   const unit = useUnit();
   const length = (v: number) => lengthText(v, unit);
   const dims = (d: Parameters<typeof dimsText>[0]) => dimsText(d, unit);
@@ -67,7 +78,7 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
   const pct = (v: number) => fmtPct(v);
   const p = a.pallet;
   const t = a.target;
-  const outside = outsideVolume(a);
+  const outside = unchecked ? null : outsideVolume(a);
   const target: [string, string][] =
     t.status === 'none'
       ? []
@@ -171,7 +182,14 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           />
         </>
       )}
-      {a.stability && <StabilityRows stability={a.stability} />}
+      {unchecked ? (
+        <>
+          <div className="root-divider" aria-hidden="true" />
+          <DetailRows title="Stability" rows={[['Rating', NOT_CHECKED]]} />
+        </>
+      ) : (
+        a.stability && <StabilityRows stability={a.stability} />
+      )}
     </div>
   );
 }

@@ -164,7 +164,7 @@ describe('the Carton step', () => {
     expect(design(app).counts.length).toBe(start.length + 1);
     expect(count('length')).toHaveValue(String(start.length + 1));
     expect(figure('Boxes per carton')).toBe(String(session(app)!.figures.boxesPerCarton));
-    expect(figure('Outer size')).toBe(dimsText(session(app)!.figures.outer, 'in'));
+    expect(figure('Outer size, as stacked')).toBe(dimsText(session(app)!.figures.outer, 'in'));
     await app.user.click(fewer('length'));
     expect(design(app).counts.length).toBe(start.length);
 
@@ -257,7 +257,7 @@ describe('the Carton step', () => {
     await app.user.click(flat);
     expect(design(app).facing).toBe('LWH');
     expect(flat).toHaveAttribute('aria-checked', 'true');
-    expect(figure('Outer size')).toBe(dimsText(session(app)!.figures.outer, 'in'));
+    expect(figure('Outer size, as stacked')).toBe(dimsText(session(app)!.figures.outer, 'in'));
 
     // Arrow keys move the choice, as in any radio group.
     await app.user.keyboard('{ArrowRight}');
@@ -287,15 +287,14 @@ describe('the Carton step', () => {
       pairText(Math.max(outer.length, outer.height), Math.min(outer.length, outer.height), 'in'),
     );
     expect(side).toHaveTextContent('9.00 in high');
-    // The size is written as the carton stands, as the results table writes it for the same
-    // layout (final review F12).
+    // The editor writes the size as stacked, and says so. The best result stands its cartons
+    // two ways up, so its table row lists the sizes longest first instead (re-review R2).
     const table = within(screen.getByRole('complementary', { name: 'Editor step' }));
     expect(table.getByText(SIZE_AS_IT_STANDS)).toBeInTheDocument();
+    expect(SIZE_AS_IT_STANDS).toMatch(/^As stacked: length × width × height/);
     expect(outer).toEqual({ length: 21, width: 9, height: 13 });
     const row = screen.getByRole('table', { name: 'Layout comparison' }).querySelector('tbody tr');
-    expect(row?.querySelectorAll('td')[1]).toHaveTextContent(
-      dimsText(outer, 'in').replace(' in', ''),
-    );
+    expect(row?.querySelectorAll('td')[1]).toHaveTextContent('21.00 × 13.00 × 9.00');
 
     await app.user.click(side);
     expect(design(app).sideDown).toBe('side');
@@ -349,13 +348,15 @@ describe('the Carton step', () => {
     await openOwn(app);
     const f = () => session(app)!.figures;
     expect(figure('Boxes per carton')).toBe('5');
-    expect(figure('Outer size')).toBe('21.00 × 9.00 × 13.00 in');
-    expect(figure('Inner size')).toBe('20.50 × 8.50 × 12.50 in');
+    expect(figure('Outer size, as stacked')).toBe('21.00 × 9.00 × 13.00 in');
+    expect(figure('Inner size, as stacked')).toBe('20.50 × 8.50 × 12.50 in');
     expect(figure('Boxes fill')).toBe('78.14%');
     expect(within(panel()).queryByText('Carton weight')).toBeNull();
     // Said politely after each change.
     const spoken = within(panel()).getByRole('status');
-    expect(spoken).toHaveTextContent('Boxes per carton: 5. Outer size: 21.00 × 9.00 × 13.00 in');
+    expect(spoken).toHaveTextContent(
+      'Boxes per carton: 5. Outer size, as stacked: 21.00 × 9.00 × 13.00 in',
+    );
 
     await setFields(app, { 'weights.productBox': '2' });
     expect(figure('Carton weight')).toBe(weightText(f().weight!, 'in'));
@@ -363,8 +364,8 @@ describe('the Carton step', () => {
 
     await app.user.selectOptions(screen.getByRole('combobox', { name: 'Units' }), 'cm');
     await flush();
-    expect(figure('Outer size')).toBe(dimsText(f().outer, 'cm'));
-    expect(figure('Outer size')).toMatch(/ cm$/);
+    expect(figure('Outer size, as stacked')).toBe(dimsText(f().outer, 'cm'));
+    expect(figure('Outer size, as stacked')).toMatch(/ cm$/);
     expect(figure('Carton weight')).toMatch(/ kg$/);
   });
 
@@ -611,8 +612,8 @@ describe('the editor shell', () => {
   it('follows the inputs while it is open', async () => {
     const app = await renderApp();
     await openOwn(app);
-    expect(figure('Outer size')).toBe('21.00 × 9.00 × 13.00 in');
+    expect(figure('Outer size, as stacked')).toBe('21.00 × 9.00 × 13.00 in');
     await setFields(app, { wallThickness: '0.5' });
-    expect(figure('Outer size')).toBe('21.50 × 9.50 × 13.50 in');
+    expect(figure('Outer size, as stacked')).toBe('21.50 × 9.50 × 13.50 in');
   });
 });

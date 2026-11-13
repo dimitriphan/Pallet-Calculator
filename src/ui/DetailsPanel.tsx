@@ -61,7 +61,8 @@ export function DetailsPanel() {
   let content;
   if (!selected)
     content = <p className="text-sm text-gray-600 dark:text-harbor-mist">No layout to show yet.</p>;
-  else if (active === 'Analytics') content = <AnalyticsTab analytics={selected.analytics} />;
+  else if (active === 'Analytics')
+    content = <AnalyticsTab analytics={selected.analytics} unchecked={outOfDate} />;
   else if (active === 'Explanation') content = <ExplanationTab ranked={selected.ranked} />;
   else
     content = (

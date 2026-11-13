@@ -14,7 +14,7 @@ import { manualMarker, type ManualMarker } from '../store/manualLayoutsStore';
 import { buildSheetContent, drawingBounds } from './buildSheet';
 import { renderBuildSheetPdf } from './buildSheetPdf';
 import { buildCsv } from './csv';
-import { buildExportPayload } from './exportData';
+import { buildExportPayload, NOT_CHECKED } from './exportData';
 import { captionLines } from './png';
 
 const NOW = new Date(2026, 10, 12, 9, 5);
@@ -263,6 +263,25 @@ describe('exports say what the screen says (final review F10, F11, F16)', () => 
     const json = JSON.parse(JSON.stringify(payload)).selectedLayout.manual;
     expect(json).toMatchObject({ status: 'outOfDate', flags: [] });
     expect(json.madeFor.product.length).toBe(12);
+
+    // Nor a rating, a warning or the outside-volume row (re-review R3).
+    expect(build.layout.stability).toBeDefined();
+    expect(payload.analytics.totals.volumeOutsideEnvelope).toBeUndefined();
+    expect(payload.analytics.stability).toBeNull();
+    expect(payload.selectedLayout.layout.stability).toBeUndefined();
+    expect(csv).toContain(`Stability rating,${NOT_CHECKED}`);
+    expect(csv).toContain('Stability warnings,');
+    expect(csv.some((l) => l.startsWith('Carton volume outside'))).toBe(false);
+    expect(sheet.palletAndLoad.filter((r) => r.label.startsWith('Stability'))).toEqual([
+      { label: 'Stability', value: NOT_CHECKED },
+    ]);
+    expect(sheet.palletAndLoad.some((r) => r.label.startsWith('Carton volume outside'))).toBe(
+      false,
+    );
+    expect(captionLines(payload).join('\n')).not.toMatch(/Stability|Poor|Fair|Good/);
+    // The current layout still has all of them.
+    expect(current.payload.analytics.stability).not.toBeNull();
+    expect(current.sheet.palletAndLoad.some((r) => r.label === 'Stability warning')).toBe(true);
   });
 });
 
@@ -309,7 +328,7 @@ describe('"Below your minimum" on the exports of a manual layout', () => {
     expect(payload.belowMinimum).toBe(false);
     expect(csv).toContain('Stability mark,');
     expect(csv.join('\n')).not.toContain('Below your minimum');
-    expect(stabilityRow(sheet)).toBe('Poor');
+    expect(stabilityRow(sheet)).toBe(NOT_CHECKED);
     const pdf = new TextDecoder('latin1').decode(
       await (await renderBuildSheetPdf(sheet, null)).arrayBuffer(),
     );

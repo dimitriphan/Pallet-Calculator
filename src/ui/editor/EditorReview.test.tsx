@@ -355,11 +355,23 @@ describe('the final review of round 5', () => {
       other().remove(third);
     });
     await app.user.click(inBar('Save'));
-    expect(screen.getByTestId('changed-elsewhere')).toHaveTextContent(
-      'This layout was deleted in another tab.',
-    );
+    const gone = screen.getByTestId('changed-elsewhere');
+    expect(gone).toHaveTextContent(/^This layout was deleted in another tab\. Save it again\?/);
+    expect(gone).not.toHaveTextContent('keeps both');
+    expect(within(gone).queryByRole('button', { name: 'Overwrite' })).toBeNull();
     expect(manual(app).specs.some((s) => s.id === third)).toBe(false);
     expect(editor(app).session).not.toBeNull();
+    // "Not now" leaves the editor open with the work in it; "Save again" saves it.
+    await app.user.click(within(gone).getByRole('button', { name: 'Not now' }));
+    expect(screen.queryByTestId('changed-elsewhere')).toBeNull();
+    expect(editor(app).session).not.toBeNull();
+    const before = manual(app).specs.length;
+    await app.user.click(inBar('Save'));
+    await app.user.click(
+      within(screen.getByTestId('changed-elsewhere')).getByRole('button', { name: 'Save again' }),
+    );
+    expect(editor(app).session).toBeNull();
+    expect(manual(app).specs).toHaveLength(before + 1);
   });
 
   it('the mixed-pattern note is on the Carton step too while it applies (F12)', async () => {

@@ -45,11 +45,9 @@ import {
 } from '../engine/manual/carton';
 import {
   addCarton,
-  canPlace,
   cartonBase,
   cartonRect,
   palletRect,
-  partlyOnFootprint,
   removeCarton,
   snap,
   snapTargets,
@@ -142,7 +140,8 @@ export interface CartonFigures {
   boxesPerCarton: number;
   /**
    * As the carton stands on the pallet (the chosen side down): the longer side of its base,
-   * the shorter side, its height. The way the results table and the exports write a carton.
+   * the shorter side, its height ("as stacked"). A manual layout is written the same way in
+   * the exports; a calculated result that mixes ways up lists its sizes longest first.
    */
   inner: Dims;
   outer: Dims;
@@ -881,14 +880,13 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         const current = s.no ? undefined : s.work[index];
         if (s.no || !current || !Number.isFinite(to.x) || !Number.isFinite(to.y)) return null;
         const position = snapped(s.work, s.inputs, s.base, index, to, s.meta.snapping);
-        // As the drop would be judged: no overlap, and not wholly off the footprint.
-        const at = { ...current, ...position };
-        const usable = usableFootprint(s.inputs);
+        // Judged by the very rule the drop is: no overlap, and not wholly off the footprint
+        // (a carton already wholly off may go anywhere that is not further off).
         return {
           position,
           valid:
-            canPlace(s.work, at, s.base, index) &&
-            (partlyOnFootprint(at, s.base, usable) || !partlyOnFootprint(current, s.base, usable)),
+            samePoint(position, current) ||
+            tryMoveCarton(s.work, index, position, s.base, usableFootprint(s.inputs)).ok,
         };
       },
       move(index, to, opts = {}) {

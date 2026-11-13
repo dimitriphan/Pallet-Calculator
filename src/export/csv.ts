@@ -24,7 +24,7 @@ import { LAYER_PATTERN_LABEL } from '../ui/layerPattern';
 import { BELOW_MINIMUM, MIN_STABILITY_LABEL } from '../ui/minStability';
 import { flagLines } from '../ui/manualFlags';
 import { outsideVolume } from '../ui/outsideVolume';
-import { isManualSelected, type ExportPayload } from './exportData';
+import { isManualSelected, NOT_CHECKED, type ExportPayload } from './exportData';
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
 
@@ -94,11 +94,12 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   const yesNo = (v: boolean) => (v ? 'Yes' : 'No');
   const ratio = (v: number) => ratioText(v);
   const share = (v: number) => shareText(v);
-  const st = a.stability;
-  const outside = outsideVolume(a);
   // A manual layout was not ranked or scored: it is named, with its flags, and nothing of a
   // ranking is written (no rank, no score rows, no comparison table).
   const manual = isManualSelected(sel) ? sel.manual : null;
+  // Not said of an out-of-date layout, whoever built the payload.
+  const st = manual?.status === 'outOfDate' ? null : a.stability;
+  const outside = manual?.status === 'outOfDate' ? null : outsideVolume(a);
   const manualRows: Row[] = manual
     ? [
         [
@@ -106,7 +107,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
           // As on screen: an out-of-date layout is shown as it was made and is not checked
           // against inputs that no longer apply.
           manual.status === 'outOfDate'
-            ? 'Not checked: this layout is out of date'
+            ? NOT_CHECKED
             : flagLines(manual.flags, unit)
                 .map((f) => f.text)
                 .join('; ') || 'None',
@@ -176,7 +177,10 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Cartons needed for target', a.target.cartonsNeeded ?? ''],
     ['Layers needed for target', a.target.layersNeeded ?? ''],
     // Stability: blank for a layout stored before layouts were rated.
-    ['Stability rating', st ? RATING[st.rating] : ''],
+    [
+      'Stability rating',
+      manual?.status === 'outOfDate' ? NOT_CHECKED : st ? RATING[st.rating] : '',
+    ],
     // The mark the screen puts beside the rating when nothing reached the minimum.
     ['Stability mark', p.belowMinimum ? BELOW_MINIMUM : ''],
     ['Stability warnings', st ? st.warnings.map(describeWarning).join(' ') : ''],

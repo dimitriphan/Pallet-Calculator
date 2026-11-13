@@ -19,6 +19,12 @@ export const STALE_NOTE = 'Out of date: inputs changed after this calculation';
 export const MANUAL_OUT_OF_DATE_NOTE =
   'Out of date: the product size, wall thickness or leeway changed after this layout was made';
 
+/**
+ * Said in place of the flags, the rating and the warnings of an out-of-date manual layout: it
+ * is shown as it was made and is not checked against inputs that no longer apply.
+ */
+export const NOT_CHECKED = 'Not checked: this layout is out of date';
+
 export interface ExportPayload {
   exportedAt: string;
   /** True when the inputs changed after this calculation (the result is shown out of date). */
@@ -91,7 +97,15 @@ export function buildExportPayload(
   const selectedLayout = result.layouts[selectedIndex];
   if (!selectedLayout) throw new Error(`No layout at index ${selectedIndex}`);
   if (manual) {
-    const { layout } = selectedLayout;
+    const outOfDate = manual.status === 'outOfDate';
+    // An out-of-date layout carries no rating, no warnings and no outside-volume figure: none
+    // of them was worked out for inputs that still apply.
+    const { stability, ...unrated } = selectedLayout.layout;
+    const layout: Layout = outOfDate
+      ? unrated
+      : { ...unrated, ...(stability ? { stability } : {}) };
+    const analytics = computeAnalytics(layout, inputs);
+    if (outOfDate) delete analytics.totals.volumeOutsideEnvelope;
     return {
       exportedAt: now.toISOString(),
       stale,
@@ -109,7 +123,7 @@ export function buildExportPayload(
         manual.status !== 'outOfDate' &&
         isBelowMinimum(layout.stability?.rating, inputs.minStability),
       selectedLayout: { rank: null, score: null, explanation: null, layout, manual },
-      analytics: computeAnalytics(layout, inputs),
+      analytics,
       comparison: [],
     };
   }

@@ -96,7 +96,7 @@ The editor has two steps, **Carton** and **Pallet layer**, shown as tabs in the 
 - **Carton on the pallet**: whether the carton stands on its base, its side or its end. With "Keep cartons upright" on, it stays on its base.
 - **Use a calculated carton**: starts again from one of the cartons the tool found.
 
-The figures beside it (boxes per carton, outer and inner size, carton weight when weights are set, and how well the boxes fill the carton) update as you change things. A carton's size is written as it stands on the pallet: longer side × shorter side × height. The comparison table and the exports write it the same way. A carton over your maximum carton size is allowed and flagged. A carton that cannot fit on the pallet, or is taller than the stacking height, cannot go on to the next step.
+The figures beside it (boxes per carton, outer and inner size, carton weight when weights are set, and how well the boxes fill the carton) update as you change things. The editor writes a carton's size "as stacked": length × width × height as the carton stands on the pallet. A calculated layout that stands its cartons more than one way up lists the three sizes longest first in the comparison table instead, so the same carton can read 21 × 13 × 9 there and 21 × 9 × 13 in the editor. A carton over your maximum carton size is allowed and flagged. A carton that cannot fit on the pallet, or is taller than the stacking height, cannot go on to the next step.
 
 **The Pallet layer step** shows the pallet, a blue outline of the allowed footprint (the pallet plus the overhang you allow) and one layer of cartons. If you changed the carton, the layer starts as the tool's best layer for it.
 
@@ -121,7 +121,7 @@ Cartons can never overlap. A carton dropped on another goes back to where it was
 
 **Save** adds the layout to "Your layouts" under its name ("Manual 1", "Manual 2" and so on, unless you type one). No two layouts have the same name: a name already in use gets " (2)", " (3)" and so on added, and a notice says so.
 
-If you try to leave or reload the page with unsaved changes in the editor, the browser asks first. If the layout you are editing was changed or deleted in another tab, Save tells you ("This layout was changed in another tab.") and offers **Save as new** or **Overwrite**.
+If you try to leave or reload the page with unsaved changes in the editor, the browser asks first. If the layout you are editing was changed in another tab, Save tells you ("This layout was changed in another tab.") and offers **Save as new** or **Overwrite**. If it was deleted there, Save asks whether to save it again.
 
 ### Your layouts
 
@@ -146,7 +146,7 @@ With one of your layouts selected, every export describes that layout:
 - **CSV**: names the layout, lists its flags and the upper-layers choice, and has no score rows and no comparison table.
 - **JSON**: the layout's rank, score and explanation are empty (`null`); a `manual` entry holds its name, flags, status and upper-layers choice. The comparison list is empty.
 
-An out-of-date layout is exported as it was made and marked out of date, with what it was made for and without flags.
+An out-of-date layout is exported as it was made and marked out of date, with what it was made for. Its flags, rating and stability warnings are not given ("Not checked: this layout is out of date").
 
 When cartons hang over the allowed footprint, "Volume used" counts only the part inside it. The part outside is given in its own row, "Carton volume outside the allowed footprint", on the Analytics tab, in the CSV and on the build sheet.
 

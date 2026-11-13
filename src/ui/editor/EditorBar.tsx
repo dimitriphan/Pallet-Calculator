@@ -29,7 +29,7 @@ export const USING_LAST_VALID =
 /** Said when Save finds the saved layout changed, or gone, since the editor opened on it. */
 export const CHANGED_ELSEWHERE = {
   changed: 'This layout was changed in another tab.',
-  deleted: 'This layout was deleted in another tab.',
+  deleted: 'This layout was deleted in another tab. Save it again?',
 } as const;
 export const CHANGED_ELSEWHERE_CHOICE =
   'Save as new keeps both. Overwrite saves your version in its place.';
@@ -310,20 +310,45 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
           className={`mx-3 mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 ${NOTE_BOX}`}
         >
           <p className="min-w-[12rem] flex-1">
-            {CHANGED_ELSEWHERE[elsewhere]} {CHANGED_ELSEWHERE_CHOICE}
+            {elsewhere === 'changed'
+              ? `${CHANGED_ELSEWHERE.changed} ${CHANGED_ELSEWHERE_CHOICE}`
+              : CHANGED_ELSEWHERE.deleted}
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            <button type="button" onClick={() => run('saveAsNew')} className={EDITOR_BUTTON}>
-              Save as new
-            </button>
-            <button
-              type="button"
-              onClick={() => run('save', { overwrite: true })}
-              className={EDITOR_BUTTON}
-            >
-              Overwrite
-            </button>
-          </div>
+          {elsewhere === 'changed' ? (
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => run('saveAsNew')} className={EDITOR_BUTTON}>
+                Save as new
+              </button>
+              <button
+                type="button"
+                onClick={() => run('save', { overwrite: true })}
+                className={EDITOR_BUTTON}
+              >
+                Overwrite
+              </button>
+            </div>
+          ) : (
+            // Nothing is left to keep or to overwrite: saved again, or not.
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => run('save', { overwrite: true })}
+                className={EDITOR_BUTTON}
+              >
+                Save again
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  agreed.current = {};
+                  setElsewhere(null);
+                }}
+                className={EDITOR_BUTTON}
+              >
+                Not now
+              </button>
+            </div>
+          )}
         </div>
       )}
       {(session.stepNotice || session.usingLastValid) && (

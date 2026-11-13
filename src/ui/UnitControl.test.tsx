@@ -63,12 +63,12 @@ describe('UnitControl', () => {
     expect(headers).toContain('Carton (cm)');
     expect(headers).toContain('Remaining volume (cm³)');
     const first = within(table).getAllByRole('row')[1]!;
-    expect(within(first).getAllByRole('cell')[1]?.textContent).toBe('53.3 × 22.9 × 33.0');
+    expect(within(first).getAllByRole('cell')[1]?.textContent).toBe('53.3 × 33.0 × 22.9');
 
     const panel = screen.getByRole('tabpanel');
     const value = (label: string) =>
       within(panel).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
-    expect(value('Outer dimensions')).toBe('53.3 × 22.9 × 33.0 cm');
+    expect(value('Outer dimensions')).toBe('53.3 × 33.0 × 22.9 cm');
     expect(value('Usable stacking height')).toBe('170.2 cm');
     expect(value('Total load height (with pallet)')).toBe('182.9 cm');
     expect(value('Volume available')).toMatch(/^\d+\.\d cm³$/);
@@ -79,7 +79,7 @@ describe('UnitControl', () => {
     const { user } = await renderApp(undefined, { viewMode: 'basic' });
     await choose(user, 'mm');
     const card = within(screen.getByRole('region', { name: 'What to build' }));
-    expect(card.getByText('Outer size').nextElementSibling?.textContent).toBe('533 × 229 × 330 mm');
+    expect(card.getByText('Outer size').nextElementSibling?.textContent).toBe('533 × 330 × 229 mm');
     expect(card.getByText('1194 × 1067 × 1829 mm (including pallet)')).toBeInTheDocument();
     expect(
       screen.getByText('Using 13 mm leeway, 6 mm carton walls, no overhang, fully rotatable.'),

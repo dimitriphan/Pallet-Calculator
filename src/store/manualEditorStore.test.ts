@@ -572,6 +572,16 @@ describe('layer step', () => {
     expect(t.e().nudge(-1, 0)).toEqual({ ok: false, reason: 'offPallet' });
     expect(t.e().nudge(1, 0)).toEqual({ ok: true, position: { x: -79, y: 4 } });
     expect(t.e().previewMove(0, { x: -70, y: 4 })?.valid).toBe(true);
+    // The preview is judged as the drop is: further off is shown as not allowed (R4).
+    for (const to of [
+      { x: -90, y: 4 },
+      { x: -80, y: 500 },
+      { x: -79, y: 4 },
+      { x: 0, y: 4 },
+    ])
+      expect(t.e().previewMove(0, to)?.valid, JSON.stringify(to)).toBe(
+        t.e().move(0, to, { snap: false }).ok,
+      );
     expect(t.e().move(0, { x: 0, y: 4 }, { snap: false })).toMatchObject({ ok: true });
   });
 

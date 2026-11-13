@@ -368,6 +368,26 @@ describe('a selected manual layout', () => {
     expect(within(row('Wide')).getByTestId('made-for')).toHaveTextContent(
       'Made for a product of 12.00 × 8.00 × 4.00 in',
     );
+
+    // Analytics: no outside-volume row, and no rating or warnings (re-review R3).
+    await app.user.click(screen.getByRole('tab', { name: 'Analytics' }));
+    const analytics = screen.getByRole('tabpanel');
+    expect(analytics).not.toHaveTextContent('Carton volume outside the allowed footprint');
+    expect(analytics).toHaveTextContent('RatingNot checked: this layout is out of date');
+    expect(analytics).not.toHaveTextContent(/Warnings|Stack height ÷/);
+
+    // The What to build card: no rating, no warnings, no comparison with a calculated layout.
+    act(() => app.stores.prefs.getState().setViewMode('basic'));
+    const card = screen.getByRole('heading', { name: 'What to build' }).closest('section')!;
+    expect(card).toHaveTextContent('Out of date');
+    expect(card).toHaveTextContent('Made for a product of 12.00 × 8.00 × 4.00 in');
+    expect(card).not.toHaveTextContent(/Stability|Calculated layout 1 fits|rests only|tall for/);
+    expect(within(card).queryByRole('list', { name: 'Layout flags' })).toBeNull();
+    // Current again: all of it is back.
+    await setField(app, 'product.height', '4');
+    const again = screen.getByRole('heading', { name: 'What to build' }).closest('section')!;
+    expect(again).toHaveTextContent(/Stability/);
+    expect(again).toHaveTextContent('Calculated layout 1 fits 260 boxes.');
   });
 
   it('says "no effect" beside Alternate layers turned when no layer is turned (F10)', async () => {
@@ -387,10 +407,12 @@ describe('a selected manual layout', () => {
     expect(upper).toHaveAccessibleDescription(
       'Alternate layers turned: no effect: the layer is the same after a half turn.',
     );
+    expect(screen.getByTestId('upper-layers-short')).toHaveTextContent('(no effect here)');
     act(() => {
       editor(app).remove(0);
     });
     expect(screen.queryByTestId('upper-layers-note')).toBeNull();
+    expect(screen.queryByTestId('upper-layers-short')).toBeNull();
     expect(upper).not.toHaveAccessibleDescription();
   });
 
