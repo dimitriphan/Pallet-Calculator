@@ -21,6 +21,12 @@ export interface OrthoFit {
 
 /** Viewing direction for the default perspective: from the front-right, above the load. */
 export const VIEW_DIR: Vec3 = [0.9, 0.75, 1.3];
+/** The editor's Pallet layer step looks down on the layer at an angle, from the front. */
+export const LAYER_VIEW_DIR: Vec3 = [0.35, 1.25, 1];
+/** Its "Top view": straight down, tipped by a hair so the front edge stays at the bottom. */
+export const TOP_VIEW_DIR: Vec3 = [0, 1, 0.001];
+/** The vertical field of view of the editor's camera, in degrees. */
+export const EDITOR_FOV = 40;
 const MARGIN = 1.1;
 
 function centre(b: Bounds): Vec3 {

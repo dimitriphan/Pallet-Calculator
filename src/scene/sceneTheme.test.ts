@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { LIGHT_BACKGROUND, sceneTheme, type SceneTheme } from './sceneTheme';
 
+const FIXED = {
+  unusedSpace: '#EF4444',
+  unusedSpaceOpacity: 0.25,
+  cartonError: '#EF4444',
+  carton: '#d9a066',
+  cartonTurned: '#b9783a',
+};
+
 describe('sceneTheme', () => {
   it('keeps the light scene colours of today', () => {
     expect(LIGHT_BACKGROUND).toBe('#f3f4f6');
@@ -11,7 +19,7 @@ describe('sceneTheme', () => {
       chipBg: 'rgba(255, 255, 255, 0.9)',
       chipText: '#1f2937',
       measureLine: '#111827',
-      fixed: { unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 },
+      fixed: FIXED,
     });
   });
 
@@ -23,7 +31,7 @@ describe('sceneTheme', () => {
       chipBg: '#1E3347',
       chipText: '#E9F1EE',
       measureLine: '#E9F1EE',
-      fixed: { unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 },
+      fixed: FIXED,
     });
   });
 
@@ -36,7 +44,10 @@ describe('sceneTheme', () => {
 
   it('keeps the unused-space red at 25% in both themes', () => {
     for (const t of ['light', 'harbor'] as const) {
-      expect(sceneTheme(t).fixed).toEqual({ unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 });
+      expect(sceneTheme(t).fixed).toMatchObject({
+        unusedSpace: '#EF4444',
+        unusedSpaceOpacity: 0.25,
+      });
     }
   });
 });

@@ -22,6 +22,7 @@ import {
   specFromLayout,
   type ManualFlag,
   type ManualLayoutSpec,
+  mixesLayerPatterns,
 } from './build';
 import { designCarton, type CartonDesign } from './carton';
 import { cartonBase, type ManualCarton } from './layer';
@@ -744,5 +745,41 @@ describe('a spec the editor could not have made', () => {
     expect(isValidSpec(spec({ cartons: [] }))).toBe(true);
     expect(isValidSpec(spec({ cartons: [at(-30.5, 1e6, true)] }))).toBe(true);
     expect(flag(buildManualLayout(spec(), BASE).flags, 'invalid')).toBeUndefined();
+  });
+});
+
+describe('mixesLayerPatterns', () => {
+  it('is true exactly for the calculated layouts whose copy stacks the bottom layer only', () => {
+    const { layouts } = optimize(DEFAULT_INPUTS);
+    const mixed = layouts.filter((r) => mixesLayerPatterns(r.layout));
+    expect(mixed.length).toBeGreaterThan(0);
+    expect(mixed.length).toBeLessThan(layouts.length);
+    for (const { layout } of layouts)
+      expect(mixesLayerPatterns(layout), layout.id).toBe(!onePattern(layout));
+    // The default best result: 260 boxes calculated, 250 as a stack of its bottom layer.
+    const best = layouts[0]!.layout;
+    expect(mixesLayerPatterns(best)).toBe(true);
+    const copy = buildManualLayout(specFromLayout(best, DEFAULT_INPUTS, 'c', 'c')!, DEFAULT_INPUTS);
+    expect([best.totalProducts, copy.layout.totalProducts]).toEqual([260, 250]);
+  });
+
+  it('is false for a stack of one pattern, turned layers included, and for no layers', () => {
+    const design: CartonDesign = {
+      counts: { length: 2, width: 2, height: 1 },
+      facing: 'LWH',
+      sideDown: 'base',
+    };
+    const spec = {
+      id: 'x',
+      name: 'x',
+      design,
+      cartons: [{ x: 0, y: 0, rotated: false }],
+      upperLayers: 'alternate' as const,
+      madeFor: madeForOf(design, DEFAULT_INPUTS),
+    };
+    const { layout } = buildManualLayout(spec, DEFAULT_INPUTS);
+    expect(layout.layers.some((l) => l.turned)).toBe(true);
+    expect(mixesLayerPatterns(layout)).toBe(false);
+    expect(mixesLayerPatterns({ ...layout, layers: [] })).toBe(false);
   });
 });

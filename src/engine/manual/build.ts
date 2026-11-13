@@ -367,3 +367,20 @@ export function specFromLayout(
     madeFor: madeForOf(design, inputs),
   };
 }
+
+/**
+ * Whether a calculated layout mixes layer patterns: some layer is not its bottom layer again
+ * (as it is, or turned). `specFromLayout` copies such a layout as a stack of its bottom layer
+ * only, which can hold a different number of boxes.
+ */
+export function mixesLayerPatterns(layout: Layout): boolean {
+  const bottom = layout.layers[0];
+  if (!bottom) return false;
+  const blocks = JSON.stringify(bottom.blocks);
+  return layout.layers.some(
+    (layer) =>
+      layer.vertical !== bottom.vertical ||
+      layer.cartonCount !== bottom.cartonCount ||
+      (!layer.turned && JSON.stringify(layer.blocks) !== blocks),
+  );
+}

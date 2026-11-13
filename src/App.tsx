@@ -64,7 +64,11 @@ function Workspace() {
             data-testid="scene-slot"
             className={`relative flex flex-1 flex-col overflow-hidden border bg-white dark:bg-harbor-panel ${
               editing
-                ? 'min-h-[520px] border-blue-700 dark:border-harbor-teal'
+                ? `${
+                    // The layer step has a row of tools more (which wraps in a narrow column), and
+                    // its view is worked in.
+                    session?.step === 'layer' ? 'min-h-[840px] xl:min-h-[680px]' : 'min-h-[520px]'
+                  } border-blue-700 dark:border-harbor-teal`
                 : 'min-h-[320px] border-gray-300 dark:border-harbor-foam/40'
             }`}
           >

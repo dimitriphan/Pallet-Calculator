@@ -138,6 +138,8 @@ export interface EditorSession {
   selected: number | null;
   /** The working layer was changed by hand since it was loaded (or is a saved manual layer). */
   layerEdited: boolean;
+  /** The working layer differs from the one Reset goes back to. */
+  layerChanged: boolean;
   /**
    * The carton's base is no longer the one the working layer was laid out for. Going to the
    * layer step (or saving) replaces the layer with the tool's best layer for the carton.
@@ -371,6 +373,7 @@ export function createManualEditorStore(deps: ManualEditorDeps): StoreApi<Manual
         upperLayers: core.upperLayers,
         selected: core.selected,
         layerEdited: core.layerEdited,
+        layerChanged: JSON.stringify(core.cartons) !== JSON.stringify(core.start),
         layerPending: pending(core, inputs),
         canUndo: past.length > 0,
         canRedo: future.length > 0,

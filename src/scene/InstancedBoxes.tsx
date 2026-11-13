@@ -18,9 +18,13 @@ interface Props {
   wireframe: boolean;
   /** Called with the clicked instance; omit to make the boxes ignore the pointer. */
   onPick?: (instanceId: number) => void;
+  /** Called when a pointer goes down on an instance (the start of a drag in the editor). */
+  onPress?: (instanceId: number, e: ThreeEvent<PointerEvent>) => void;
+  /** Called as the pointer comes over the boxes and leaves them. */
+  onHover?: (over: boolean) => void;
 }
 
-function Boxes({ boxes, inputs, colorOf, opacity, wireframe, onPick }: Props) {
+function Boxes({ boxes, inputs, colorOf, opacity, wireframe, onPick, onPress, onHover }: Props) {
   const ref = useRef<InstancedMesh>(null);
   const invalidate = useThree((s) => s.invalidate);
 
@@ -43,7 +47,20 @@ function Boxes({ boxes, inputs, colorOf, opacity, wireframe, onPick }: Props) {
 
   const translucent = opacity < 1;
   return (
-    <instancedMesh ref={ref} args={[undefined, undefined, boxes.length]} onClick={onClick}>
+    <instancedMesh
+      ref={ref}
+      args={[undefined, undefined, boxes.length]}
+      onClick={onClick}
+      onPointerDown={
+        onPress
+          ? (e) => {
+              if (e.instanceId !== undefined) onPress(e.instanceId, e);
+            }
+          : undefined
+      }
+      onPointerOver={onHover ? () => onHover(true) : undefined}
+      onPointerOut={onHover ? () => onHover(false) : undefined}
+    >
       <boxGeometry />
       <meshStandardMaterial
         // Recreated when switching translucency so three compiles the right program.

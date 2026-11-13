@@ -3,12 +3,19 @@
  * the one layer of the Pallet layer step, as ordinary layouts, so the same carton and product
  * drawing code shows them. No React, no three.js.
  */
-import { PALLET_HEIGHT } from '../domain/constants';
+import { EPS, PALLET_HEIGHT } from '../domain/constants';
 import type { CartonCandidate, Inputs, Layout } from '../domain/types';
 import { verticalAxis, type CartonDesign } from '../engine/manual/carton';
-import { cartonBase, manualPattern } from '../engine/manual/layer';
+import {
+  cartonBase,
+  cartonRect,
+  manualPattern,
+  type CartonBase,
+  type ManualCarton,
+  type Point,
+} from '../engine/manual/layer';
 import { usableFootprint } from '../engine/packing/geometry';
-import { cartonPlacements } from '../engine/packing/positions';
+import { cartonPlacements, type PlacedBox } from '../engine/packing/positions';
 import { palletBounds, toSceneBounds, type SceneBounds, type Vec3 } from './transforms';
 
 /**
@@ -101,4 +108,96 @@ export function layerStepBounds(layout: Layout, inputs: Inputs): SceneBounds {
   const cartons = cartonsBounds(layout, inputs);
   if (cartons) grow(cartons);
   return { min, max };
+}
+
+/** How far a carton being dragged is lifted, so it is drawn over a carton it overlaps. */
+export const DRAG_LIFT = 0.3;
+
+/**
+ * The cartons of the working layer as boxes standing on the pallet top, in the order given.
+ * `lifted` is the index of a carton being dragged, drawn a little above the others.
+ */
+export function layerBoxes(
+  cartons: readonly ManualCarton[],
+  base: CartonBase,
+  height: number,
+  lifted: number | null = null,
+): PlacedBox[] {
+  return cartons.map((c, k) => {
+    const r = cartonRect(c, base);
+    return { x: r.x, y: r.y, z: k === lifted ? DRAG_LIFT : 0, dx: r.w, dy: r.h, dz: height };
+  });
+}
+
+/** For each carton, whether it lies outside the usable footprint (as the overhang flag counts). */
+export function overhanging(
+  cartons: readonly ManualCarton[],
+  base: CartonBase,
+  usable: Point,
+): boolean[] {
+  return cartons.map((c) => {
+    const r = cartonRect(c, base);
+    return Math.max(-r.x, -r.y, r.x + r.w - usable.x, r.y + r.h - usable.y) > EPS;
+  });
+}
+
+/** How far a carton's seam line stops short of its ends, as a share of its length. */
+const SEAM_INSET = 0.12;
+/** How far above the carton top the seam is drawn. */
+const SEAM_LIFT = 0.03;
+
+/**
+ * One line on top of every carton, along the longer side of its base, like the taped seam of
+ * a real carton: it shows at a glance which way each carton lies, so a turned one stands out.
+ * Line-segment vertices (x, y, z triples) in the scene frame.
+ */
+export function seamPositions(
+  boxes: readonly PlacedBox[],
+  cartons: readonly ManualCarton[],
+  base: CartonBase,
+  usable: Point,
+): Float32Array {
+  const out = new Float32Array(boxes.length * 6);
+  const longAlongA = base.a >= base.b;
+  boxes.forEach((b, k) => {
+    const alongX = longAlongA !== (cartons[k]?.rotated ?? false);
+    const top = b.z + b.dz + PALLET_HEIGHT + SEAM_LIFT;
+    const x0 = b.x - usable.x / 2;
+    const z0 = b.y - usable.y / 2;
+    const from: Vec3 = alongX
+      ? [x0 + b.dx * SEAM_INSET, top, z0 + b.dy / 2]
+      : [x0 + b.dx / 2, top, z0 + b.dy * SEAM_INSET];
+    const to: Vec3 = alongX
+      ? [x0 + b.dx * (1 - SEAM_INSET), top, z0 + b.dy / 2]
+      : [x0 + b.dx / 2, top, z0 + b.dy * (1 - SEAM_INSET)];
+    out.set([...from, ...to], k * 6);
+  });
+  return out;
+}
+
+/** The point of the usable footprint's frame under a point of the scene. */
+export function sceneToFootprint(sceneX: number, sceneZ: number, usable: Point): Point {
+  return { x: sceneX + usable.x / 2, y: sceneZ + usable.y / 2 };
+}
+
+/** A carton's distances from the left and front edges of the usable footprint. */
+export function fromLeftFront(
+  c: ManualCarton,
+  base: CartonBase,
+  usable: Point,
+): { left: number; front: number } {
+  const r = cartonRect(c, base);
+  // The front is the edge at the greatest y (see layer.ts).
+  return { left: r.x, front: usable.y - (r.y + r.h) };
+}
+
+/** The minimum corner of a carton that stands `left` and `front` from those edges. */
+export function atLeftFront(
+  c: ManualCarton,
+  base: CartonBase,
+  usable: Point,
+  at: { left: number; front: number },
+): Point {
+  const r = cartonRect(c, base);
+  return { x: at.left, y: usable.y - r.h - at.front };
 }

@@ -614,14 +614,29 @@ describe('layer step', () => {
     t.openLayer();
     expect(t.e().reset()).toEqual({ ok: true });
     expect(t.s().canUndo).toBe(false);
+    // Whether there is anything to reset: the layer differs from the one it started as.
+    expect(t.s().layerChanged).toBe(false);
+    t.e().select(1);
+    expect(t.s().layerChanged).toBe(false);
     t.e().remove(0);
+    expect(t.s().layerChanged).toBe(true);
     t.e().select(0);
     t.e().nudge(0, -1);
     const edited = t.s().cartons;
     expect(t.e().reset()).toEqual({ ok: true });
-    expect(t.s()).toMatchObject({ cartons: FOUR, selected: null, dirty: false });
+    expect(t.s()).toMatchObject({
+      cartons: FOUR,
+      selected: null,
+      dirty: false,
+      layerChanged: false,
+    });
     t.e().undo();
     expect(t.s().cartons).toBe(edited);
+    expect(t.s().layerChanged).toBe(true);
+    // Moved away and back by hand: nothing to reset again.
+    t.e().undo();
+    t.e().undo();
+    expect(t.s().layerChanged).toBe(false);
   });
 
   it('the bar figures follow the layer: cartons, layers, boxes, weight, rating and flags', async () => {

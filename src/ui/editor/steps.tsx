@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import type { EditorSession, EditorStep } from '../../store/manualEditorStore';
 import { CartonStep } from './CartonStep';
 import { LayerStep } from './LayerStep';
+import { LayerTools } from './LayerTools';
 
 export interface StepParts {
   /** The step's tab. */
@@ -21,7 +22,7 @@ export interface StepParts {
  */
 export const STEPS: Record<EditorStep, StepParts> = {
   carton: { label: 'Carton', Panel: CartonStep, Tools: null },
-  layer: { label: 'Pallet layer', Panel: LayerStep, Tools: null },
+  layer: { label: 'Pallet layer', Panel: LayerStep, Tools: LayerTools },
 };
 
 export const STEP_ORDER: readonly EditorStep[] = ['carton', 'layer'];
