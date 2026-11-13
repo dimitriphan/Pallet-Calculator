@@ -37,18 +37,19 @@ async function exportPng(page: Page): Promise<Buffer> {
 }
 
 /**
- * The top and side views of an exported PNG (its right-hand panels, drawn at a fixed size
- * whatever the size of the 3D view on screen), as a hash of their pixels.
+ * The three views of an exported PNG (the 3D panel and the top and side panels), as a hash of
+ * their pixels.
  */
-async function orthoPanels(page: Page, png: Buffer): Promise<string> {
+async function viewPanels(page: Page, png: Buffer): Promise<string> {
   return page.evaluate(async (base64) => {
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
     const image = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
     if (image.width !== 2400 || image.height !== 1500) throw new Error('Not the export size');
-    const canvas = new OffscreenCanvas(900, 1200);
+    // Everything above the caption strip (which holds the time of the export).
+    const canvas = new OffscreenCanvas(2400, 1200);
     const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(image, -1500, 0);
-    const digest = await crypto.subtle.digest('SHA-256', ctx.getImageData(0, 0, 900, 1200).data);
+    ctx.drawImage(image, 0, 0);
+    const digest = await crypto.subtle.digest('SHA-256', ctx.getImageData(0, 0, 2400, 1200).data);
     return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
   }, png.toString('base64'));
 }
@@ -62,7 +63,6 @@ test('design my own carton: counts, facing, flag, save, reload', async ({ page }
   await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
   await expect(page.getByRole('table', { name: 'Layout comparison' })).toBeVisible();
   await expect(page.getByTestId('layout-scene').locator('canvas')).toBeVisible();
-  const before = await exportPng(page);
 
   await page.getByRole('button', { name: 'Design my own carton' }).click();
   const bar = page.getByRole('region', { name: 'Editing by hand' });
@@ -81,9 +81,15 @@ test('design my own carton: counts, facing, flag, save, reload', async ({ page }
   await expect(figure('Outer size')).toHaveText('21.00 × 9.00 × 13.00 in');
   const first = await settledPicture(canvas);
 
-  // An export while editing still shows the selected layout: its top and side views are,
-  // pixel for pixel, what they were before the editor opened.
-  expect(await orthoPanels(page, await exportPng(page))).toBe(await orthoPanels(page, before));
+  // Nothing is exported while editing (the hidden view of the selected layout is another
+  // size then, so its 3D picture would differ): every item is off and says why.
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  const menu = page.getByRole('menu', { name: 'Export' });
+  await expect(menu).toContainText('Save or cancel the layout you are editing first.');
+  for (const item of await menu.getByRole('menuitem').all()) await expect(item).toBeDisabled();
+  await page.keyboard.press('Escape');
+  // The view underneath is hidden from assistive technology meanwhile.
+  await expect(page.getByTestId('layout-scene')).toHaveAttribute('aria-hidden', 'true');
 
   // One more box along the length: the figures follow, the carton is drawn again, and at
   // 25 in it is over the 24 in maximum, which is said at once.
@@ -127,9 +133,14 @@ test('design my own carton: counts, facing, flag, save, reload', async ({ page }
   expect(await stored(page)).toBeNull();
   await bar.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(bar).toHaveCount(0);
-  await expect(page.getByText('Saved “Flat sixes” to your layouts.')).toBeVisible();
+  await expect(
+    page
+      .getByRole('region', { name: 'Your layouts' })
+      .getByRole('button', { name: 'Show your layout Flat sixes' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   // The normal 3D view and its toolbar are back.
   await expect(page.getByLabel('Envelope')).toBeVisible();
+  await expect(page.getByTestId('layout-scene')).not.toHaveAttribute('aria-hidden');
 
   const expectStored = async () => {
     const { items: saved } = (await stored(page)) as {
@@ -156,6 +167,9 @@ test('edit a calculated layout by hand: the pallet layer step, cancel', async ({
   const problems = watchProblems(page);
   await page.goto('/');
   await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  await expect(page.getByTestId('layout-scene').locator('canvas')).toBeVisible();
+  await settledPicture(page.getByTestId('layout-scene').locator('canvas'));
+  const before = await exportPng(page);
   await page.getByRole('button', { name: 'Edit layout 2 by hand' }).click();
   const bar = page.getByRole('region', { name: 'Editing by hand' });
   await expect(bar.getByRole('tab', { name: /Pallet layer/ })).toHaveAttribute(
@@ -190,8 +204,14 @@ test('edit a calculated layout by hand: the pallet layer step, cancel', async ({
   await bar.getByRole('button', { name: 'Cancel' }).click();
   await dialog.getByRole('button', { name: 'Discard changes' }).click();
   await expect(bar).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Design my own carton' })).toBeFocused();
+  // Back on the control that opened the editor.
+  await expect(page.getByRole('button', { name: 'Edit layout 2 by hand' })).toBeFocused();
   expect(await stored(page)).toBeNull();
+
+  // With the editor closed again an export is, pixel for pixel, what it was before the editor
+  // opened: the 3D panel as well as the top and side views.
+  await settledPicture(page.getByTestId('layout-scene').locator('canvas'));
+  expect(await viewPanels(page, await exportPng(page))).toBe(await viewPanels(page, before));
   expect(problems).toEqual([]);
 });
 
@@ -546,19 +566,22 @@ test('the pallet layer step: tools, keys, upper layers, save', async ({ page }) 
   await page.keyboard.press('[');
   await page.keyboard.press('[');
   await expect(item(page, 8)).toHaveAttribute('aria-pressed', 'true');
+  // Carton 9 lies along the front edge: turned, it would only fit past that edge, and a turn
+  // never makes an overhang.
   await page.keyboard.press('r');
-  await expect(item(page, 8)).toHaveAttribute('data-turned', 'false');
+  await expect(message).toHaveText('No room to turn this carton here. Move it first.');
+  await expect(item(page, 8)).toHaveAttribute('data-turned', 'true');
   await page.keyboard.press('Delete');
   await expect(cartonButtons).toHaveCount(8);
   await page.keyboard.press('Control+z');
   await expect(cartonButtons).toHaveCount(9);
-  await page.keyboard.press('Control+z');
-  await expect(item(page, 8)).toHaveAttribute('data-turned', 'true');
   await page.keyboard.press('Control+Shift+z');
-  await expect(item(page, 8)).toHaveAttribute('data-turned', 'false');
+  await expect(cartonButtons).toHaveCount(8);
+  // Undo after a redo, then redo by Ctrl+Y, then undo once more.
+  await page.keyboard.press('Control+z');
+  await expect(cartonButtons).toHaveCount(9);
   await page.keyboard.press('Control+y');
   await expect(cartonButtons).toHaveCount(8);
-  await page.keyboard.press('Control+z');
   await page.keyboard.press('Control+z');
   await expect(item(page, 8)).toHaveAttribute('data-turned', 'true');
   // Typing in a field is typing: the layer keys are not taken from it.
@@ -605,7 +628,11 @@ test('the pallet layer step: tools, keys, upper layers, save', async ({ page }) 
   const final = await readLayer(page);
   await tool('Save').click();
   await expect(bar).toHaveCount(0);
-  await expect(page.getByText('Saved “Hand made” to your layouts.')).toBeVisible();
+  await expect(
+    page
+      .getByRole('region', { name: 'Your layouts' })
+      .getByRole('button', { name: 'Show your layout Hand made' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   const { items } = (await stored(page)) as {
     items: {
       name: string;

@@ -204,7 +204,8 @@ function drawHeader(doc: jsPDF, sheet: BuildSheet, mascot?: SheetMascot): number
       base += lineH(14);
       doc.text(line, LEFT, base);
     }
-    base -= 0.06;
+    // The job name follows closely; the date keeps its usual distance.
+    if (sheet.jobName) base -= 0.06;
   }
   if (sheet.jobName) {
     font(doc, 14);

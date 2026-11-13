@@ -59,7 +59,7 @@ export function ProductionSummary() {
       {editing ? (
         <span
           data-testid="summary-editing"
-          className="heading absolute right-3 top-2 bg-blue-700 px-1.5 py-0.5 text-xs text-white dark:bg-harbor-teal-fill dark:text-harbor-foam"
+          className="heading absolute bottom-2 right-3 bg-blue-700 px-1.5 py-0.5 text-xs text-white dark:bg-harbor-teal-fill dark:text-harbor-foam"
         >
           Editing<span className="sr-only">: these are the totals of the layout being edited</span>
         </span>

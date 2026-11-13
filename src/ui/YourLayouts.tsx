@@ -184,11 +184,11 @@ export function YourLayouts({ compact = false }: { compact?: boolean }) {
                   aria-pressed={selected}
                   aria-label={`Show your layout ${spec.name}`}
                   onClick={() => select(spec.id)}
-                  className="focus-ticks block w-full min-w-0 cursor-pointer space-y-1 text-left hover:underline"
+                  className="focus-ticks block w-full min-w-0 group cursor-pointer space-y-1 text-left"
                 >
                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                     <span
-                      className={`min-w-0 break-words text-sm font-semibold ${
+                      className={`min-w-0 break-words text-sm font-semibold group-hover:underline ${
                         // Greyed, but still 4.5:1 on every surface it can stand on.
                         outOfDate ? 'text-gray-600 dark:text-harbor-mist' : ''
                       }`}
