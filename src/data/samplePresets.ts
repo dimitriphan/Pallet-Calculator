@@ -21,6 +21,8 @@ function fromDefaults(id: string, name: string, pallet: Preset['pallet']): Prese
       emptyCarton: d.weights.emptyCarton,
       pallet: d.weights.pallet,
     },
+    minStability: d.minStability,
+    layerPattern: d.layerPattern,
     advanced: {},
   };
 }

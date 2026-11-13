@@ -37,7 +37,8 @@ interface Scored {
   score: ScoreBreakdown;
 }
 
-const RATING_ORDER: Record<StabilityRating, number> = { good: 0, fair: 1, poor: 2 };
+/** Ratings from best to worst. */
+export const RATING_ORDER: Record<StabilityRating, number> = { good: 0, fair: 1, poor: 2 };
 
 /**
  * Where a layout's stability rating sorts: good, fair, poor. A layout without a rating (only
@@ -45,6 +46,34 @@ const RATING_ORDER: Record<StabilityRating, number> = { good: 0, fair: 1, poor: 
  */
 export function ratingOrder(l: Layout): number {
   return l.stability ? RATING_ORDER[l.stability.rating] : 0;
+}
+
+/** Whether the layout counts as a pinwheel layout: any of its layers is a pinwheel. */
+export function isPinwheelLayout(l: Layout): boolean {
+  return l.layers.some((layer) => layer.kind === 'pinwheel');
+}
+
+/** Whether the inputs ask for pinwheel layouts first among equal box counts. */
+export function prefersPinwheel(i: Inputs): boolean {
+  // Inputs from before the setting existed have none: Auto.
+  return (i as Partial<Inputs>).layerPattern === 'preferPinwheel';
+}
+
+/**
+ * Round 5 spec 5, Prefer pinwheel: products descending, then pinwheel layouts before
+ * straight-cut ones, then as compareRanked (rating, score, cartons, id).
+ */
+export function comparePinwheelFirst(a: Scored, b: Scored): number {
+  if (a.layout.totalProducts !== b.layout.totalProducts) {
+    return b.layout.totalProducts - a.layout.totalProducts;
+  }
+  const pinwheelDiff = Number(isPinwheelLayout(b.layout)) - Number(isPinwheelLayout(a.layout));
+  return pinwheelDiff !== 0 ? pinwheelDiff : compareRanked(a, b);
+}
+
+/** The ranking order the inputs ask for. */
+export function comparatorFor(i: Inputs): (a: Scored, b: Scored) => number {
+  return prefersPinwheel(i) ? comparePinwheelFirst : compareRanked;
 }
 
 /**

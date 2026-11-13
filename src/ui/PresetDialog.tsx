@@ -3,6 +3,8 @@ import { downloadBlob } from '../export/download';
 import type { Preset } from '../domain/types';
 import { BUTTON, ModalDialog, PRIMARY_BUTTON } from './ModalDialog';
 import { dimsText, lengthText } from './format';
+import { LAYER_PATTERN_LABEL } from './layerPattern';
+import { MIN_STABILITY_LABEL } from './minStability';
 import { useUnit } from './useUnit';
 import { PresetEditForm } from './PresetEditForm';
 import { usePresets, useStores } from './StoreContext';
@@ -89,6 +91,10 @@ export function PresetDialog({ onClose }: { onClose(): void }) {
                     <p className="text-sm text-gray-900 dark:text-harbor-foam">{p.name}</p>
                     <p className="text-xs tabular-nums text-gray-600 dark:text-harbor-mist">
                       Pallet {dimsText(p.pallet, unit)} · leeway {lengthText(p.leeway, unit)}
+                      {p.minStability !== 'auto' &&
+                        ` · minimum stability ${MIN_STABILITY_LABEL[p.minStability]}`}
+                      {p.layerPattern !== 'auto' &&
+                        ` · layer pattern ${LAYER_PATTERN_LABEL[p.layerPattern]}`}
                     </p>
                   </div>
                   {pending(p) ? (

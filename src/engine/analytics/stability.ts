@@ -3,11 +3,18 @@
  * a serious warning against the thresholds in stabilityThresholds.ts. Advice only: crush
  * strength is not checked.
  *
+ * A layout placed by hand (layers of kind 'manual') is checked more closely, because its
+ * cartons may stand apart from each other and off the pallet: the stack height check is made
+ * on each free-standing group of the bottom layer, and a fifth check ('deck') measures how
+ * much of each bottom carton rests on the pallet. Calculated layouts are rated by the four
+ * checks exactly as before.
+ *
  * Layers are compared as placed: each layer is centred in the usable footprint by its own
  * bounding box, so two layers line up by their centres whatever the footprint (no inputs
  * needed). Cartons of a block tile the block's rectangle exactly, so areas are worked out on
  * block rectangles, which keeps every check cheap on layers of thousands of cartons.
  */
+import { EPS } from '../../domain/constants';
 import { STABILITY } from '../../domain/stabilityThresholds';
 import type {
   Block,
@@ -26,10 +33,25 @@ import { formatNumber } from '../units/units';
 /** Values this close to a threshold count as on it (thresholds are strict). */
 const TOLERANCE = 1e-9;
 
-/** What the four checks measured on a layout. */
+/** What the checks measured on a layout. */
 export interface StabilityMeasures {
-  /** Stack height (pallet deck excluded) ÷ the shorter side of the bottom layer's extent. */
+  /**
+   * Stack height (pallet deck excluded) ÷ the shorter side of the bottom layer's extent. For a
+   * layout placed by hand: the worst such ratio over the free-standing groups of the bottom
+   * layer, each by its own extent (the same number while the layer is one group).
+   */
   stackHeightRatio: number;
+  /**
+   * Only on a layout placed by hand: how many free-standing groups its bottom layer is in
+   * (cartons joined edge to edge). Above 1, `stackHeightRatio` is that of the worst group.
+   */
+  freeStandingGroups?: number;
+  /**
+   * Only on a layout placed by hand and measured with its inputs: the least share (0..1) of a
+   * bottom carton's base that rests on the pallet deck, and how many bottom cartons have less
+   * than the caution share on it.
+   */
+  deck?: { share: number; cartons: number };
   /** The tallest carton height ÷ shorter base side over the layers, and its layer (from 1). */
   cartonHeight: { ratio: number; layer: number } | null;
   /** The least supported layer above the first, and its number; null with one layer. */
@@ -44,8 +66,13 @@ function footprintOf(layer: Layer, c: CartonCandidate): [number, number] {
   return [c.outer[fa], c.outer[fb]];
 }
 
-/** Moves a layer's frame so its bounding box is centred on the origin (as placed). */
+/**
+ * Moves a layer's frame so its bounding box is centred on the origin (as placed). A layer
+ * placed by hand stays in the usable footprint's frame, where its cartons really are: every
+ * layer of a manual layout is manual, so its layers still share one frame.
+ */
 function centring(layer: Layer, a: number, b: number): { x: number; y: number } {
+  if (layer.kind === 'manual') return { x: 0, y: 0 };
   const { min, size } = blocksBounds(layer.blocks, a, b);
   return { x: -min.x - size.x / 2, y: -min.y - size.y / 2 };
 }
@@ -80,6 +107,16 @@ function sameFootprint(p: Layer, q: Layer, c: CartonCandidate): boolean {
  */
 export function supportShare(upper: Layer, lower: Layer, l: Layout): number {
   if (upper.blocks === lower.blocks && sameFootprint(upper, lower, l.carton)) return 1;
+  // A layer placed by hand has one block per carton, and a stack of them alternates between
+  // two block lists: each pair is worked out once.
+  const manual = upper.kind === 'manual' && lower.kind === 'manual';
+  const sizes = manual
+    ? [...footprintOf(upper, l.carton), ...footprintOf(lower, l.carton)].join('|')
+    : '';
+  if (manual) {
+    const hit = manualShares.get(upper.blocks)?.get(lower.blocks);
+    if (hit && hit.sizes === sizes) return hit.share;
+  }
   const ups = blockRects(upper, l.carton);
   const downs = blockRects(lower, l.carton);
   let area = 0;
@@ -88,8 +125,20 @@ export function supportShare(upper: Layer, lower: Layer, l: Layout): number {
     area += u.w * u.h;
     for (const d of downs) covered += overlapArea(u, d);
   }
-  return area > 0 ? Math.min(1, covered / area) : 1;
+  const share = area > 0 ? Math.min(1, covered / area) : 1;
+  if (manual) {
+    let byLower = manualShares.get(upper.blocks);
+    if (!byLower) manualShares.set(upper.blocks, (byLower = new WeakMap()));
+    byLower.set(lower.blocks, { sizes, share });
+  }
+  return share;
 }
+
+/** Support shares of pairs of hand-placed block lists, with the carton footprints they hold for. */
+const manualShares = new WeakMap<
+  readonly Block[],
+  WeakMap<readonly Block[], { sizes: string; share: number }>
+>();
 
 /** Rounded to a millionth of an inch, so equal positions give equal integers. */
 const units = (v: number) => Math.round(v * 1e6);
@@ -187,12 +236,120 @@ export function sameCartonRects(p: Layer, q: Layer, c: CartonCandidate): boolean
   return cartonRectsKey(p, c) === cartonRectsKey(q, c);
 }
 
-/** What the four checks measure on `l`. Pure, and cheap enough to run on every candidate. */
-export function measureStability(l: Layout): StabilityMeasures {
+/** Whether a layout was placed by hand: every layer of one is of kind 'manual'. */
+function isManual(l: Layout): boolean {
+  return l.layers[0]?.kind === 'manual';
+}
+
+/** Each carton of a layer placed by hand (one single-carton block per carton), as placed. */
+function manualRects(layer: Layer, c: CartonCandidate): Rect[] {
+  const [a, b] = footprintOf(layer, c);
+  return layer.blocks.map((blk) => ({
+    x: blk.x,
+    y: blk.y,
+    w: blk.rotated ? b : a,
+    h: blk.rotated ? a : b,
+  }));
+}
+
+/**
+ * Whether two cartons stand together: their facing edges are at most `STABILITY.joinGap`
+ * apart (or meet, or, in data changed by hand, overlap) and run alongside each other for a
+ * stretch longer than the engine's tolerance. Facing at a corner only does not count: a
+ * corner holds nothing up.
+ */
+function joined(p: Rect, q: Rect): boolean {
+  const gap = STABILITY.joinGap + EPS;
+  const alongX = Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x);
+  const alongY = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
+  return (alongX >= -gap && alongY > EPS) || (alongY >= -gap && alongX > EPS);
+}
+
+/**
+ * The free-standing groups of a set of cartons: the bounding box of each set of cartons
+ * standing together (see `joined`), directly or through others (connected components).
+ */
+export function freeStandingGroups(rects: readonly Rect[]): Rect[] {
+  const parent = rects.map((_, k) => k);
+  const find = (k: number): number => {
+    while (parent[k] !== k) {
+      parent[k] = parent[parent[k]!]!;
+      k = parent[k]!;
+    }
+    return k;
+  };
+  // Left to right, so a carton is only compared with those that start before it ends.
+  const order = rects.map((_, k) => k).sort((p, q) => rects[p]!.x - rects[q]!.x);
+  for (let n = 0; n < order.length; n++) {
+    const p = rects[order[n]!]!;
+    for (let m = n + 1; m < order.length; m++) {
+      const q = rects[order[m]!]!;
+      if (q.x > p.x + p.w + STABILITY.joinGap + EPS) break;
+      if (joined(p, q)) parent[find(order[m]!)] = find(order[n]!);
+    }
+  }
+  const boxes = new Map<number, { x0: number; y0: number; x1: number; y1: number }>();
+  rects.forEach((r, k) => {
+    const root = find(k);
+    const box = boxes.get(root);
+    if (!box) {
+      boxes.set(root, { x0: r.x, y0: r.y, x1: r.x + r.w, y1: r.y + r.h });
+    } else {
+      box.x0 = Math.min(box.x0, r.x);
+      box.y0 = Math.min(box.y0, r.y);
+      box.x1 = Math.max(box.x1, r.x + r.w);
+      box.y1 = Math.max(box.y1, r.y + r.h);
+    }
+  });
+  return [...boxes.values()].map((b) => ({ x: b.x0, y: b.y0, w: b.x1 - b.x0, h: b.y1 - b.y0 }));
+}
+
+/**
+ * The pallet deck in the frame a layer placed by hand is in. That frame is the usable
+ * footprint's (pallet plus allowed overhang, origin at its minimum corner), in which the
+ * pallet is inset by half the allowed overhang on every side.
+ */
+function deckRect(i: Inputs): Rect {
+  const inset = i.overhang / 2;
+  return { x: inset, y: inset, w: i.pallet.length, h: i.pallet.width };
+}
+
+/**
+ * The share of each carton's base on the deck: the least of them, and how many are under the
+ * caution share. Null for no cartons.
+ */
+function deckShare(rects: readonly Rect[], deck: Rect): StabilityMeasures['deck'] | null {
+  let share = Infinity;
+  let cartons = 0;
+  for (const r of rects) {
+    const area = r.w * r.h;
+    const s = area > 0 ? Math.min(1, overlapArea(r, deck) / area) : 1;
+    if (s < share) share = s;
+    if (s < STABILITY.deckShare.caution - TOLERANCE) cartons++;
+  }
+  return rects.length > 0 ? { share, cartons } : null;
+}
+
+/**
+ * What the checks measure on `l`. Pure, and cheap enough to run on every candidate. The
+ * inputs are only read for a layout placed by hand, to find the pallet deck under it: without
+ * them the deck check is not made.
+ */
+export function measureStability(l: Layout, i?: Inputs): StabilityMeasures {
   const { layers, carton } = l;
   const bottom = layers[0];
   const stackHeight = layers.reduce((s, layer) => s + layer.height, 0);
-  const base = bottom ? Math.min(bottom.extent.x, bottom.extent.y) : 0;
+  let base = bottom ? Math.min(bottom.extent.x, bottom.extent.y) : 0;
+  const manual: Pick<StabilityMeasures, 'freeStandingGroups' | 'deck'> = {};
+  if (bottom && isManual(l)) {
+    const rects = manualRects(bottom, carton);
+    const groups = freeStandingGroups(rects);
+    manual.freeStandingGroups = groups.length;
+    // One group is the whole layer: its extent, as for any layout. Several: the narrowest.
+    if (groups.length > 1) base = Math.min(...groups.map((g) => Math.min(g.w, g.h)));
+    const deck = i ? deckShare(rects, deckRect(i)) : null;
+    if (deck) manual.deck = deck;
+  }
 
   let cartonHeight: StabilityMeasures['cartonHeight'] = null;
   let support: StabilityMeasures['support'] = null;
@@ -215,6 +372,7 @@ export function measureStability(l: Layout): StabilityMeasures {
     cartonHeight,
     support,
     columns,
+    ...manual,
   };
 }
 
@@ -236,7 +394,14 @@ function below(value: number, t: { caution: number; serious: number }) {
 export function stabilityWarnings(m: StabilityMeasures): StabilityWarning[] {
   const out: StabilityWarning[] = [];
   const stack = above(m.stackHeightRatio, STABILITY.stackHeightRatio);
-  if (stack) out.push({ check: 'stackHeight', level: stack, value: m.stackHeightRatio });
+  if (stack) {
+    out.push({
+      check: 'stackHeight',
+      level: stack,
+      value: m.stackHeightRatio,
+      ...((m.freeStandingGroups ?? 1) > 1 ? { freeStanding: true as const } : {}),
+    });
+  }
   if (m.cartonHeight) {
     const level = above(m.cartonHeight.ratio, STABILITY.cartonHeightRatio);
     if (level) {
@@ -262,6 +427,10 @@ export function stabilityWarnings(m: StabilityMeasures): StabilityWarning[] {
       layer: m.columns.from,
     });
   }
+  if (m.deck) {
+    const level = below(m.deck.share, STABILITY.deckShare);
+    if (level) out.push({ check: 'deck', level, value: m.deck.share, cartons: m.deck.cartons });
+  }
   return out;
 }
 
@@ -272,13 +441,12 @@ export function ratingOf(warnings: readonly StabilityWarning[]): StabilityRating
 }
 
 /**
- * The layout's stability rating and warnings. Every check works from the layout alone (layers
- * line up by their centres); the inputs are taken so a check that needs them can be added
- * without changing the callers.
+ * The layout's stability rating and warnings. The checks of a calculated layout work from the
+ * layout alone (layers line up by their centres). A layout placed by hand needs the inputs
+ * for the deck check: the pallet under it, and the allowed overhang its positions start from.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function assessStability(l: Layout, _i?: Inputs): Stability {
-  const warnings = stabilityWarnings(measureStability(l));
+export function assessStability(l: Layout, i?: Inputs): Stability {
+  const warnings = stabilityWarnings(measureStability(l, i));
   return { rating: ratingOf(warnings), warnings };
 }
 
@@ -300,13 +468,28 @@ function shareText(share: number): string {
 /** A warning as one plain sentence. */
 export function describeWarning(w: StabilityWarning): string {
   switch (w.check) {
-    case 'stackHeight':
-      return `Stack is tall for its base (${ratioText(w.value, STABILITY.stackHeightRatio[w.level])} times its shorter side).`;
+    case 'stackHeight': {
+      const times = ratioText(w.value, STABILITY.stackHeightRatio[w.level]);
+      return w.freeStanding
+        ? `A free-standing column of the load is tall for its base (${times} times its shorter side).`
+        : `Stack is tall for its base (${times} times its shorter side).`;
+    }
     case 'cartonHeight':
       return `Cartons in layer ${w.layer ?? 1} stand on a narrow face (${ratioText(w.value, STABILITY.cartonHeightRatio[w.level])} times taller than their shorter side).`;
     case 'support':
       return `Layer ${w.layer ?? 2} is only ${shareText(w.value)}% supported by the layer below.`;
     case 'columns':
       return 'Layers are stacked in straight columns with no interlocking.';
+    case 'deck': {
+      const n = w.cartons ?? 1;
+      if (w.value <= TOLERANCE) {
+        return n === 1
+          ? '1 carton in the bottom layer does not rest on the pallet at all.'
+          : `${n} cartons in the bottom layer hang off the pallet; the worst does not rest on it at all.`;
+      }
+      return n === 1
+        ? `1 carton in the bottom layer rests only ${shareText(w.value)}% on the pallet.`
+        : `${n} cartons in the bottom layer hang off the pallet; the worst rests only ${shareText(w.value)}% on it.`;
+    }
   }
 }

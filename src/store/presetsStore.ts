@@ -40,6 +40,8 @@ function covered(p: Preset | Inputs) {
     p.weights.maxPallet,
     p.weights.emptyCarton,
     p.weights.pallet,
+    p.minStability,
+    p.layerPattern,
   ];
 }
 
@@ -61,6 +63,8 @@ export function presetToInputs(p: Preset, current: Inputs): Inputs {
     customOrientations: [...p.customOrientations],
     keepCartonsUpright: p.keepCartonsUpright,
     weights: { ...p.weights, productBox: current.weights.productBox },
+    minStability: p.minStability,
+    layerPattern: p.layerPattern,
   };
 }
 
@@ -165,6 +169,8 @@ function presetFromInputs(i: Inputs): Omit<Preset, 'id' | 'name'> {
       emptyCarton: i.weights.emptyCarton,
       pallet: i.weights.pallet,
     },
+    minStability: i.minStability,
+    layerPattern: i.layerPattern,
     advanced: {},
   };
 }

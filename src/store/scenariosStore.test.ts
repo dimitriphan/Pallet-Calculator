@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../domain/constants';
 import { scenarioSchema } from '../domain/schemas';
+import { manualSpec } from '../engine/manual/testSupport';
 import { optimize } from '../engine/optimize';
 import { STORAGE_KEYS } from '../persistence/keys';
 import { createLocalStorageRepository } from '../persistence/localStorageRepository';
@@ -77,6 +78,45 @@ describe('scenarios store', () => {
     expect(reloaded.store.getState().scenarios[0]!.inputs.boxesPerCarton).toBeNull();
   });
 
+  it('loads a scenario stored before the minimum stability as Auto', () => {
+    const storage = new FakeStorage();
+    const s = setup(storage).store.getState().save('Old', DEFAULT_INPUTS, result, 1);
+    const old = structuredClone(s) as unknown as { inputs: Record<string, unknown> };
+    delete old.inputs.minStability;
+    storage.setItem(STORAGE_KEYS.scenarios, JSON.stringify({ version: 1, items: [old] }));
+    const reloaded = setup(storage);
+    expect(reloaded.notices).toEqual([]);
+    expect(reloaded.store.getState().scenarios).toEqual([s]);
+    expect(reloaded.store.getState().scenarios[0]!.inputs.minStability).toBe('auto');
+  });
+
+  it('saves and reloads a scenario worked out with a minimum stability', () => {
+    const storage = new FakeStorage();
+    const inputs = { ...DEFAULT_INPUTS, minStability: 'good' as const };
+    const s = setup(storage).store.getState().save('Good only', inputs, optimize(inputs), 0);
+    expect(s.result.autoBestProducts).toBe(260);
+    const reloaded = setup(storage);
+    expect(reloaded.notices).toEqual([]);
+    expect(reloaded.store.getState().scenarios).toEqual([s]);
+  });
+
+  it('loads a scenario stored before the layer pattern setting as Auto, and keeps a stored one', () => {
+    const storage = new FakeStorage();
+    const s = setup(storage).store.getState().save('Old', DEFAULT_INPUTS, result, 1);
+    const old = structuredClone(s) as unknown as { inputs: Record<string, unknown> };
+    delete old.inputs.layerPattern;
+    storage.setItem(STORAGE_KEYS.scenarios, JSON.stringify({ version: 1, items: [old] }));
+    const reloaded = setup(storage);
+    expect(reloaded.notices).toEqual([]);
+    expect(reloaded.store.getState().scenarios).toEqual([s]);
+    expect(reloaded.store.getState().scenarios[0]!.inputs.layerPattern).toBe('auto');
+
+    const inputs = { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' as const };
+    const kept = setup(storage).store.getState().save('Pinwheels', inputs, optimize(inputs), 0);
+    expect(kept.result.autoBestProducts).toBe(260);
+    expect(setup(storage).store.getState().scenarios).toContainEqual(kept);
+  });
+
   it('keeps state and reports when storage is full', () => {
     const storage = new FakeStorage();
     storage.failWrites = true;
@@ -95,5 +135,26 @@ describe('scenarios store', () => {
     expect(tabB.getState().scenarios.map((x) => x.name)).toEqual(['A', 'B']);
     tabA.getState().refresh();
     expect(tabA.getState().scenarios.map((x) => x.name)).toEqual(['A', 'B']);
+  });
+
+  it('saves the manual layouts given with the scenario, as a copy, and reads them back', () => {
+    const { store, storage } = setup();
+    const layouts = [manualSpec({ id: 'a' }), manualSpec({ id: 'b', name: 'Manual 2' })];
+    const s = store.getState().save('With layouts', DEFAULT_INPUTS, result, 0, layouts);
+    expect(s.manualLayouts).toEqual(layouts);
+    expect(s.manualLayouts).not.toBe(layouts);
+    expect(s.manualLayouts![0]).not.toBe(layouts[0]);
+    expect(setup(storage).store.getState().scenarios[0]!.manualLayouts).toEqual(layouts);
+    expect(store.getState().duplicate(s.id).manualLayouts).toEqual(layouts);
+    expect(store.getState().save('None', DEFAULT_INPUTS, result, 0, []).manualLayouts).toEqual([]);
+  });
+
+  it('a scenario saved without manual layouts has no such field, as before Round 5', () => {
+    const { store, storage } = setup();
+    const s = store.getState().save('Old style', DEFAULT_INPUTS, result, 0);
+    expect('manualLayouts' in s).toBe(false);
+    const read = setup(storage).store.getState().scenarios[0]!;
+    expect('manualLayouts' in read).toBe(false);
+    expect(read).toEqual(s);
   });
 });

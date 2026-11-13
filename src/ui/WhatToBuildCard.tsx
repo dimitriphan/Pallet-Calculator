@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { cartonDisplayDims, describeBoxCounts } from '../engine/analytics/analytics';
 import {
   describeRun,
@@ -8,14 +8,22 @@ import {
   turnedLayersText,
 } from '../engine/analytics/stack';
 import { describeWarning } from '../engine/analytics/stability';
-import { dimsText, roomText, weightText, weightTrimText } from './format';
+import { FlagList } from './editor/FlagList';
+import { dimsText, fmtCount, roomText, weightText, weightTrimText } from './format';
+import { flagLines } from './manualFlags';
+import { isBelowMinimum } from './minStability';
+import { ManualBadge, OutOfDateBadge } from './YourLayouts';
 import { useUnit } from './useUnit';
 import { Mascot } from './Mascot';
+import { BelowMinimumBadge, MinimumNote, useBelowMinimum } from './MinimumNotes';
 import { StabilityBadge } from './StabilityBadge';
 import { StaleBadge } from './StaleBadge';
 import { useStatusContent } from './StatusMessages';
 import { useResults } from './StoreContext';
 import { useSelectedAnalytics } from './useSelectedAnalytics';
+
+/** The card's heading: where the focus goes when the editor closes in Basic view. */
+export const WHAT_TO_BUILD_HEADING_ID = 'what-to-build-heading';
 
 const NO_LAYOUT = 'Enter the three sizes to see what to build.';
 
@@ -35,14 +43,25 @@ function Part({ title, children }: { title: string; children: ReactNode }) {
  * while a first calculation runs.
  */
 export function WhatToBuildCard() {
-  const headingId = useId();
+  const headingId = WHAT_TO_BUILD_HEADING_ID;
   const selected = useSelectedAnalytics();
   const best = useResults((s) => s.result?.layouts[0] ?? null);
   const select = useResults((s) => s.select);
   const running = useResults((s) => s.status === 'running');
-  const { error, empty } = useStatusContent();
+  const { error: calcError, empty: calcEmpty } = useStatusContent();
+  // A saved manual layout can be shown and printed whatever became of the calculation.
+  const manualShown = selected?.ranked.manual !== undefined;
+  const error = manualShown ? null : calcError;
+  const empty = manualShown ? null : calcEmpty;
   const heading = useRef<HTMLHeadingElement>(null);
   const unit = useUnit();
+  const calculatedBelow = useBelowMinimum();
+  const manual = selected?.ranked.manual;
+  // A manual layout is marked by its own rating; the result's mark is about calculated ones.
+  const belowMinimum = manual
+    ? manual.status !== 'outOfDate' &&
+      isBelowMinimum(selected.ranked.layout.stability?.rating, selected.inputs.minStability)
+    : calculatedBelow;
 
   const showBest = () => {
     select(0);
@@ -54,6 +73,9 @@ export function WhatToBuildCard() {
   // calculation failed; a card for the previous inputs would contradict them.
   if (error || empty) return null;
 
+  // An out-of-date manual layout is shown as it was made: no rating, no warnings and no
+  // comparison with a calculated layout that is for other inputs.
+  const outOfDate = manual?.status === 'outOfDate';
   let body: ReactNode;
   if (selected) {
     const { ranked, analytics } = selected;
@@ -72,7 +94,40 @@ export function WhatToBuildCard() {
     ];
     body = (
       <>
-        {ranked.rank !== 1 && best && (
+        {manual && (
+          <div
+            data-testid="your-layout-note"
+            className="space-y-2 border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-foam"
+          >
+            <p className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold">{`Your layout: ${manual.name}`}</span>
+              <ManualBadge />
+              {manual.status === 'outOfDate' && <OutOfDateBadge />}
+            </p>
+            <p className="tabular-nums">
+              {`Made by hand. ${fmtCount(layout.totalProducts)} ${layout.totalProducts === 1 ? 'box' : 'boxes'} on the pallet.`}
+              {best &&
+                !outOfDate &&
+                ` Calculated layout 1 fits ${fmtCount(best.layout.totalProducts)} boxes.`}
+            </p>
+            {manual.status === 'outOfDate' && (
+              <p>{`Made for a product of ${dimsText(manual.madeFor.product, unit)}; the inputs have changed since. It is shown as it was made.`}</p>
+            )}
+            {best && (
+              <button
+                type="button"
+                onClick={showBest}
+                className="focus-ticks border border-blue-300 bg-white px-2 py-1 text-sm text-blue-800 hover:bg-blue-100 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline"
+              >
+                Use calculated layout 1
+              </button>
+            )}
+          </div>
+        )}
+        {manual && manual.status !== 'outOfDate' && (
+          <FlagList lines={flagLines(manual.flags, unit)} label="Layout flags" />
+        )}
+        {!manual && ranked.rank !== 1 && best && (
           <div className="space-y-2 border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-foam">
             <p>
               Showing layout {ranked.rank}, chosen in Full view. Layout 1 fits{' '}
@@ -87,6 +142,8 @@ export function WhatToBuildCard() {
             </button>
           </div>
         )}
+        {/* What the settings did to the calculated result: not said of a manual layout. */}
+        {!manual && <MinimumNote always />}
         <Part title="Carton">
           <dl className="bracket divide-y divide-gray-100 dark:divide-harbor-foam/40">
             {carton.map(([label, value]) => (
@@ -151,10 +208,11 @@ export function WhatToBuildCard() {
               )}
             </>
           )}
-          {layout.stability && (
+          {layout.stability && !outOfDate && (
             <div className="space-y-1">
-              <p>
+              <p className="flex flex-wrap items-center gap-1.5">
                 <StabilityBadge stability={layout.stability} className="px-2 py-0.5 text-sm" />
+                {belowMinimum && <BelowMinimumBadge className="px-2 py-0.5 text-sm" />}
               </p>
               {layout.stability.warnings.map((warning) => (
                 <p

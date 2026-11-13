@@ -307,3 +307,62 @@ describe('resultsStore', () => {
     expect(useResultsStore.getState().status).toBe('idle');
   });
 });
+
+describe('selecting a manual layout', () => {
+  async function ready(onSelectionReset = vi.fn()) {
+    const store = createResultsStore(() => Promise.resolve(result(1)), { onSelectionReset });
+    await store.getState().request(inputsA);
+    onSelectionReset.mockClear();
+    return { store, onSelectionReset, s: () => store.getState() };
+  }
+
+  it('starts with none; selecting one resets the scene selection and leaves the index', async () => {
+    const { s, onSelectionReset } = await ready();
+    expect(s().selectedManualId).toBeNull();
+    s().select(1);
+    s().selectManual('m1');
+    expect(s()).toMatchObject({ selectedManualId: 'm1', selectedIndex: 1 });
+    expect(onSelectionReset).toHaveBeenCalledTimes(2);
+    s().selectManual('m1');
+    expect(onSelectionReset).toHaveBeenCalledTimes(2);
+    // selectSelected is the calculated selection only.
+    expect(selectSelected(s())).toBe(s().result!.layouts[1]);
+  });
+
+  it('is cleared by selecting a calculated layout, by null and by loading a scenario', async () => {
+    const { s } = await ready();
+    s().selectManual('m1');
+    s().select(0);
+    expect(s().selectedManualId).toBeNull();
+    s().selectManual('m1');
+    s().select(7); // refused: no such layout
+    expect(s().selectedManualId).toBe('m1');
+    s().selectManual(null);
+    expect(s().selectedManualId).toBeNull();
+    s().selectManual('m1');
+    s().restore(inputsB, result(5), 1);
+    expect(s()).toMatchObject({ selectedManualId: null, selectedIndex: 1 });
+  });
+
+  it('is kept through a recalculation, a stale mark and an error', async () => {
+    let fail = false;
+    const store = createResultsStore(() =>
+      fail ? Promise.reject(new Error('boom')) : Promise.resolve(result(1)),
+    );
+    await store.getState().request(inputsA);
+    store.getState().selectManual('m1');
+    store.getState().markStale();
+    await store.getState().request(inputsB);
+    expect(store.getState()).toMatchObject({ selectedManualId: 'm1', status: 'ready' });
+    fail = true;
+    await store.getState().request(inputsA);
+    expect(store.getState()).toMatchObject({ selectedManualId: 'm1', status: 'error' });
+  });
+
+  it('can be selected before anything is calculated', () => {
+    const store = createResultsStore(vi.fn());
+    store.getState().selectManual('m1');
+    expect(store.getState().selectedManualId).toBe('m1');
+    expect(selectSelected(store.getState())).toBeNull();
+  });
+});

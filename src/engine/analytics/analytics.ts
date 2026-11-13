@@ -1,11 +1,11 @@
 import { PALLET_HEIGHT } from '../../domain/constants';
-import type { Dims, Inputs, Layout, ProductAxis, Stability } from '../../domain/types';
+import type { Dims, Inputs, Layer, Layout, ProductAxis, Stability } from '../../domain/types';
 import { availableVolume, usableFootprint, usableHeight } from '../packing/geometry';
 import { layoutMetrics } from '../packing/metrics';
 import { footprintAxes } from '../packing/stacking';
 import { turnedLayerNumbers } from './stack';
 import { measureStability, type StabilityMeasures } from './stability';
-import { unusedSpace } from './unusedSpace';
+import { layerFreeRects, unusedSpace } from './unusedSpace';
 import { layoutWeight, roomForCartons, type LayoutWeight } from './weight';
 
 export type TargetStatus = 'none' | 'met' | 'exceeded' | 'notAchievable';
@@ -73,10 +73,20 @@ export interface Analytics {
   totals: {
     products: number;
     cartons: number;
+    /**
+     * The carton volume inside the envelope (usable footprint by usable height). For every
+     * calculated layout that is all of it. `volumeUsed + remainingVolume = volumeAvailable`.
+     */
     volumeUsed: number;
     volumeAvailable: number;
     utilizationPct: number;
     remainingVolume: number;
+    /**
+     * Only for a layout placed by hand: the carton volume outside the envelope (cartons that
+     * overhang the usable footprint, or stand above the height limit); 0 when all is inside.
+     * `volumeUsed` plus this is the volume of all the cartons.
+     */
+    volumeOutsideEnvelope?: number;
     /** The part of the remaining volume above the top of the stack. */
     headroomVolume: number;
     /** The part of the remaining volume beside the cartons, layer by layer. */
@@ -118,20 +128,30 @@ export interface Analytics {
 }
 
 /**
+ * A carton's size as it stands with `vertical` up: the longer side of its base, the shorter
+ * side, then its height ("as stacked"). How the editor and every layout that stands its carton
+ * one way write a carton's size.
+ */
+export function standingDims(size: Record<ProductAxis, number>, vertical: ProductAxis): Dims {
+  const [a, b] = footprintAxes(vertical);
+  return {
+    length: Math.max(size[a], size[b]),
+    width: Math.min(size[a], size[b]),
+    height: size[vertical],
+  };
+}
+
+/**
  * Carton size as length >= width plus height. When every layer stands the carton on the
- * same product axis, that axis is the height; otherwise the three sizes are sorted descending.
+ * same product axis, that axis is the height (the carton as stacked, `standingDims`);
+ * otherwise the three sizes are sorted descending. A layout placed by hand always stands its
+ * carton one way, so it is always written as stacked.
  */
 export function cartonDisplayDims(l: Layout, which: 'inner' | 'outer'): Dims {
   const size = l.carton[which];
   const first = l.layers[0]?.vertical;
-  if (first !== undefined && l.layers.every((layer) => layer.vertical === first)) {
-    const [a, b] = footprintAxes(first);
-    return {
-      length: Math.max(size[a], size[b]),
-      width: Math.min(size[a], size[b]),
-      height: size[first],
-    };
-  }
+  if (first !== undefined && l.layers.every((layer) => layer.vertical === first))
+    return standingDims(size, first);
   const axes: ProductAxis[] = ['L', 'W', 'H'];
   const sorted = axes.map((k) => size[k]).sort((p, q) => q - p);
   return { length: sorted[0] ?? 0, width: sorted[1] ?? 0, height: sorted[2] ?? 0 };
@@ -161,6 +181,9 @@ function targetAnalytics(l: Layout, i: Inputs): Analytics['target'] {
   };
 }
 
+/** Cubic inches: a smaller difference between two ways of measuring a volume is rounding. */
+const OUTSIDE_NOISE = 1e-6;
+
 export function computeAnalytics(l: Layout, i: Inputs): Analytics {
   const m = layoutMetrics(l, i);
   const counts = l.layers.map((layer) => layer.cartonCount);
@@ -171,6 +194,24 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
   const available = availableVolume(i);
   const utilizationPct = available > 0 ? (m.cartonVolume / available) * 100 : 0;
   const unused = unusedSpace(l, i);
+  // The rule: used volume, remaining volume and utilisation are all measured inside the
+  // envelope (usable footprint by usable height), so used + remaining = available.
+  // A calculated layout lies wholly inside it: used is the volume of its cartons and what
+  // remains is the subtraction, as always. A layout placed by hand may have cartons outside
+  // the usable footprint (or, flagged, above the height limit): what remains is then the
+  // unused space measured inside the envelope (never negative), used is the rest of the
+  // envelope, and the carton volume outside it is given separately.
+  const manual = l.layers.some((layer) => layer.kind === 'manual');
+  const remainingVolume = manual
+    ? Math.min(available, unused.headroomVolume + unused.gapVolume)
+    : available - m.cartonVolume;
+  const volumeUsed = manual ? available - remainingVolume : m.cartonVolume;
+  const envelopePct = manual && available > 0 ? (volumeUsed / available) * 100 : null;
+  const outside = m.cartonVolume - volumeUsed;
+  const fullest = manual ? fullestLayer(l) : undefined;
+  const remainingFootprintArea = fullest
+    ? layerFreeRects(fullest, l, footprint).reduce((s, r) => s + r.w * r.h, 0)
+    : footprint.x * footprint.y - m.fullestLayerUsedArea;
 
   return {
     product: {
@@ -195,19 +236,21 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
       cartonsPerLayerMin: min,
       cartonsPerLayerMax: max,
       totalLoadHeight: m.loadExtent.z + PALLET_HEIGHT,
-      volumeUtilizationPct: utilizationPct,
-      remainingHeight: height - m.loadExtent.z,
-      remainingFootprintArea: footprint.x * footprint.y - m.fullestLayerUsedArea,
+      volumeUtilizationPct: envelopePct ?? utilizationPct,
+      // A hand-made carton over the height limit (flagged) leaves none, not less than none.
+      remainingHeight: manual ? Math.max(0, height - m.loadExtent.z) : height - m.loadExtent.z,
+      remainingFootprintArea,
       loadLength: m.loadExtent.x,
       loadWidth: m.loadExtent.y,
     },
     totals: {
       products: l.totalProducts,
       cartons: l.totalCartons,
-      volumeUsed: m.cartonVolume,
+      volumeUsed,
       volumeAvailable: available,
-      utilizationPct,
-      remainingVolume: available - m.cartonVolume,
+      utilizationPct: envelopePct ?? utilizationPct,
+      remainingVolume,
+      ...(manual ? { volumeOutsideEnvelope: outside > OUTSIDE_NOISE ? outside : 0 } : {}),
       headroomVolume: unused.headroomVolume,
       layerGapVolume: unused.gapVolume,
     },
@@ -221,9 +264,18 @@ export function computeAnalytics(l: Layout, i: Inputs): Analytics {
     },
     weight: weightAnalytics(l, i),
     stability: l.stability
-      ? { ...l.stability, measures: measureStability(l), turnedLayers: turnedLayerNumbers(l) }
+      ? { ...l.stability, measures: measureStability(l, i), turnedLayers: turnedLayerNumbers(l) }
       : null,
   };
+}
+
+/** The layer with the most cartons, the first of them on a tie (as layoutMetrics picks it). */
+function fullestLayer(l: Layout): Layer | undefined {
+  let fullest: Layer | undefined;
+  for (const layer of l.layers) {
+    if (!fullest || layer.cartonCount > fullest.cartonCount) fullest = layer;
+  }
+  return fullest;
 }
 
 function weightAnalytics(l: Layout, i: Inputs): Analytics['weight'] {

@@ -20,7 +20,18 @@ export interface OrthoFit {
 }
 
 /** Viewing direction for the default perspective: from the front-right, above the load. */
-const VIEW_DIR: Vec3 = [0.9, 0.75, 1.3];
+export const VIEW_DIR: Vec3 = [0.9, 0.75, 1.3];
+/** The editor's Pallet layer step looks down on the layer at an angle, from the front. */
+export const LAYER_VIEW_DIR: Vec3 = [0.35, 1.25, 1];
+/** Its "Top view": straight down, tipped by a hair so the front edge stays at the bottom. */
+export const TOP_VIEW_DIR: Vec3 = [0, 1, 0.001];
+/**
+ * How far the layer step's camera may be tipped down, in radians from straight above: 80°, so
+ * it always looks at the layer from above the pallet's deck and never from under it.
+ */
+export const LAYER_MAX_POLAR = (80 * Math.PI) / 180;
+/** The vertical field of view of the editor's camera, in degrees. */
+export const EDITOR_FOV = 40;
 const MARGIN = 1.1;
 
 function centre(b: Bounds): Vec3 {
@@ -33,23 +44,31 @@ function size(b: Bounds): Vec3 {
 
 /**
  * A camera position that keeps the bounds' bounding sphere inside the narrower of the vertical
- * and horizontal fields of view, looking at the bounds centre.
+ * and horizontal fields of view, looking at the bounds centre from `direction` (any length;
+ * the default view when left out or zero).
  */
-export function perspectiveFit(bounds: Bounds, fovDeg: number, aspect: number): PerspectiveFit {
+export function perspectiveFit(
+  bounds: Bounds,
+  fovDeg: number,
+  aspect: number,
+  direction: Vec3 = VIEW_DIR,
+): PerspectiveFit {
   const target = centre(bounds);
   const radius = Math.max(Math.hypot(...size(bounds)) / 2, 1);
   const vHalf = (fovDeg * Math.PI) / 360;
   const hHalf = Math.atan(Math.tan(vHalf) * aspect);
   const distance = (radius / Math.sin(Math.min(vHalf, hHalf))) * MARGIN;
-  const len = Math.hypot(...VIEW_DIR);
-  const position = target.map((t, k) => t + (VIEW_DIR[k]! / len) * distance) as Vec3;
+  const dir = Math.hypot(...direction) > 1e-9 ? direction : VIEW_DIR;
+  const len = Math.hypot(...dir);
+  const position = target.map((t, k) => t + (dir[k]! / len) * distance) as Vec3;
   return { position, target };
 }
 
 /**
  * An orthographic camera that frames the bounds at `aspect` (width / height) with `margin`:
  * 'top' looks straight down with the length across and the far side at the top;
- * 'side' looks along +Z at the length x height face with height vertical.
+ * 'side' looks from the front (the edge at the greatest z, at the bottom of the top view) at
+ * the length x height face with height vertical, so left and right are as in the top view.
  */
 export function orthoFit(
   bounds: Bounds,
@@ -70,7 +89,7 @@ export function orthoFit(
 
   const standoff = depth / 2 + 10;
   const position: Vec3 =
-    view === 'top' ? [c[0], c[1] + standoff, c[2]] : [c[0], c[1], c[2] - standoff];
+    view === 'top' ? [c[0], c[1] + standoff, c[2]] : [c[0], c[1], c[2] + standoff];
   return {
     position,
     target: c,

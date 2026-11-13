@@ -10,7 +10,6 @@ import { jsPDF } from 'jspdf';
 import type { Unit } from '../engine/units/units';
 import { lengthText } from '../ui/format';
 import type { BuildSheet, DrawingKey, SheetPattern, SheetRow } from './buildSheet';
-import { STALE_NOTE } from './exportData';
 
 /** PNG data URLs of the light-rendered 3D view as framed and the side view. */
 export interface SheetPictures {
@@ -197,6 +196,17 @@ function drawHeader(doc: jsPDF, sheet: BuildSheet, mascot?: SheetMascot): number
     wrapW = CONTENT_W - w - MASCOT_GAP;
     mascotBottom = top + MASCOT_H;
   }
+  if (sheet.manual) {
+    // The sheet of a manual layout is headed with its name (spec 6.4).
+    font(doc, 14, 'bold');
+    base += 0.1;
+    for (const line of wrap(doc, sheet.manual.heading, wrapW)) {
+      base += lineH(14);
+      doc.text(line, LEFT, base);
+    }
+    // The job name follows closely; the date keeps its usual distance.
+    if (sheet.jobName) base -= 0.06;
+  }
   if (sheet.jobName) {
     font(doc, 14);
     base += 0.1;
@@ -218,14 +228,52 @@ function drawHeader(doc: jsPDF, sheet: BuildSheet, mascot?: SheetMascot): number
   return ruleY + 0.22;
 }
 
-function drawStaleBox(doc: jsPDF, y: number): number {
-  const h = 0.38;
+function drawStaleBox(doc: jsPDF, text: string, y: number): number {
+  font(doc, 11, 'bold');
+  const lines = wrap(doc, text, CONTENT_W - 0.3);
+  const h = 0.38 + (lines.length - 1) * lineH(11);
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.025);
   doc.rect(LEFT, y, CONTENT_W, h, 'S');
-  font(doc, 11, 'bold');
-  doc.text(`${STALE_NOTE}.`, LEFT + 0.15, y + h / 2 + 0.055);
+  lines.forEach((line, k) => doc.text(line, LEFT + 0.15, y + 0.245 + k * lineH(11)));
   return y + h + 0.22;
+}
+
+/** The print error colour: red 700, 6.5:1 on white. Only broken limits are drawn in it. */
+const ERROR: RGB = [185, 28, 28];
+
+/**
+ * The flags of a manual layout, in the error style: a box with a heavy red bar down its left
+ * side, "Limits broken" and one line per flag in red; notes follow in black.
+ */
+function drawFlags(doc: jsPDF, manual: NonNullable<BuildSheet['manual']>, y: number): number {
+  if (manual.flags.length === 0 && manual.notes.length === 0) return y;
+  const textW = CONTENT_W - 0.4;
+  const size = 10.5;
+  font(doc, size, 'bold', ERROR);
+  const rows: { text: string; error: boolean; bold: boolean }[] = [];
+  if (manual.flags.length > 0) rows.push({ text: 'Limits broken', error: true, bold: true });
+  for (const flag of manual.flags) {
+    font(doc, size, 'normal', ERROR);
+    for (const line of wrap(doc, flag, textW)) rows.push({ text: line, error: true, bold: false });
+  }
+  for (const note of manual.notes) {
+    font(doc, size, 'normal');
+    for (const line of wrap(doc, `Note: ${note}`, textW))
+      rows.push({ text: line, error: false, bold: false });
+  }
+  const h = 0.2 + rows.length * lineH(size);
+  const color = manual.flags.length > 0 ? ERROR : BLACK;
+  doc.setDrawColor(...color);
+  doc.setLineWidth(0.015);
+  doc.rect(LEFT, y, CONTENT_W, h, 'S');
+  doc.setFillColor(...color);
+  doc.rect(LEFT, y, 0.08, h, 'F');
+  rows.forEach((row, k) => {
+    font(doc, size, row.bold ? 'bold' : 'normal', row.error ? ERROR : BLACK);
+    doc.text(row.text, LEFT + 0.22, y + 0.24 + k * lineH(size));
+  });
+  return y + h + 0.2;
 }
 
 function drawSummary(doc: jsPDF, rows: SheetRow[], y: number): number {
@@ -333,7 +381,8 @@ function drawOverview(
   mascot?: SheetMascot,
 ): number {
   let y = drawHeader(doc, sheet, mascot);
-  if (sheet.stale) y = drawStaleBox(doc, y);
+  if (sheet.stale) y = drawStaleBox(doc, sheet.staleNote, y);
+  if (sheet.manual) y = drawFlags(doc, sheet.manual, y);
   y = drawSummary(doc, sheet.summary, y);
   const colW = (CONTENT_W - 0.35) / 2;
   const bottom = Math.max(
@@ -415,13 +464,25 @@ function drawLayerDrawing(
   const availW = DRAW_W - labelW - 0.04;
   const availH = DRAW_H - below - (key ? KEY_H : 0);
   const { footprint, pallet, cartons } = drawing;
-  const s = Math.min(availW / footprint.x, availH / footprint.y);
-  const w = footprint.x * s;
-  const h = footprint.y * s;
-  const ox = x + labelW + (availW - w) / 2;
-  const oy = y + (availH - h) / 2;
+  // The drawing is scaled to hold the footprint and any carton outside it (a layer placed by
+  // hand may overhang); with every carton inside, that is the footprint itself.
+  const { bounds } = drawing;
+  const s = Math.min(availW / bounds.dx, availH / bounds.dy);
+  const w = bounds.dx * s;
+  const h = bounds.dy * s;
+  // (ox, oy) is the page position of the footprint's own origin.
+  const left = x + labelW + (availW - w) / 2;
+  const topY = y + (availH - h) / 2;
+  const ox = left - bounds.x * s;
+  const oy = topY - bounds.y * s;
+  const outside =
+    Math.abs(bounds.x) > EPS ||
+    Math.abs(bounds.y) > EPS ||
+    Math.abs(bounds.dx - footprint.x) > EPS ||
+    Math.abs(bounds.dy - footprint.y) > EPS;
 
   const differs =
+    outside ||
     Math.abs(footprint.x - pallet.dx) > EPS ||
     Math.abs(footprint.y - pallet.dy) > EPS ||
     Math.abs(pallet.x) > EPS ||
@@ -430,7 +491,7 @@ function drawLayerDrawing(
     doc.setDrawColor(...BLACK);
     doc.setLineWidth(0.01);
     doc.setLineDashPattern([0.06, 0.04], 0);
-    doc.rect(ox, oy, w, h, 'S');
+    doc.rect(ox, oy, footprint.x * s, footprint.y * s, 'S');
     doc.setLineDashPattern([], 0);
   }
 
@@ -452,11 +513,11 @@ function drawLayerDrawing(
   // Dimension lines measure the solid pallet outline, ticked at its edges.
   const tick = 0.04;
   doc.setLineWidth(0.006);
-  const dimY = oy + h + 0.08;
+  const dimY = topY + h + 0.08;
   doc.line(px, dimY, px + pw, dimY);
   doc.line(px, dimY - tick, px, dimY + tick);
   doc.line(px + pw, dimY - tick, px + pw, dimY + tick);
-  const dimX = ox - 0.08;
+  const dimX = left - 0.08;
   doc.line(dimX, py, dimX, py + ph);
   doc.line(dimX - tick, py, dimX + tick, py);
   doc.line(dimX - tick, py + ph, dimX + tick, py + ph);
@@ -466,10 +527,10 @@ function drawLayerDrawing(
   const widthText = lengthText(pallet.dy, unit);
   doc.text(widthText, dimX - 0.07, py + ph / 2 + doc.getTextWidth(widthText) / 2, { angle: 90 });
   font(doc, 8, 'normal', GREY_TEXT);
-  doc.text('Top view, pallet length across', ox + w / 2, oy + h + 0.4, { align: 'center' });
+  doc.text('Top view, pallet length across', left + w / 2, topY + h + 0.4, { align: 'center' });
   if (key) {
     font(doc, 8, 'normal', BLACK);
-    doc.text(key.text, x, oy + h + 0.4 + KEY_H);
+    doc.text(key.text, x, topY + h + 0.4 + KEY_H);
   }
 }
 
@@ -612,7 +673,7 @@ export async function renderBuildSheetPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait', compress: false });
   doc.setProperties({
-    title: sheet.jobName ? `${sheet.title} - ${sheet.jobName}` : sheet.title,
+    title: [sheet.title, sheet.manual?.heading, sheet.jobName].filter(Boolean).join(' - '),
     creator: 'Pallet Calculator',
   });
 

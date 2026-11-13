@@ -415,6 +415,77 @@ test('every layout carries a stability rating', async ({ page }) => {
   await expect(page.getByText(/^Stability: (Good|Fair|Poor)$/).first()).toBeVisible();
 });
 
+test('a minimum stability leaves layouts out and says what Auto would give', async ({ page }) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  const rows = page.getByRole('table', { name: 'Layout comparison' }).locator('tbody tr');
+  const total = page
+    .getByRole('region', { name: 'Production summary' })
+    .locator('div', { has: page.getByText('Total boxes per pallet', { exact: true }) })
+    .locator('dd');
+  const minimum = page.getByRole('radiogroup', { name: 'Minimum stability' });
+
+  // Auto: the most boxes first, and every layout of the defaults is rated Fair.
+  await expect(minimum.getByRole('radio', { name: 'Auto' })).toBeChecked();
+  await expect(total).toHaveText('260');
+  await expect(rows).toHaveCount(5);
+  await expect(rows.first()).toContainText('Fair');
+
+  // Good only: a different list, every layout Good, and the cost of the choice.
+  await minimum.getByRole('radio', { name: 'Good only' }).click();
+  await expect(total).toHaveText('245');
+  await expect(rows).toHaveCount(5);
+  for (const text of await rows.allTextContents()) {
+    expect(text).toContain('Good');
+    expect(text).not.toContain('Fair');
+  }
+  await expect(page.getByText('Auto would give 15 more boxes.')).toBeVisible();
+  await expect(page.getByText('Below your minimum')).toHaveCount(0);
+
+  // Basic view has no control, but says the minimum is in force.
+  await page
+    .getByRole('radiogroup', { name: 'View' })
+    .getByRole('radio', { name: 'Basic' })
+    .click();
+  await expect(page.getByRole('radiogroup', { name: 'Minimum stability' })).toHaveCount(0);
+  const card = page.getByRole('region', { name: 'What to build' });
+  await expect(card).toContainText('Minimum stability: Good only. Auto would give 15 more boxes.');
+  await expect(page.getByText(/minimum stability Good only\./)).toBeVisible();
+
+  // The choice is remembered with the other inputs.
+  await page.reload();
+  await expect(card).toContainText('Minimum stability: Good only.');
+  await expect(total).toHaveText('245');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  await expect(minimum.getByRole('radio', { name: 'Good only' })).toBeChecked();
+
+  // Nothing reaches Good in the pinwheel case: the most stable layouts, each marked.
+  await fillDims(page, 'Pallet limitation', ['Length', 'Width', 'Height'], ['48', '40', '60']);
+  await fillDims(page, 'Product box', ['Length', 'Width', 'Height'], ['16.5', '10.5', '18']);
+  await fillDims(
+    page,
+    'Maximum carton',
+    ['Max length', 'Max width', 'Max height'],
+    ['16.5', '10.5', '18'],
+  );
+  await page.getByLabel('Box leeway', { exact: true }).fill('0');
+  await page.getByLabel('Carton wall thickness', { exact: true }).fill('0');
+  await expect(
+    page.getByText('No layout reaches Good. Showing the most stable found.'),
+  ).toBeVisible();
+  await expect(total).toHaveText('30');
+  await expect(rows.first()).toContainText('Fair');
+  await expect(page.getByText('Below your minimum')).toHaveCount(await rows.count());
+
+  // Fair or better is met, so nothing is marked.
+  await minimum.getByRole('radio', { name: 'Fair or better' }).click();
+  await expect(page.getByText('Below your minimum')).toHaveCount(0);
+  await expect(page.getByText(/No layout reaches/)).toHaveCount(0);
+  await expect(total).toHaveText('30');
+  expect(problems).toEqual([]);
+});
+
 test('the unused-space overlay can be switched on and exported', async ({ page }) => {
   const problems = watchProblems(page);
   await page.goto('/');
@@ -441,3 +512,141 @@ test('the header mascot still loads and is hidden from assistive technology', as
     .poll(() => image.evaluate((el) => (el as HTMLImageElement).naturalWidth))
     .toBeGreaterThan(0);
 });
+
+test('the layer pattern setting changes the ranking, and falls back when no pinwheel exists', async ({
+  page,
+}) => {
+  const problems = watchProblems(page);
+  await page.goto('/');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  const rows = page.getByRole('table', { name: 'Layout comparison' }).locator('tbody tr');
+  const total = page
+    .getByRole('region', { name: 'Production summary' })
+    .locator('div', { has: page.getByText('Total boxes per pallet', { exact: true }) })
+    .locator('dd');
+  const pattern = page.getByRole('radiogroup', { name: 'Layer pattern' });
+  const fallback = page.getByText(
+    'No pinwheel layout exists for these sizes. Showing straight-cut layouts.',
+  );
+
+  // A 16 x 11 x 6 in box: 92 boxes with straight cuts, and a pinwheel of 92 Auto throws away.
+  await fillDims(page, 'Product box', ['Length', 'Width', 'Height'], ['16', '11', '6']);
+  await expect(pattern.getByRole('radio', { name: 'Auto' })).toBeChecked();
+  await expect(total).toHaveText('92');
+  await expect(rows.first()).not.toContainText('Pinwheel');
+
+  // Prefer pinwheel: the same boxes, the pinwheel layout first, the straight-cut one below.
+  await pattern.getByRole('radio', { name: 'Prefer pinwheel' }).click();
+  await expect(rows.first()).toContainText('Pinwheel');
+  await expect(total).toHaveText('92');
+  await expect(rows.nth(1)).not.toContainText('Pinwheel');
+  await expect(rows.nth(1)).toContainText('92');
+  await expect(page.getByText(/Auto would give/)).toHaveCount(0);
+
+  // Pinwheel only: nothing but pinwheel layouts, fewer boxes, and the cost of the choice.
+  await pattern.getByRole('radio', { name: 'Pinwheel only' }).click();
+  await expect(total).toHaveText('88');
+  for (const text of await rows.allTextContents()) expect(text).toContain('Pinwheel');
+  await expect(page.getByText('Auto would give 4 more boxes.')).toBeVisible();
+  await expect(fallback).toHaveCount(0);
+
+  // Basic view has no control, but says the setting is in force; it is remembered.
+  await page
+    .getByRole('radiogroup', { name: 'View' })
+    .getByRole('radio', { name: 'Basic' })
+    .click();
+  await expect(page.getByRole('radiogroup', { name: 'Layer pattern' })).toHaveCount(0);
+  const card = page.getByRole('region', { name: 'What to build' });
+  await expect(card).toContainText('Layer pattern: Pinwheel only. Auto would give 4 more boxes.');
+  await page.reload();
+  await expect(card).toContainText('Layer pattern: Pinwheel only.');
+  await expect(total).toHaveText('88');
+  await page.getByRole('radiogroup', { name: 'View' }).getByRole('radio', { name: 'Full' }).click();
+  await expect(pattern.getByRole('radio', { name: 'Pinwheel only' })).toBeChecked();
+
+  // A carton too large to turn beside itself: no pinwheel, so the straight-cut layouts, said so.
+  await fillDims(page, 'Product box', ['Length', 'Width', 'Height'], ['30', '25', '20']);
+  await fillDims(
+    page,
+    'Maximum carton',
+    ['Max length', 'Max width', 'Max height'],
+    ['31', '26', '21'],
+  );
+  await expect(fallback).toBeVisible();
+  await expect(rows.first()).toBeVisible();
+  for (const text of await rows.allTextContents()) expect(text).not.toContain('Pinwheel');
+  await expect(page.getByText(/Auto would give/)).toHaveCount(0);
+
+  // Under Auto nothing is said.
+  await pattern.getByRole('radio', { name: 'Auto' }).click();
+  await expect(fallback).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
+for (const [width, height] of [
+  [390, 844],
+  [700, 900],
+  [768, 1024],
+] as const)
+  for (const view of ['Basic', 'Full'] as const)
+    for (const theme of ['harbor', 'light'] as const)
+      test(`below 1024 px the workspace is one column with no sideways page scroll: ${width} px, ${view}, ${theme} (final review F18)`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height });
+        await page.goto('/');
+        await page.getByLabel('Theme', { exact: true }).selectOption(theme);
+        await page
+          .getByRole('radiogroup', { name: 'View' })
+          .getByRole('radio', { name: view })
+          .click();
+        await expect(page.getByTestId('layout-scene').locator('canvas')).toBeVisible();
+        const measure = () =>
+          page.evaluate(() => {
+            const box = (el: Element | null) => {
+              const r = el?.getBoundingClientRect();
+              return r ? { x: r.x, y: r.y + window.scrollY, w: r.width, h: r.height } : null;
+            };
+            return {
+              scrollWidth: document.documentElement.scrollWidth,
+              bodyWidth: document.body.scrollWidth,
+              header: box(document.querySelector('header')),
+              actions: box(document.querySelector('[data-testid=header-actions]')),
+              summary: box(document.querySelector('[aria-label="Production summary"]')),
+              scene: box(document.querySelector('[data-testid=scene-slot]')),
+              main: box(document.querySelector('main')),
+              details: box(document.querySelector('aside[aria-label=Details]')),
+              inputs: box(document.querySelector('aside[aria-label=Inputs]')),
+              table: box(document.querySelector('table[aria-label="Layout comparison"]')),
+            };
+          });
+        const m = await measure();
+        // Nothing is wider than the window.
+        expect(m.scrollWidth).toBe(width);
+        expect(m.bodyWidth).toBe(width);
+        for (const part of [m.header, m.actions, m.summary, m.scene, m.main, m.details, m.inputs]) {
+          expect(part!.x).toBeGreaterThanOrEqual(0);
+          expect(part!.x + part!.w).toBeLessThanOrEqual(width);
+        }
+        // One column, in this order: summary, 3D view (and results), details, inputs.
+        expect(m.main!.w).toBe(width);
+        expect(m.scene!.w).toBeGreaterThanOrEqual(width - 40);
+        expect(m.scene!.h).toBeGreaterThanOrEqual(320);
+        expect(m.summary!.y).toBeLessThan(m.scene!.y);
+        expect(m.main!.y + m.main!.h).toBeLessThanOrEqual(m.details!.y + 1);
+        expect(m.details!.y + m.details!.h).toBeLessThanOrEqual(m.inputs!.y + 1);
+        // The inputs can be reached from the top.
+        await page.getByRole('link', { name: 'Change inputs' }).click();
+        await expect(page.locator('aside[aria-label=Inputs]')).toBeInViewport();
+        if (view === 'Full') {
+          // The comparison table may scroll sideways inside its own box only.
+          const scroller = page.getByRole('table', { name: 'Layout comparison' }).locator('..');
+          const s = await scroller.evaluate((el) => ({
+            client: el.clientWidth,
+            right: el.getBoundingClientRect().right,
+          }));
+          expect(s.right).toBeLessThanOrEqual(width);
+          expect(s.client).toBeLessThanOrEqual(width);
+        }
+        expect((await measure()).scrollWidth).toBe(width);
+      });

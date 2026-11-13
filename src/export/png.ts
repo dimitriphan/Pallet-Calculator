@@ -1,6 +1,6 @@
 import type { Unit } from '../engine/units/units';
 import { dimsText, weightStabilityText } from '../ui/format';
-import type { ExportPayload } from './exportData';
+import { isManualSelected, type ExportPayload } from './exportData';
 
 export interface Rect {
   x: number;
@@ -53,7 +53,9 @@ export function captionLines(p: ExportPayload, unit: Unit = 'in'): string[] {
     `Carton: ${dimsText(carton.outer, unit)} (outer)`,
     ...(weightLine ? [weightLine] : []),
     [
-      `Layout ${p.selectedLayout.rank}`,
+      isManualSelected(p.selectedLayout)
+        ? `Manual layout: ${p.selectedLayout.manual.name}`
+        : `Layout ${p.selectedLayout.rank}`,
       `Exported ${localMinute(p.exportedAt)}`,
       ...(p.stale ? [p.status] : []),
     ].join('   |   '),

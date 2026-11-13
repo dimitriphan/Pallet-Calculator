@@ -7,6 +7,7 @@ import type { RotationMode, StabilityRating } from '../domain/types';
 import { describeWarning } from '../engine/analytics/stability';
 import type { Unit } from '../engine/units/units';
 import {
+  dimsText,
   fmtDecimal,
   fmtPct,
   formatLength,
@@ -19,7 +20,11 @@ import {
   weightLabel,
   withUnit,
 } from '../ui/format';
-import type { ExportPayload } from './exportData';
+import { LAYER_PATTERN_LABEL } from '../ui/layerPattern';
+import { BELOW_MINIMUM, MIN_STABILITY_LABEL } from '../ui/minStability';
+import { flagLines } from '../ui/manualFlags';
+import { outsideVolume } from '../ui/outsideVolume';
+import { isManualSelected, NOT_CHECKED, type ExportPayload } from './exportData';
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
 
@@ -47,6 +52,30 @@ const TARGET: Record<TargetStatus, string> = {
 
 type Row = [string, string | number];
 
+/** As the editor's choice is worded. */
+export const UPPER_LAYERS_TEXT = {
+  same: 'All the same',
+  alternate: 'Alternate layers turned',
+} as const;
+
+/** Added to the choice where it changes nothing, wherever the choice is reported. */
+export const UPPER_LAYERS_NO_EFFECT = 'no effect: the layer is the same after a half turn';
+
+/**
+ * A manual layout's upper-layers choice in words. "Alternate layers turned" is said to have no
+ * effect when the layer is the same after a half turn, so that no report claims layers are
+ * turned while the stability figures say none is.
+ */
+export function upperLayersText(manual: {
+  upperLayers: keyof typeof UPPER_LAYERS_TEXT;
+  upperLayersNoEffect?: boolean;
+}): string {
+  const text = UPPER_LAYERS_TEXT[manual.upperLayers];
+  return manual.upperLayers === 'alternate' && manual.upperLayersNoEffect
+    ? `${text} (${UPPER_LAYERS_NO_EFFECT})`
+    : text;
+}
+
 const RATING: Record<StabilityRating, string> = { good: 'Good', fair: 'Fair', poor: 'Poor' };
 
 /**
@@ -65,11 +94,39 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   const yesNo = (v: boolean) => (v ? 'Yes' : 'No');
   const ratio = (v: number) => ratioText(v);
   const share = (v: number) => shareText(v);
-  const st = a.stability;
+  // A manual layout was not ranked or scored: it is named, with its flags, and nothing of a
+  // ranking is written (no rank, no score rows, no comparison table).
+  const manual = isManualSelected(sel) ? sel.manual : null;
+  // Not said of an out-of-date layout, whoever built the payload.
+  const st = manual?.status === 'outOfDate' ? null : a.stability;
+  const outside = manual?.status === 'outOfDate' ? null : outsideVolume(a);
+  const manualRows: Row[] = manual
+    ? [
+        [
+          'Manual layout flags',
+          // As on screen: an out-of-date layout is shown as it was made and is not checked
+          // against inputs that no longer apply.
+          manual.status === 'outOfDate'
+            ? NOT_CHECKED
+            : flagLines(manual.flags, unit)
+                .map((f) => f.text)
+                .join('; ') || 'None',
+        ],
+        ['Upper layers', upperLayersText(manual)],
+        ...(manual.status === 'outOfDate'
+          ? ([
+              ['Made for product', dimsText(manual.madeFor.product, unit)],
+              [L('Made for carton wall thickness'), len(manual.madeFor.wallThickness)],
+              [L('Made for box leeway'), len(manual.madeFor.leeway)],
+            ] as Row[])
+          : []),
+      ]
+    : [];
   const rows: Row[] = [
     ['Exported at', p.exportedAt],
-    ['Selected layout', sel.rank],
+    ['Selected layout', manual ? `Manual: ${manual.name}` : (sel.rank ?? '')],
     ['Status', p.status],
+    ...manualRows,
     [L('Pallet length'), len(i.pallet.length)],
     [L('Pallet width'), len(i.pallet.width)],
     [L('Pallet height'), len(i.pallet.height)],
@@ -87,6 +144,10 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Product rotation', ROTATION[i.rotationMode]],
     ['Custom orientations', i.rotationMode === 'custom' ? i.customOrientations.join(' ') : ''],
     ['Keep cartons upright', yesNo(i.keepCartonsUpright)],
+    ['Minimum stability', MIN_STABILITY_LABEL[i.minStability]],
+    ['Layer pattern', LAYER_PATTERN_LABEL[i.layerPattern]],
+    // What those two settings did to the result, as the screen says it; blank when nothing.
+    ['Result notes', p.notes.join(' ')],
     [L('Usable stacking height'), len(a.pallet.usableHeight)],
     [L('Carton inner length'), len(a.carton.inner.length)],
     [L('Carton inner width'), len(a.carton.inner.width)],
@@ -105,6 +166,8 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     [L('Load width'), len(a.pallet.loadWidth)],
     [L('Load total height'), len(a.pallet.totalLoadHeight)],
     [V('Volume used'), vol(a.totals.volumeUsed)],
+    // Only for a layout placed by hand with cartons outside: "Volume used" leaves this out.
+    ...(outside ? ([[V(outside.label), vol(outside.volume)]] as Row[]) : []),
     [V('Volume available'), vol(a.totals.volumeAvailable)],
     ['Utilization (%)', n(a.totals.utilizationPct)],
     [V('Remaining volume'), vol(a.totals.remainingVolume)],
@@ -114,9 +177,20 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     ['Cartons needed for target', a.target.cartonsNeeded ?? ''],
     ['Layers needed for target', a.target.layersNeeded ?? ''],
     // Stability: blank for a layout stored before layouts were rated.
-    ['Stability rating', st ? RATING[st.rating] : ''],
+    [
+      'Stability rating',
+      manual?.status === 'outOfDate' ? NOT_CHECKED : st ? RATING[st.rating] : '',
+    ],
+    // The mark the screen puts beside the rating when nothing reached the minimum.
+    ['Stability mark', p.belowMinimum ? BELOW_MINIMUM : ''],
     ['Stability warnings', st ? st.warnings.map(describeWarning).join(' ') : ''],
-    ['Stack height ÷ shorter side of base', st ? ratio(st.measures.stackHeightRatio) : ''],
+    [
+      // A layout placed by hand whose bottom layer stands in separate groups.
+      (st?.measures.freeStandingGroups ?? 1) > 1
+        ? 'Stack height ÷ shorter side of the narrowest free-standing group'
+        : 'Stack height ÷ shorter side of base',
+      st ? ratio(st.measures.stackHeightRatio) : '',
+    ],
     [
       'Carton height ÷ shorter base side, worst layer',
       st?.measures.cartonHeight ? ratio(st.measures.cartonHeight.ratio) : '',
@@ -125,11 +199,21 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
       'Least support from the layer below',
       st?.measures.support ? share(st.measures.support.share) : '',
     ],
+    // Only for a layout placed by hand: calculated layouts keep the rows they had.
+    ...(st?.measures.deck
+      ? ([
+          ['Least share of a bottom carton resting on the pallet', share(st.measures.deck.share)],
+        ] as Row[])
+      : []),
     ['Layers turned half a turn (180°)', st ? st.turnedLayers.join(' ') : ''],
-    ['Overall score', n(sel.score.total)],
-    ['Quantity contribution', n(sel.score.quantityContribution)],
-    ['Utilization contribution', n(sel.score.utilizationContribution)],
-    ['Space contribution', n(sel.score.spaceContribution)],
+    ...(sel.score
+      ? ([
+          ['Overall score', n(sel.score.total)],
+          ['Quantity contribution', n(sel.score.quantityContribution)],
+          ['Utilization contribution', n(sel.score.utilizationContribution)],
+          ['Space contribution', n(sel.score.spaceContribution)],
+        ] as Row[])
+      : []),
   ];
   // Weight is reported only when the box weight was set; otherwise the file is as before.
   const w = a.weight;
@@ -172,7 +256,7 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
     c.cartons,
     c.layers,
     ...(patterned ? [c.pinwheel ? 'Pinwheel' : ''] : []),
-    c.stability ? RATING[c.stability] : '',
+    c.stability ? `${RATING[c.stability]}${p.belowMinimum ? ` (${BELOW_MINIMUM})` : ''}` : '',
     fmtPct(c.utilizationPct),
     ...(weighed ? [c.weight === undefined ? '' : wt(c.weight)] : []),
     vol(c.remainingVolume),
@@ -180,6 +264,8 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   ]);
 
   const line = (cells: (string | number)[]) => cells.map((c) => csvField(String(c))).join(',');
+  // A manual layout is not ranked against the calculated ones: no comparison table.
+  if (manual) return [line(['Metric', 'Value']), ...rows.map(line), ''].join('\r\n');
   return [
     line(['Metric', 'Value']),
     ...rows.map(line),

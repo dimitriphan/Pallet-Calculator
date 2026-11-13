@@ -1,13 +1,21 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { useStore, type StoreApi } from 'zustand';
 import { useInputsStore, type InputsState } from '../store/inputsStore';
+import type { ManualEditorState } from '../store/manualEditorStore';
+import type { ManualLayoutsState } from '../store/manualLayoutsStore';
+import { useManualEditorStore, useManualLayoutsStore } from '../store/manualStores';
 import { usePresetsStore, type PresetsState } from '../store/presetsStore';
 import { usePrefsStore, type PrefsState } from '../store/prefsStore';
 import { useResultsStore, type ResultsState } from '../store/resultsStore';
 import { useScenariosStore, type ScenariosState } from '../store/scenariosStore';
 import { useSceneStore, type SceneState } from '../store/sceneStore';
 
-/** What a caller may supply; presets, scenarios and prefs default to the app's own stores. */
+/**
+ * What a caller may supply; presets, scenarios and prefs default to the app's own stores. The
+ * two manual stores are joined to the inputs and results stores they were created with
+ * (`createManualStores`), so a caller that supplies its own inputs and results supplies these
+ * too.
+ */
 export interface AppStores {
   inputs: StoreApi<InputsState>;
   results: StoreApi<ResultsState>;
@@ -15,6 +23,8 @@ export interface AppStores {
   presets?: StoreApi<PresetsState>;
   scenarios?: StoreApi<ScenariosState>;
   prefs?: StoreApi<PrefsState>;
+  manualLayouts?: StoreApi<ManualLayoutsState>;
+  manualEditor?: StoreApi<ManualEditorState>;
 }
 
 export type ResolvedStores = Required<AppStores>;
@@ -26,6 +36,8 @@ const defaultStores: ResolvedStores = {
   presets: usePresetsStore,
   scenarios: useScenariosStore,
   prefs: usePrefsStore,
+  manualLayouts: useManualLayoutsStore,
+  manualEditor: useManualEditorStore,
 };
 
 const StoreContext = createContext<ResolvedStores>(defaultStores);
@@ -65,4 +77,12 @@ export function useScenarios<T>(selector: (s: ScenariosState) => T): T {
 
 export function usePrefs<T>(selector: (s: PrefsState) => T): T {
   return useStore(useStores().prefs, selector);
+}
+
+export function useManualLayouts<T>(selector: (s: ManualLayoutsState) => T): T {
+  return useStore(useStores().manualLayouts, selector);
+}
+
+export function useManualEditor<T>(selector: (s: ManualEditorState) => T): T {
+  return useStore(useStores().manualEditor, selector);
 }

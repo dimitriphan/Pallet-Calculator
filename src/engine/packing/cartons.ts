@@ -109,6 +109,43 @@ function fitRule(i: Inputs) {
 }
 
 /**
+ * The carton holding `counts` boxes along each product dimension: inner size = boxes plus the
+ * leeway, outer size = inner plus a wall on each side, and how well the boxes fill it. The one
+ * place a carton's sizes are worked out: calculated and hand-designed cartons both come from
+ * here, so they cannot differ.
+ */
+export function cartonOfCounts(
+  counts: Record<ProductAxis, number>,
+  size: Record<ProductAxis, number>,
+  leeway: number,
+  wallThickness: number,
+  productVolume = volumeOf(size),
+): CartonCandidate {
+  const { L: l, W: w, H: h } = counts;
+  const inner = {
+    L: l * size.L + leeway,
+    W: w * size.W + leeway,
+    H: h * size.H + leeway,
+  };
+  const outer = {
+    L: inner.L + 2 * wallThickness,
+    W: inner.W + 2 * wallThickness,
+    H: inner.H + 2 * wallThickness,
+  };
+  const boxesPerCarton = l * w * h;
+  const cartonProductVolume = boxesPerCarton * productVolume;
+  const outerVolume = volumeOf(outer);
+  return {
+    counts,
+    inner,
+    outer,
+    boxesPerCarton,
+    utilization: cartonProductVolume / outerVolume,
+    emptyVolume: outerVolume - cartonProductVolume,
+  };
+}
+
+/**
  * Candidates sorted by boxes per carton (descending) then key, and whether the list was cut
  * short: by the enumeration limit, or by keeping only the MAX_CARTON_CANDIDATES biggest.
  * With `boxesPerCarton` set to N, only cartons of exactly N boxes, enumerated from the
@@ -133,27 +170,7 @@ export function generateCartonCandidatesWithInfo(i: Inputs): {
       seen.add(key);
     }
 
-    const inner = {
-      L: l * size.L + leeway,
-      W: w * size.W + leeway,
-      H: h * size.H + leeway,
-    };
-    const outer = {
-      L: inner.L + 2 * wallThickness,
-      W: inner.W + 2 * wallThickness,
-      H: inner.H + 2 * wallThickness,
-    };
-    const boxesPerCarton = l * w * h;
-    const cartonProductVolume = boxesPerCarton * productVolume;
-    const outerVolume = volumeOf(outer);
-    result.push({
-      counts,
-      inner,
-      outer,
-      boxesPerCarton,
-      utilization: cartonProductVolume / outerVolume,
-      emptyVolume: outerVolume - cartonProductVolume,
-    });
+    result.push(cartonOfCounts(counts, size, leeway, wallThickness, productVolume));
   };
 
   const n = i.boxesPerCarton;

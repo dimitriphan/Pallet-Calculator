@@ -10,14 +10,29 @@ export interface ResultsState {
   result: OptimizeResult | null;
   stale: boolean;
   selectedIndex: number;
+  /**
+   * The id of the manual layout shown in place of the calculated one at `selectedIndex`, or
+   * null. It is kept through a recalculation (a manual layout is kept and re-checked when the
+   * inputs change) and cleared by selecting a calculated layout or loading a scenario. An id
+   * no manual layout has selects nothing: the calculated layout shows. See selection.ts.
+   */
+  selectedManualId: string | null;
   error: string | null;
   request(inputs: Inputs): Promise<void>;
   markStale(): void;
+  /** Selects a calculated layout (and so no manual one). */
   select(index: number): void;
+  /** Selects a manual layout by its id, or none with null (the calculated one shows again). */
+  selectManual(id: string | null): void;
   restore(inputs: Inputs, result: OptimizeResult, selectedIndex: number): void;
   retry(): void;
 }
 
+/**
+ * The selected calculated layout. A manual layout may be selected in its place: screens and
+ * exports read the selection through `selectSelectedLayout` (selection.ts) or the
+ * `useSelectedLayout` hook, never through this alone.
+ */
 export function selectSelected(s: ResultsState): RankedLayout | null {
   return s.result?.layouts[s.selectedIndex] ?? null;
 }
@@ -26,7 +41,8 @@ function sameDims(a: Inputs['pallet'], b: Inputs['pallet']): boolean {
   return a.length === b.length && a.width === b.width && a.height === b.height;
 }
 
-function sameInputs(a: Inputs, b: Inputs): boolean {
+/** Whether two sets of inputs are the same calculation. */
+export function sameInputs(a: Inputs, b: Inputs): boolean {
   return (
     sameDims(a.pallet, b.pallet) &&
     sameDims(a.product, b.product) &&
@@ -43,7 +59,9 @@ function sameInputs(a: Inputs, b: Inputs): boolean {
     a.weights.productBox === b.weights.productBox &&
     a.weights.maxPallet === b.weights.maxPallet &&
     a.weights.emptyCarton === b.weights.emptyCarton &&
-    a.weights.pallet === b.weights.pallet
+    a.weights.pallet === b.weights.pallet &&
+    a.minStability === b.minStability &&
+    a.layerPattern === b.layerPattern
   );
 }
 
@@ -97,6 +115,7 @@ export function createResultsStore(
       result: null,
       stale: false,
       selectedIndex: 0,
+      selectedManualId: null,
       error: null,
       request(inputs) {
         const s = get();
@@ -119,7 +138,12 @@ export function createResultsStore(
       select(index) {
         const count = get().result?.layouts.length ?? 0;
         if (!Number.isInteger(index) || index < 0 || index >= count) return;
-        set({ selectedIndex: index });
+        set({ selectedIndex: index, selectedManualId: null });
+        resetSelection();
+      },
+      selectManual(id) {
+        if (id === get().selectedManualId) return;
+        set({ selectedManualId: id });
         resetSelection();
       },
       restore(inputs, result, selectedIndex) {
@@ -130,7 +154,15 @@ export function createResultsStore(
         // A saved index is not trusted: keep it within the layouts (0 when there are none).
         const last = result.layouts.length - 1;
         const index = Math.max(0, Math.min(Math.trunc(selectedIndex) || 0, last));
-        set({ status: 'ready', inputs, result, stale: false, selectedIndex: index, error: null });
+        set({
+          status: 'ready',
+          inputs,
+          result,
+          stale: false,
+          selectedIndex: index,
+          selectedManualId: null,
+          error: null,
+        });
         resetSelection();
       },
       retry() {

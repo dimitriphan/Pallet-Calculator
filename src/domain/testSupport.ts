@@ -11,6 +11,8 @@ function changed(value: unknown, key: string): unknown {
   if (value === null) return 3;
   if (Array.isArray(value)) return value.length === 0 ? ['LWH'] : [];
   if (key === 'rotationMode') return value === 'custom' ? 'full' : 'custom';
+  if (key === 'minStability') return value === 'good' ? 'auto' : 'good';
+  if (key === 'layerPattern') return value === 'pinwheelOnly' ? 'auto' : 'pinwheelOnly';
   throw new Error(`No variant for ${key}: ${String(value)}`);
 }
 

@@ -55,9 +55,27 @@ describe('buildCsv', () => {
     expect(idx('Selected layout')).toBeGreaterThan(-1);
     expect(idx('Pallet length (in)')).toBeLessThan(idx('Product length (in)'));
     expect(idx('Keep cartons upright')).toBeLessThan(idx('Usable stacking height (in)'));
+    expect(idx('Minimum stability')).toBe(idx('Keep cartons upright') + 1);
+    expect(idx('Layer pattern')).toBe(idx('Minimum stability') + 1);
     expect(idx('Boxes per carton')).toBeLessThan(idx('Load length (in)'));
     expect(idx('Utilization (%)')).toBeLessThan(idx('Target status'));
     expect(labels.at(-1)).toBe('Space contribution');
+  });
+
+  it('names the minimum stability the result was worked out with', () => {
+    expect(lines).toContain('Minimum stability,Auto');
+    const inputs: Inputs = { ...DEFAULT_INPUTS, minStability: 'good' };
+    const good = buildCsv(buildExportPayload(inputs, optimize(inputs), 0, NOW)).split('\r\n');
+    expect(good).toContain('Minimum stability,Good only');
+    expect(good).toContain('Total boxes per pallet,245');
+  });
+
+  it('names the layer pattern setting the result was worked out with', () => {
+    expect(lines).toContain('Layer pattern,Auto');
+    const inputs: Inputs = { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' };
+    const only = buildCsv(buildExportPayload(inputs, optimize(inputs), 0, NOW)).split('\r\n');
+    expect(only).toContain('Layer pattern,Pinwheel only');
+    expect(only).toContain('Total boxes per pallet,230');
   });
 
   it('writes counts as integers and other numbers with two decimals', () => {
@@ -123,6 +141,55 @@ describe('buildCsv', () => {
       out.findIndex((l) => l.startsWith('Target quantity,')) + 1,
     );
     expect(p.inputs.boxesPerCarton).toBe(2);
+  });
+
+  it('carries the notes of the settings, and the mark of a layout below the minimum', () => {
+    const value = (rows: string[], metric: string) =>
+      rows.find((l) => l.startsWith(`${metric},`))?.slice(metric.length + 1);
+    // Nothing to say under Auto: the rows are there, blank.
+    expect(value(lines, 'Result notes')).toBe('');
+    expect(value(lines, 'Stability mark')).toBe('');
+    expect(lines.indexOf('Result notes,')).toBe(
+      lines.findIndex((l) => l.startsWith('Layer pattern,')) + 1,
+    );
+
+    // Nothing reaches Good in the pinwheel case: said, and every layout marked.
+    const good: Inputs = { ...PINWHEEL_INPUTS, minStability: 'good' };
+    const below = buildCsv(buildExportPayload(good, optimize(good), 0, NOW)).split('\r\n');
+    expect(value(below, 'Result notes')).toBe(
+      'No layout reaches Good. Showing the most stable found.',
+    );
+    expect(value(below, 'Stability rating')).toBe('Fair');
+    expect(value(below, 'Stability mark')).toBe('Below your minimum');
+    const table = below.slice(below.findIndex((l) => l.startsWith('#,')) + 1).filter(Boolean);
+    expect(table.length).toBeGreaterThan(0);
+    for (const row of table) expect(row).toContain('Fair (Below your minimum)');
+
+    // What Auto would give, under a minimum and under Pinwheel only.
+    const steady: Inputs = { ...DEFAULT_INPUTS, minStability: 'good' };
+    const fewer = buildCsv(buildExportPayload(steady, optimize(steady), 0, NOW)).split('\r\n');
+    expect(value(fewer, 'Result notes')).toBe('Auto would give 15 more boxes.');
+    expect(value(fewer, 'Stability mark')).toBe('');
+    const only: Inputs = { ...DEFAULT_INPUTS, layerPattern: 'pinwheelOnly' };
+    const pinwheels = buildCsv(buildExportPayload(only, optimize(only), 0, NOW)).split('\r\n');
+    expect(value(pinwheels, 'Result notes')).toBe('Auto would give 30 more boxes.');
+
+    // Pinwheel only with square cartons: the straight-cut layouts, said so.
+    // One cube to a carton: every footprint is square, so no pinwheel exists.
+    const cubes: Inputs = {
+      ...CUBES,
+      maxCarton: { length: 10, width: 10, height: 10 },
+      layerPattern: 'pinwheelOnly',
+    };
+    const fallback = buildCsv(buildExportPayload(cubes, optimize(cubes), 0, NOW)).split('\r\n');
+    expect(value(fallback, 'Result notes')).toBe(
+      'No pinwheel layout exists for these sizes. Showing straight-cut layouts.',
+    );
+    // A limited search says only what it found.
+    const limited = { ...optimize(good), truncated: true };
+    expect(buildCsv(buildExportPayload(good, limited, 0, NOW))).toContain(
+      'No layout reaching Good was found before the search was stopped.',
+    );
   });
 });
 

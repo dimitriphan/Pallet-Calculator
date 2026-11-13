@@ -3,13 +3,15 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { PRODUCT_FORCE_LIMIT, PRODUCT_RENDER_THRESHOLD } from '../domain/constants';
 import { useUnit } from '../ui/useUnit';
-import { useScene, useStores } from '../ui/StoreContext';
+import { useManualEditor, useScene, useStores } from '../ui/StoreContext';
 import { useResolvedTheme } from '../ui/useTheme';
 import { CameraRig } from './CameraRig';
 import { CaptureBridge } from './CaptureBridge';
 import { CAPTURE_UNIFORM_COLORS, captureGridColors } from './captureVisibility';
 import { Cartons } from './Cartons';
+import { EditorScene } from './EditorScene';
 import { Envelope } from './Envelope';
+import { hiddenSceneProps } from './hiddenScene';
 import { Labels } from './Labels';
 import { Measurements } from './Measurements';
 import { Pallet } from './Pallet';
@@ -137,28 +139,49 @@ const Unavailable = () => (
   </div>
 );
 
-/** The interactive 3D workspace: toolbar above a canvas showing the selected layout. */
+/**
+ * The interactive 3D workspace: toolbar above a canvas showing the selected layout. While a
+ * layout is edited by hand the editor's view covers both and its bar (outside this module)
+ * stands in for the toolbar; the view of the selected layout stays mounted underneath,
+ * hidden. Nothing is exported while editing (the hidden view is another size then).
+ */
 export default function PalletScene() {
   const { layout } = useSceneData();
   const sceneStore = useStores().scene;
+  const editing = useManualEditor((s) => s.session !== null);
+  const hidden = hiddenSceneProps(editing);
   return (
-    <div className="flex h-full w-full flex-col">
-      <SceneToolbar totalProducts={layout?.totalProducts ?? 0} />
-      <SceneErrorBoundary fallback={<Unavailable />}>
-        <div className="relative min-h-0 flex-1">
-          <Canvas
-            gl={{ preserveDrawingBuffer: true }}
-            dpr={[1, 2]}
-            frameloop="demand"
-            // No tone mapping: the carton, product and pallet colours show as specified.
-            flat
-            camera={{ fov: 40, near: 0.5, far: 20000, position: [120, 100, 160] }}
-            onPointerMissed={() => sceneStore.getState().setSelection(null)}
-          >
-            <SceneContents />
-          </Canvas>
+    <div className="relative h-full w-full">
+      <div
+        // Hidden, not removed: nothing in it can be focused, clicked or read.
+        {...hidden}
+        className={`flex h-full w-full flex-col ${hidden.className}`}
+        data-testid="layout-scene"
+      >
+        <SceneToolbar totalProducts={layout?.totalProducts ?? 0} />
+        <SceneErrorBoundary fallback={<Unavailable />}>
+          <div className="relative min-h-0 flex-1">
+            <Canvas
+              gl={{ preserveDrawingBuffer: true }}
+              dpr={[1, 2]}
+              frameloop="demand"
+              // No tone mapping: the carton, product and pallet colours show as specified.
+              flat
+              camera={{ fov: 40, near: 0.5, far: 20000, position: [120, 100, 160] }}
+              onPointerMissed={() => sceneStore.getState().setSelection(null)}
+            >
+              <SceneContents />
+            </Canvas>
+          </div>
+        </SceneErrorBoundary>
+      </div>
+      {editing && (
+        <div className="absolute inset-0">
+          <SceneErrorBoundary fallback={<Unavailable />}>
+            <EditorScene />
+          </SceneErrorBoundary>
         </div>
-      </SceneErrorBoundary>
+      )}
     </div>
   );
 }

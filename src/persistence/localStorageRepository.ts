@@ -4,7 +4,7 @@ import { createMemoryRepository, type Repository } from './repository';
 const UNREADABLE = 'Saved data could not be read.';
 const BACKED_UP = ' It will be backed up before anything is overwritten.';
 const THEY_BACKED_UP = ' They will be backed up before anything is overwritten.';
-const NOT_SAVED = 'Could not save: browser storage is full or unavailable.';
+export const NOT_SAVED = 'Could not save: browser storage is full or unavailable.';
 const BACKUP_FAILED =
   'Could not keep a backup, so your change was not saved. Free up browser storage and try again.';
 
@@ -38,6 +38,7 @@ export function createDefaultRepository<T extends { id: string }>(opts: {
   schema: z.ZodType<T>;
   seed?: T[];
   onNotice?: (message: string) => void;
+  discardFailed?: boolean;
 }): Repository<T> {
   const storage = getBrowserStorage();
   return storage
@@ -62,6 +63,10 @@ interface StoredRead<T> {
  * in memory and are applied again on the next write. Data that could not be fully read is
  * copied to `<key>.backup` before the key is first overwritten; if that copy cannot be written,
  * nothing is overwritten. `seed` is used only when the key has never been written.
+ *
+ * With `discardFailed`, a change whose write failed is dropped instead of kept in memory: the
+ * list stays what is really stored, so a caller can say plainly that nothing was saved (`save`
+ * and `remove` return false either way).
  */
 export function createLocalStorageRepository<T extends { id: string }>(opts: {
   key: string;
@@ -69,6 +74,7 @@ export function createLocalStorageRepository<T extends { id: string }>(opts: {
   storage?: Storage;
   onNotice?: (message: string) => void;
   seed?: T[];
+  discardFailed?: boolean;
 }): Repository<T> {
   const { key, schema, onNotice } = opts;
   const storage = opts.storage ?? getBrowserStorage();
@@ -147,9 +153,21 @@ export function createLocalStorageRepository<T extends { id: string }>(opts: {
 
   const current = (): T[] => (items ??= load());
 
-  /** Records one change, merges it into what is stored now and writes the result. */
-  const change = (id: string, item: T | null): void => {
+  /**
+   * Records one change, merges it into what is stored now and writes the result. Returns
+   * whether it was written.
+   */
+  const change = (id: string, item: T | null): boolean => {
     const before = current();
+    const failed = (notice: string): false => {
+      onNotice?.(notice);
+      if (opts.discardFailed) {
+        // The change is given up: the list is again what is stored (or what it was).
+        unsynced.delete(id);
+        items = readMerged() ?? before;
+      }
+      return false;
+    };
     unsynced.delete(id); // re-insert so the change order is kept
     unsynced.set(id, item);
     items = readMerged() ?? applyLocal(before, id, item);
@@ -159,16 +177,16 @@ export function createLocalStorageRepository<T extends { id: string }>(opts: {
         storage.setItem(`${key}.backup`, pendingBackup);
         pendingBackup = null;
       } catch {
-        onNotice?.(BACKUP_FAILED);
-        return; // the change stays in memory and unwritten
+        return failed(BACKUP_FAILED); // the change stays in memory and unwritten
       }
     }
     try {
       if (!storage) throw new Error('no storage');
       storage.setItem(key, JSON.stringify({ version: 1, items }));
       unsynced.clear();
+      return true;
     } catch {
-      onNotice?.(NOT_SAVED);
+      return failed(NOT_SAVED);
     }
   };
 

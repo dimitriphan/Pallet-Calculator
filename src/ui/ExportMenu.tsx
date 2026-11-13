@@ -11,7 +11,9 @@ import { BuildSheetDialog } from './BuildSheetDialog';
 import { useUnit } from './useUnit';
 import { BUTTON } from './ModalDialog';
 import type { ViewMode } from '../store/prefsStore';
-import { usePrefs, useResults, useScene } from './StoreContext';
+import { ENTRY_REASONS } from './editor/useEditorEntry';
+import { useManualEditor, usePrefs, useScene } from './StoreContext';
+import { useExportSource, useSelectedLayout } from './useSelectedLayout';
 
 type Format = 'pdf' | 'json' | 'csv' | 'png';
 
@@ -27,6 +29,7 @@ const ITEMS: { format: Format; label: string; modes: ViewMode[] }[] = [
 ];
 
 const NO_LAYOUT = 'Run a calculation first';
+export const EXPORT_WHILE_EDITING = ENTRY_REASONS.editing;
 const NO_3D = '3D view is unavailable, so PNG export is disabled.';
 const PNG_FAILED = 'PNG export failed. Try again after the 3D view has loaded.';
 const PDF_FAILED = 'Build sheet could not be created. Try again.';
@@ -39,10 +42,9 @@ const ITEM =
  * (Basic mode offers the build sheet and PNG).
  */
 export function ExportMenu() {
-  const inputs = useResults((s) => s.inputs);
-  const result = useResults((s) => s.result);
-  const selectedIndex = useResults((s) => s.selectedIndex);
-  const stale = useResults((s) => s.stale);
+  // The selected layout, calculated or manual, read through the one selection.
+  const hasLayout = useSelectedLayout() !== null;
+  const exportSource = useExportSource();
   const captureViews = useScene((s) => s.captureViews);
   const viewMode = usePrefs((s) => s.viewMode);
   const unit = useUnit();
@@ -53,10 +55,19 @@ export function ExportMenu() {
   const trigger = useRef<HTMLButtonElement>(null);
   const menuId = useId();
 
-  const hasLayout = !!inputs && !!result?.layouts[selectedIndex];
-  const disabledFor = (f: Format) => !hasLayout || (f === 'png' && !captureViews);
+  // While a layout is edited by hand nothing is exported: the files would show the selected
+  // layout, not the one on screen, and the 3D pictures would be taken from a view that is
+  // hidden and another size.
+  const editing = useManualEditor((s) => s.session !== null);
+  const disabledFor = (f: Format) => editing || !hasLayout || (f === 'png' && !captureViews);
   const titleFor = (f: Format) =>
-    !hasLayout ? NO_LAYOUT : f === 'png' && !captureViews ? NO_3D : undefined;
+    editing
+      ? EXPORT_WHILE_EDITING
+      : !hasLayout
+        ? NO_LAYOUT
+        : f === 'png' && !captureViews
+          ? NO_3D
+          : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -130,7 +141,9 @@ export function ExportMenu() {
 
   const saveBuildSheet = async (jobName: string) => {
     try {
-      if (!inputs || !result) throw new Error('No layout');
+      const source = exportSource();
+      if (!source) throw new Error('No layout');
+      const { inputs, result, selectedIndex, stale, manual } = source;
       const now = new Date();
       const sheet = buildSheetContent({
         inputs,
@@ -140,6 +153,7 @@ export function ExportMenu() {
         stale,
         now,
         unit,
+        ...(manual ? { manual } : {}),
       });
       const { renderBuildSheetPdf } = await import('../export/buildSheetPdf');
       // The mascot is decoration: a failed load gives a sheet without it, not a failed export.
@@ -156,13 +170,15 @@ export function ExportMenu() {
 
   const choose = async (format: Format) => {
     close(true);
-    if (!inputs || !result) return;
+    const source = exportSource();
+    if (!source || editing) return;
+    const { inputs, result, selectedIndex, stale, manual } = source;
     if (format === 'pdf') {
       setSheetDialog(true);
       return;
     }
     const now = new Date();
-    const payload = buildExportPayload(inputs, result, selectedIndex, now, stale);
+    const payload = buildExportPayload(inputs, result, selectedIndex, now, stale, manual);
     const name = exportFilename(format, now);
     if (format === 'json') {
       downloadBlob(
@@ -208,6 +224,11 @@ export function ExportMenu() {
           onKeyDown={onMenuKeyDown}
           className="absolute right-0 z-20 mt-1 w-56 border border-gray-200 bg-white py-1 dark:border-harbor-foam dark:bg-harbor-panel"
         >
+          {editing && (
+            <p className="px-3 pb-1.5 pt-1 text-xs text-gray-600 dark:text-harbor-mist">
+              {EXPORT_WHILE_EDITING}
+            </p>
+          )}
           {items.map(({ format, label }) => (
             <div key={format}>
               <button

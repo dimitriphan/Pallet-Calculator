@@ -1,7 +1,9 @@
 import { emptyMessage } from './emptyMessage';
 import { Mascot } from './Mascot';
+import { resultNotes } from './resultNotes';
 import { SproutProgress } from './SproutProgress';
 import { useResults } from './StoreContext';
+import { useSelectedLayout } from './useSelectedLayout';
 
 interface StatusLine {
   key: string;
@@ -11,8 +13,14 @@ interface StatusLine {
   progress?: boolean;
 }
 
-/** What the status area would show right now; shared so callers can avoid repeating it. */
-export function useStatusContent(): {
+/**
+ * What the status area would show right now; shared so callers can avoid repeating it.
+ * `forSelection` is for where the lines stand over the selected layout rather than over the
+ * list of calculated ones (Basic view): while a manual layout is selected, the notes about
+ * the calculated result (limited search, nothing reached the minimum, no pinwheel found) are
+ * left out, since they would read as describing the manual layout.
+ */
+export function useStatusContent(forSelection = false): {
   lines: StatusLine[];
   /** The calculation error, shown with Retry, or null. */
   error: string | null;
@@ -24,7 +32,9 @@ export function useStatusContent(): {
   const errorText = useResults((s) => s.error);
   const result = useResults((s) => s.result);
   const inputs = useResults((s) => s.inputs);
-  const truncated = result?.truncated ?? false;
+  const manualSelected = useSelectedLayout()?.ranked.manual !== undefined;
+  const calculatedNotes = !(forSelection && manualSelected);
+  const truncated = (result?.truncated ?? false) && calculatedNotes;
 
   const lines: StatusLine[] = [];
   if (status === 'running')
@@ -47,6 +57,21 @@ export function useStatusContent(): {
       text: 'Search was limited to keep it fast; results may not be the best possible.',
       tone: 'text-amber-800 dark:text-harbor-sand',
     });
+  // The layouts shown are the best-rated found, each marked as below the minimum; or, under
+  // Pinwheel only with no pinwheel found, the straight-cut ones Auto gives.
+  const notes = result && inputs && calculatedNotes ? resultNotes(inputs, result) : null;
+  if (notes?.belowMinimum)
+    lines.push({
+      key: 'belowMinimum',
+      text: notes.belowMinimum,
+      tone: 'text-amber-800 dark:text-harbor-sand',
+    });
+  if (notes?.patternFallback)
+    lines.push({
+      key: 'patternFallback',
+      text: notes.patternFallback,
+      tone: 'text-amber-800 dark:text-harbor-sand',
+    });
 
   return {
     lines,
@@ -60,8 +85,8 @@ export function useStatusContent(): {
  * The live region stays mounted so screen readers announce what appears in it; while it is
  * empty it takes no height and cancels the parent's `space-y` margin.
  */
-export function StatusMessages() {
-  const { lines, error, empty } = useStatusContent();
+export function StatusMessages({ forSelection = false }: { forSelection?: boolean }) {
+  const { lines, error, empty } = useStatusContent(forSelection);
   const retry = useResults((s) => s.retry);
 
   return (

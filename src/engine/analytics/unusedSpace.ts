@@ -4,7 +4,8 @@
  * layer, the parts of the usable footprint its cartons leave free. The two volumes add up to
  * the analytics' remaining volume; the boxes are what the 3D view draws.
  */
-import type { Inputs, Layer, Layout } from '../../domain/types';
+import { EPS } from '../../domain/constants';
+import type { Block, Inputs, Layer, Layout, ProductAxis } from '../../domain/types';
 import type { Rect } from '../packing/geometry';
 import { usableFootprint, usableHeight } from '../packing/geometry';
 import { layerOffset } from '../packing/positions';
@@ -132,20 +133,39 @@ function placedBlockRects(layer: Layer, l: Layout, usable: { x: number; y: numbe
   }));
 }
 
+/** The parts of the usable footprint the layer's cartons leave free, as placed. */
+export function layerFreeRects(layer: Layer, l: Layout, usable: { x: number; y: number }): Rect[] {
+  return freeRects(usable.x, usable.y, placedBlockRects(layer, l, usable));
+}
+
 const drawable = (size: number) => size >= MIN_GAP - SNAP;
 
+/**
+ * The unused space inside the envelope. Cartons may lie partly or wholly outside it (a layer
+ * placed by hand may overhang, or stand taller than the usable height): only what is inside
+ * counts, so no volume is ever negative and the two volumes never exceed the envelope.
+ */
 export function unusedSpace(l: Layout, i: Inputs): UnusedSpace {
   const usable = usableFootprint(i);
   const height = usableHeight(i);
   const gaps: SpaceBox[] = [];
   let gapVolume = 0;
   let top = 0;
+  // Layers of one pattern share their block list: its free parts are worked out once.
+  const freeOf = new Map<readonly Block[], { vertical: ProductAxis; free: Rect[] }>();
   for (const layer of l.layers) {
-    top = Math.max(top, layer.z + layer.height);
-    for (const r of freeRects(usable.x, usable.y, placedBlockRects(layer, l, usable))) {
-      gapVolume += r.w * r.h * layer.height;
+    const layerTop = layer.z + layer.height;
+    top = Math.max(top, layerTop);
+    // The part of the layer inside the envelope: all of it, unless it stands above the limit.
+    const dz = layerTop > height + EPS ? Math.max(0, height - layer.z) : layer.height;
+    if (dz <= 0) continue;
+    const known = freeOf.get(layer.blocks);
+    const free = known?.vertical === layer.vertical ? known.free : layerFreeRects(layer, l, usable);
+    freeOf.set(layer.blocks, { vertical: layer.vertical, free });
+    for (const r of free) {
+      gapVolume += r.w * r.h * dz;
       if (drawable(r.w) && drawable(r.h)) {
-        gaps.push({ x: r.x, y: r.y, z: layer.z, dx: r.w, dy: r.h, dz: layer.height });
+        gaps.push({ x: r.x, y: r.y, z: layer.z, dx: r.w, dy: r.h, dz });
       }
     }
   }

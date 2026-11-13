@@ -2,6 +2,8 @@ import { PALLET_HEIGHT } from '../domain/constants';
 import { inputFieldValue } from '../store/inputsStore';
 import { AdvancedSection } from './AdvancedSection';
 import { DimsFieldset } from './DimsFieldset';
+import { LayerPatternControl } from './LayerPatternControl';
+import { MinStabilityControl } from './MinStabilityControl';
 import { NumberField } from './NumberField';
 import { RotationControl } from './RotationControl';
 import { lengthText, palletNotice } from './format';
@@ -143,6 +145,9 @@ export function InputsPanel() {
       <WeightFields full />
       <div className="root-divider" aria-hidden="true" />
       <RotationControl />
+      <div className="root-divider" aria-hidden="true" />
+      <MinStabilityControl />
+      <LayerPatternControl />
       <AdvancedSection />
     </form>
   );

@@ -1,19 +1,55 @@
-import type { Dims, Inputs, OptimizeResult, RankedLayout, StabilityRating } from '../domain/types';
+import type {
+  Dims,
+  Inputs,
+  Layout,
+  OptimizeResult,
+  RankedLayout,
+  StabilityRating,
+} from '../domain/types';
+import type { ManualMarker } from '../store/manualLayoutsStore';
+import { isBelowMinimum } from '../ui/minStability';
 import { cartonDisplayDims, computeAnalytics, type Analytics } from '../engine/analytics/analytics';
 import { hasPinwheelLayer } from '../engine/analytics/stack';
+import { resultNoteLines } from '../ui/resultNotes';
 
 /** What every export says when the result shown is older than the current inputs. */
 export const STALE_NOTE = 'Out of date: inputs changed after this calculation';
+
+/** The same for a manual layout whose carton no longer applies (spec 6.6). */
+export const MANUAL_OUT_OF_DATE_NOTE =
+  'Out of date: the product size, wall thickness or leeway changed after this layout was made';
+
+/**
+ * Said in place of the flags, the rating and the warnings of an out-of-date manual layout: it
+ * is shown as it was made and is not checked against inputs that no longer apply.
+ */
+export const NOT_CHECKED = 'Not checked: this layout is out of date';
 
 export interface ExportPayload {
   exportedAt: string;
   /** True when the inputs changed after this calculation (the result is shown out of date). */
   stale: boolean;
-  /** "Current", or STALE_NOTE when stale. */
+  /** "Current", or when stale STALE_NOTE (MANUAL_OUT_OF_DATE_NOTE for an out-of-date manual layout). */
   status: string;
   inputs: Inputs;
-  selectedLayout: RankedLayout;
+  /**
+   * What the minimum stability and the layer pattern setting did to the result, as on screen:
+   * nothing reached the minimum, no pinwheel was found, what Auto would give. Empty when
+   * neither changed anything.
+   */
+  notes: string[];
+  /**
+   * True when every layout is shown although it rates below the minimum stability; for a
+   * manual layout, when its own rating is under the minimum (never for one that is out of date).
+   */
+  belowMinimum: boolean;
+  /**
+   * The selected layout. A manual layout was not ranked or scored: its `rank`, `score` and
+   * `explanation` are null and `manual` holds its name, flags and status.
+   */
+  selectedLayout: RankedLayout | ManualSelected;
   analytics: Analytics;
+  /** The calculated layouts side by side; empty for a manual layout, which is not ranked. */
   comparison: {
     rank: number;
     carton: Dims;
@@ -32,21 +68,72 @@ export interface ExportPayload {
   }[];
 }
 
-/** Everything an export file needs, taken from the inputs the result was computed from. */
+/** A manual layout as the selected layout of an export: no rank, no score. */
+export interface ManualSelected {
+  rank: null;
+  score: null;
+  explanation: null;
+  layout: Layout;
+  manual: ManualMarker;
+}
+
+export function isManualSelected(s: ExportPayload['selectedLayout']): s is ManualSelected {
+  return s.rank === null;
+}
+
+/**
+ * Everything an export file needs, taken from the inputs the result was computed from. With
+ * `manual` (the selected layout is a manual one, given as a result of that one layout) nothing
+ * of a ranking is written: no rank, no score, no comparison.
+ */
 export function buildExportPayload(
   inputs: Inputs,
   result: OptimizeResult,
   selectedIndex: number,
   now: Date,
   stale = false,
+  manual?: ManualMarker,
 ): ExportPayload {
   const selectedLayout = result.layouts[selectedIndex];
   if (!selectedLayout) throw new Error(`No layout at index ${selectedIndex}`);
+  if (manual) {
+    const outOfDate = manual.status === 'outOfDate';
+    // An out-of-date layout carries no rating, no warnings and no outside-volume figure: none
+    // of them was worked out for inputs that still apply.
+    const { stability, ...unrated } = selectedLayout.layout;
+    const layout: Layout = outOfDate
+      ? unrated
+      : { ...unrated, ...(stability ? { stability } : {}) };
+    const analytics = computeAnalytics(layout, inputs);
+    if (outOfDate) delete analytics.totals.volumeOutsideEnvelope;
+    return {
+      exportedAt: now.toISOString(),
+      stale,
+      status: !stale
+        ? 'Current'
+        : manual.status === 'outOfDate'
+          ? MANUAL_OUT_OF_DATE_NOTE
+          : STALE_NOTE,
+      inputs,
+      // The notes are about the calculated result, which this is not.
+      notes: [],
+      // As on screen: an out-of-date layout is shown as it was made, and is not judged
+      // against the minimum now set.
+      belowMinimum:
+        manual.status !== 'outOfDate' &&
+        isBelowMinimum(layout.stability?.rating, inputs.minStability),
+      selectedLayout: { rank: null, score: null, explanation: null, layout, manual },
+      analytics,
+      comparison: [],
+    };
+  }
   return {
     exportedAt: now.toISOString(),
     stale,
     status: stale ? STALE_NOTE : 'Current',
     inputs,
+    notes: resultNoteLines(inputs, result),
+    belowMinimum: result.belowMinimum === true && inputs.minStability !== 'auto',
     selectedLayout,
     analytics: computeAnalytics(selectedLayout.layout, inputs),
     comparison: result.layouts.map((r) => {

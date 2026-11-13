@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS } from '../../domain/constants';
-import type { Inputs, Layout } from '../../domain/types';
+import type { Dims, Inputs, Layout } from '../../domain/types';
+import { buildManualLayout, specFromLayout } from '../manual/build';
 import { optimize } from '../optimize';
-import { computeAnalytics, cartonDisplayDims, layerOrientations } from './analytics';
+import { computeAnalytics, cartonDisplayDims, layerOrientations, standingDims } from './analytics';
 import { trimToWeight } from './weight';
 
 const CASE_I: Inputs = {
@@ -108,6 +109,59 @@ describe('computeAnalytics, target', () => {
       cartonsNeeded: null,
       layersNeeded: null,
     });
+  });
+});
+
+describe('cartonDisplayDims: calculated layouts as on main, manual layouts as stacked (R2)', () => {
+  /** The rule as it is on main, written out again. */
+  const mainRule = (l: Layout): Dims => {
+    const size = l.carton.outer;
+    const first = l.layers[0]!.vertical;
+    if (l.layers.every((x) => x.vertical === first)) {
+      const [a, b] = (['L', 'W', 'H'] as const).filter((k) => k !== first);
+      return {
+        length: Math.max(size[a!], size[b!]),
+        width: Math.min(size[a!], size[b!]),
+        height: size[first],
+      };
+    }
+    const [length, width, height] = [size.L, size.W, size.H].sort((p, q) => q - p);
+    return { length: length!, width: width!, height: height! };
+  };
+
+  it('every calculated layout of the default inputs and Case I is written by the rule on main', () => {
+    let mixed = 0;
+    for (const inputs of [DEFAULT_INPUTS, CASE_I])
+      for (const { layout } of optimize(inputs).layouts) {
+        expect(cartonDisplayDims(layout, 'outer')).toEqual(mainRule(layout));
+        if (layout.layers.some((x) => x.vertical !== layout.layers[0]!.vertical)) mixed++;
+      }
+    expect(mixed).toBeGreaterThan(0);
+    // The default best layout stands its cartons two ways up: longest first.
+    expect(cartonDisplayDims(winner(DEFAULT_INPUTS), 'outer')).toEqual({
+      length: 21,
+      width: 13,
+      height: 9,
+    });
+  });
+
+  it('every manual layout is written as stacked: longer base side, shorter base side, height', () => {
+    for (const inputs of [DEFAULT_INPUTS, CASE_I])
+      for (const { layout } of optimize(inputs).layouts) {
+        const spec = specFromLayout(layout, inputs, 'copy', 'Copy')!;
+        const built = buildManualLayout(spec, inputs).layout;
+        const vertical = built.layers[0]!.vertical;
+        const d = cartonDisplayDims(built, 'outer');
+        expect(d).toEqual(standingDims(built.carton.outer, vertical));
+        expect(d.height).toBe(built.layers[0]!.height);
+        expect(d.length).toBeGreaterThanOrEqual(d.width);
+      }
+    // The hand copy of the default best layout: its one layer stands 13 high.
+    const copy = buildManualLayout(
+      specFromLayout(winner(DEFAULT_INPUTS), DEFAULT_INPUTS, 'copy', 'Copy')!,
+      DEFAULT_INPUTS,
+    ).layout;
+    expect(cartonDisplayDims(copy, 'outer')).toEqual({ length: 21, width: 9, height: 13 });
   });
 });
 

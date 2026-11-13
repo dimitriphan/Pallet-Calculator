@@ -5,9 +5,26 @@ export interface FixedSceneColors {
   /** The headroom and gap blocks of the unused-space overlay, drawn at unusedSpaceOpacity. */
   unusedSpace: string;
   unusedSpaceOpacity: number;
+  /**
+   * The manual layout editor's error colour: a carton dragged over another, and the tint and
+   * outline of cartons outside the allowed footprint.
+   */
+  cartonError: string;
+  /** A carton that lies turned in the editor's layer view (an unturned one is `carton`). */
+  carton: string;
+  cartonTurned: string;
+  /** The outline of the usable footprint in the editor: the envelope's blue of the normal view. */
+  footprintOutline: string;
 }
 
-const FIXED: FixedSceneColors = { unusedSpace: '#EF4444', unusedSpaceOpacity: 0.25 };
+const FIXED: FixedSceneColors = {
+  unusedSpace: '#EF4444',
+  unusedSpaceOpacity: 0.25,
+  cartonError: '#EF4444',
+  carton: '#d9a066',
+  cartonTurned: '#b9783a',
+  footprintOutline: '#3b82f6',
+};
 
 /** Colours of the 3D view that follow the theme. Loads, envelope and selection never change. */
 export interface SceneTheme {

@@ -6,6 +6,7 @@ import {
   type LayerOrientation,
 } from '../engine/analytics/analytics';
 import { describeWarning } from '../engine/analytics/stability';
+import { NOT_CHECKED } from '../export/exportData';
 import { DetailRows } from './DetailRows';
 import { StabilityBadge } from './StabilityBadge';
 import {
@@ -21,6 +22,7 @@ import {
   weightText,
   type Unit,
 } from './format';
+import { outsideVolume } from './outsideVolume';
 import { useUnit } from './useUnit';
 
 const TARGET_LABEL = {
@@ -57,7 +59,17 @@ function LayerWeightLines({ perLayer, unit }: { perLayer: number[]; unit: Unit }
 }
 
 /** Every analytics figure of the selected layout. */
-export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
+export function AnalyticsTab({
+  analytics: a,
+  unchecked = false,
+}: {
+  analytics: Analytics;
+  /**
+   * The layout is an out-of-date manual one: shown as it was made, and not checked against
+   * inputs that no longer apply (no rating, no warnings, no outside-volume row).
+   */
+  unchecked?: boolean;
+}) {
   const unit = useUnit();
   const length = (v: number) => lengthText(v, unit);
   const dims = (d: Parameters<typeof dimsText>[0]) => dimsText(d, unit);
@@ -66,6 +78,7 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
   const pct = (v: number) => fmtPct(v);
   const p = a.pallet;
   const t = a.target;
+  const outside = unchecked ? null : outsideVolume(a);
   const target: [string, string][] =
     t.status === 'none'
       ? []
@@ -135,6 +148,8 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           ['Total products', String(a.totals.products)],
           ['Total cartons', String(a.totals.cartons)],
           ['Volume used', volume(a.totals.volumeUsed)],
+          // A layout placed by hand with cartons outside: "Volume used" leaves that part out.
+          ...(outside ? ([[outside.label, volume(outside.volume)]] as [string, string][]) : []),
           ['Volume available', volume(a.totals.volumeAvailable)],
           ['Utilization', pct(a.totals.utilizationPct)],
           ['Remaining volume', volume(a.totals.remainingVolume)],
@@ -167,7 +182,14 @@ export function AnalyticsTab({ analytics: a }: { analytics: Analytics }) {
           />
         </>
       )}
-      {a.stability && <StabilityRows stability={a.stability} />}
+      {unchecked ? (
+        <>
+          <div className="root-divider" aria-hidden="true" />
+          <DetailRows title="Stability" rows={[['Rating', NOT_CHECKED]]} />
+        </>
+      ) : (
+        a.stability && <StabilityRows stability={a.stability} />
+      )}
     </div>
   );
 }
@@ -195,7 +217,13 @@ function StabilityRows({ stability: s }: { stability: NonNullable<Analytics['sta
                 ],
               ] as [string, ReactNode][])
             : []),
-          ['Stack height ÷ shorter side of base', ratioText(m.stackHeightRatio)],
+          [
+            // A layout placed by hand whose bottom layer stands in separate groups.
+            (m.freeStandingGroups ?? 1) > 1
+              ? 'Stack height ÷ shorter side of the narrowest free-standing group'
+              : 'Stack height ÷ shorter side of base',
+            ratioText(m.stackHeightRatio),
+          ],
           [
             'Carton height ÷ shorter base side, worst layer',
             m.cartonHeight ? (
@@ -212,6 +240,14 @@ function StabilityRows({ stability: s }: { stability: NonNullable<Analytics['sta
               '—'
             ),
           ],
+          ...(m.deck
+            ? ([
+                [
+                  'Least share of a bottom carton resting on the pallet',
+                  <span className="whitespace-nowrap">{shareText(m.deck.share)}</span>,
+                ],
+              ] as [string, ReactNode][])
+            : []),
           [
             'Most identical layers in straight columns',
             <span className="whitespace-nowrap">

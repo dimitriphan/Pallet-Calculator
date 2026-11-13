@@ -1,4 +1,5 @@
 import type { Analytics } from '../engine/analytics/analytics';
+import type { ManualLayoutSpec } from '../engine/manual/build';
 import type { Unit } from '../engine/units/units';
 
 export interface Dims {
@@ -9,6 +10,17 @@ export interface Dims {
 export type ProductAxis = 'L' | 'W' | 'H';
 export type OrientationCode = 'LWH' | 'LHW' | 'WLH' | 'WHL' | 'HLW' | 'HWL';
 export type RotationMode = 'full' | 'upright' | 'noSide' | 'custom';
+/**
+ * The lowest stability rating a layout may have to be offered: any ('auto'), Fair or better,
+ * or Good only.
+ */
+export type MinStability = 'auto' | 'fair' | 'good';
+/**
+ * Which layer patterns are wanted: 'auto' uses a pinwheel only where it holds more cartons
+ * than straight cuts; 'preferPinwheel' also ranks pinwheel layouts first among equal box
+ * counts; 'pinwheelOnly' leaves straight-cut layouts out.
+ */
+export type LayerPatternPref = 'auto' | 'preferPinwheel' | 'pinwheelOnly';
 
 /** Weights in pounds. Blank box weight means weight is ignored everywhere. */
 export interface WeightInputs {
@@ -31,6 +43,8 @@ export interface Inputs {
   customOrientations: OrientationCode[]; // used only when rotationMode === 'custom'
   keepCartonsUpright: boolean;
   weights: WeightInputs;
+  minStability: MinStability;
+  layerPattern: LayerPatternPref;
 }
 
 /** Same shape as Inputs but every numeric field is the raw text the user typed. */
@@ -47,6 +61,8 @@ export interface InputsDraft {
   customOrientations: OrientationCode[];
   keepCartonsUpright: boolean;
   weights: Record<keyof WeightInputs, string>; // '' = blank
+  minStability: MinStability;
+  layerPattern: LayerPatternPref;
 }
 
 /**
@@ -76,8 +92,16 @@ export interface Block {
   rotated: boolean;
 }
 
-/** How a layer's blocks are arranged: straight cuts, or four blocks turning round a centre gap. */
-export type LayerPatternKind = 'grid' | 'pinwheel';
+/**
+ * How a layer's blocks are arranged: straight cuts, four blocks turning round a centre gap, or
+ * placed by hand ('manual': one block of one carton, `cols: 1, rows: 1`, per carton).
+ *
+ * The blocks of a grid or pinwheel layer are in the layer's own frame and the layer is centred
+ * in the usable footprint when placed. The blocks of a manual layer are where the user put
+ * them: in the frame of the usable footprint (origin at its minimum corner), never re-centred,
+ * and they may lie outside it (negative, or beyond its size) where cartons overhang.
+ */
+export type LayerPatternKind = 'grid' | 'pinwheel' | 'manual';
 
 export interface LayerPattern {
   vertical: ProductAxis;
@@ -99,7 +123,8 @@ export interface Layer extends LayerPattern {
 }
 
 export type StabilityRating = 'good' | 'fair' | 'poor';
-export type StabilityCheck = 'stackHeight' | 'cartonHeight' | 'support' | 'columns';
+/** 'deck' (Round 5) is only made on a layout placed by hand. */
+export type StabilityCheck = 'stackHeight' | 'cartonHeight' | 'support' | 'columns' | 'deck';
 
 /**
  * One stability check over its caution or serious threshold. `value` is the measured ratio,
@@ -110,6 +135,13 @@ export interface StabilityWarning {
   level: 'caution' | 'serious';
   value: number;
   layer?: number;
+  /**
+   * 'stackHeight' on a layout placed by hand whose bottom layer stands in several separate
+   * groups: `value` is the ratio of the worst free-standing group, not of the whole load.
+   */
+  freeStanding?: true;
+  /** 'deck': how many bottom-layer cartons have less than the caution share on the pallet. */
+  cartons?: number;
 }
 
 export interface Stability {
@@ -161,6 +193,28 @@ export interface OptimizeResult {
   truncated: boolean;
   /** Only with NO_CARTON_WITH_COUNT: the nearest achievable boxes per carton on each side. */
   nearestCounts?: { below: number | null; above: number | null };
+  /**
+   * Only with a minimum stability: no layout reached it, and `layouts` are the best-rated
+   * ones found instead. Never set to false.
+   */
+  belowMinimum?: boolean;
+  /**
+   * Only with a minimum stability or a layer pattern other than Auto: the most products of any
+   * layout before the settings were applied (what Auto would put first), when that is more
+   * than the first layout here holds.
+   */
+  autoBestProducts?: number;
+  /**
+   * Only with layer pattern 'pinwheelOnly': no pinwheel layout was found, and `layouts` are
+   * the straight-cut layouts Auto gives instead. Never set to false.
+   */
+  patternFallback?: boolean;
+  /**
+   * Only with `patternFallback` and a maximum pallet weight: the weight is why no pinwheel
+   * layout is listed (pinwheel layouts were found and every one is over it, or a carton was
+   * too heavy to look for one), so "no pinwheel exists" must not be said. Never set to false.
+   */
+  pinwheelOverWeight?: boolean;
 }
 
 export interface Preset {
@@ -178,6 +232,8 @@ export interface Preset {
   keepCartonsUpright: boolean;
   /** The product box weight stays with the product, so a preset never holds it. */
   weights: Omit<WeightInputs, 'productBox'>;
+  minStability: MinStability;
+  layerPattern: LayerPatternPref;
   advanced: Record<string, unknown>; // reserved for the later Advanced Optimization release
 }
 
@@ -192,4 +248,10 @@ export interface Scenario {
   result: OptimizeResult;
   selectedIndex: number;
   analytics: Analytics | null;
+  /**
+   * The manual layouts present when the scenario was saved. Loading the scenario adds them to
+   * the ones present and never removes or changes any of those (see `addFromScenario`).
+   * Absent on a scenario saved before manual layouts existed: loading that one adds none.
+   */
+  manualLayouts?: ManualLayoutSpec[];
 }

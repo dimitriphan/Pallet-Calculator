@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DEFAULT_INPUTS, PALLET_HEIGHT } from './constants';
 import { computeAnalytics, type Analytics } from '../engine/analytics/analytics';
+import { manualLayoutListSchema } from './manualSchemas';
 import { analyticsSchema, optimizeResultSchema } from './resultSchemas';
 import type { Inputs, InputsDraft, OrientationCode, Preset, Scenario, WeightInputs } from './types';
 
@@ -72,6 +73,10 @@ const inputsShape = {
   keepCartonsUpright: z.boolean(),
   // Added in Round 4: data saved before it has no weights and reads with the defaults.
   weights: weights.default(defaultWeights),
+  // Added in Round 5: data saved before it has no minimum and reads as Auto.
+  minStability: z.enum(['auto', 'fair', 'good']).default('auto'),
+  // Added in Round 5: data saved before it has no layer pattern setting and reads as Auto.
+  layerPattern: z.enum(['auto', 'preferPinwheel', 'pinwheelOnly']).default('auto'),
 };
 
 export const inputsSchema: z.ZodType<Inputs> = z
@@ -107,6 +112,8 @@ export const presetSchema: z.ZodType<Preset> = z
     keepCartonsUpright: inputsShape.keepCartonsUpright,
     // Added in Round 4; the product box weight stays with the product, not the preset.
     weights: presetWeights.default(defaultPresetWeights),
+    minStability: inputsShape.minStability,
+    layerPattern: inputsShape.layerPattern,
     advanced: z.record(z.string(), z.unknown()),
   })
   .refine((v) => v.rotationMode !== 'custom' || v.customOrientations.length > 0, {
@@ -124,7 +131,12 @@ export const scenarioSchema: z.ZodType<Scenario> = z
     result: optimizeResultSchema,
     selectedIndex: z.number().int().min(0),
     analytics: analyticsSchema.nullable(),
+    // Added in Round 5; absent on older scenarios. An entry that cannot be read is dropped.
+    manualLayouts: manualLayoutListSchema.optional(),
   })
+  .transform(({ manualLayouts, ...rest }) =>
+    manualLayouts === undefined ? rest : { ...rest, manualLayouts },
+  )
   .transform((s): Scenario => {
     const a = s.analytics;
     const complete =
@@ -165,6 +177,8 @@ export function draftFromInputs(inputs: Inputs): InputsDraft {
       emptyCarton: String(inputs.weights.emptyCarton),
       pallet: String(inputs.weights.pallet),
     },
+    minStability: inputs.minStability,
+    layerPattern: inputs.layerPattern,
   };
 }
 
@@ -250,6 +264,8 @@ export function parseDraft(
       emptyCarton: num('weights.emptyCarton', draft.weights.emptyCarton),
       pallet: num('weights.pallet', draft.weights.pallet),
     },
+    minStability: draft.minStability,
+    layerPattern: draft.layerPattern,
   };
 
   const result = inputsSchema.safeParse(candidate);

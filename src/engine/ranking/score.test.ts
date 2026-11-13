@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_INPUTS, SCORE_WEIGHTS } from '../../domain/constants';
-import type { Inputs, Layout, StabilityRating } from '../../domain/types';
+import type { Inputs, Layout, ScoreBreakdown, StabilityRating } from '../../domain/types';
 import { generateCartonCandidates } from '../packing/cartons';
 import { buildLayouts } from '../packing/stacking';
-import { compareRanked, scoreLayout } from './score';
+import {
+  comparatorFor,
+  comparePinwheelFirst,
+  compareRanked,
+  isPinwheelLayout,
+  scoreLayout,
+} from './score';
 
 /** Case I: 10-inch cube, no leeway or walls, max carton 20 x 20 x 10, pallet 40 x 40 x 25. */
 const CUBES: Inputs = {
@@ -127,4 +133,43 @@ describe('compareRanked', () => {
       expect(compareRanked(low, high)).toBeGreaterThan(0);
     });
   });
+});
+
+describe('comparePinwheelFirst (Prefer pinwheel)', () => {
+  const score = { total: 50 } as ScoreBreakdown;
+  const layout = (id: string, totalProducts: number, pinwheel: boolean, rating: StabilityRating) =>
+    ({
+      layout: {
+        id,
+        totalProducts,
+        totalCartons: 10,
+        layers: [{ kind: pinwheel ? 'pinwheel' : undefined }],
+        stability: { rating, warnings: [] },
+      } as unknown as Layout,
+      score,
+    }) as const;
+
+  it('puts boxes first, then pinwheel layouts, then the rating', () => {
+    const more = layout('a', 12, false, 'poor');
+    const pinFair = layout('b', 10, true, 'fair');
+    const pinGood = layout('c', 10, true, 'good');
+    const straightGood = layout('d', 10, false, 'good');
+    const sorted = [straightGood, pinFair, more, pinGood].sort(comparePinwheelFirst);
+    expect(sorted.map((s) => s.layout.id)).toEqual(['a', 'c', 'b', 'd']);
+    // Without the setting the rating decides among equal box counts.
+    expect([straightGood, pinFair].sort(compareRanked)[0]).toBe(straightGood);
+  });
+
+  it('is chosen by the inputs, and inputs without the setting rank as before', () => {
+    expect(comparatorFor({ ...DEFAULT_INPUTS, layerPattern: 'preferPinwheel' })).toBe(
+      comparePinwheelFirst,
+    );
+    for (const layerPattern of ['auto', 'pinwheelOnly'] as const)
+      expect(comparatorFor({ ...DEFAULT_INPUTS, layerPattern })).toBe(compareRanked);
+    const { layerPattern: _unused, ...old } = DEFAULT_INPUTS;
+    void _unused;
+    expect(comparatorFor(old as Inputs)).toBe(compareRanked);
+    expect(isPinwheelLayout(pinLayout)).toBe(true);
+  });
+  const pinLayout = { layers: [{}, { kind: 'pinwheel' }] } as unknown as Layout;
 });

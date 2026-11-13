@@ -42,17 +42,31 @@ describe('orthoFit', () => {
     expect(fit.far).toBeGreaterThanOrEqual(fit.position[1] - 0);
   });
 
-  it('side: looks along +Z at the length x height face with height vertical', () => {
+  it('side: looks from the front at the length x height face, left on the left (F15)', () => {
     const fit = orthoFit(B, 'side', 3 / 2);
     expect((fit.right - fit.left) / (fit.top - fit.bottom)).toBeCloseTo(1.5, 12);
     expect(fit.right - fit.left).toBeGreaterThanOrEqual(50);
     expect(fit.top - fit.bottom).toBeGreaterThanOrEqual(60);
     expect(fit.position[0]).toBe(0);
     expect(fit.position[1]).toBe(30);
-    expect(fit.position[2]).toBeLessThan(-21);
+    // In front of the load (the front is the edge at the greatest z), looking back at it.
+    expect(fit.position[2]).toBeGreaterThan(21);
     expect(fit.up).toEqual([0, 1, 0]);
-    expect(fit.near).toBeLessThanOrEqual(-21 - fit.position[2]);
-    expect(fit.far).toBeGreaterThanOrEqual(21 - fit.position[2]);
+    expect(fit.near).toBeLessThanOrEqual(fit.position[2] - 21);
+    expect(fit.far).toBeGreaterThanOrEqual(fit.position[2] + 21);
+    // Screen right is forward x up: +x, as in the top view (whose right is +x too), so what
+    // the plan shows on the right the side view shows on the right.
+    const right = (f: typeof fit) => {
+      const d = [0, 1, 2].map((k) => f.target[k]! - f.position[k]!);
+      const u = f.up;
+      return [
+        Math.sign(d[1]! * u[2] - d[2]! * u[1]),
+        Math.sign(d[2]! * u[0] - d[0]! * u[2]),
+        Math.sign(d[0]! * u[1] - d[1]! * u[0]),
+      ].map((v) => v + 0);
+    };
+    expect(right(fit)).toEqual([1, 0, 0]);
+    expect(right(orthoFit(B, 'top', 3 / 2))).toEqual([1, 0, 0]);
   });
 
   it('adds the margin on the limiting axis', () => {

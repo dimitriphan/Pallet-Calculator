@@ -1,4 +1,4 @@
-import type { Inputs, Layer, Layout, ProductAxis } from '../../domain/types';
+import type { Inputs, LayerPattern, Layout, ProductAxis } from '../../domain/types';
 import { productSize, usableFootprint } from './geometry';
 import { blocksBounds, footprintAxes } from './stacking';
 
@@ -19,13 +19,17 @@ export interface PlacedCarton extends PlacedBox {
   axes: { x: ProductAxis; y: ProductAxis; z: ProductAxis };
 }
 
-/** Offset that centres the layer's blocks (by their bounding box) in the usable footprint. */
+/**
+ * Offset that centres the layer's blocks (by their bounding box) in the usable footprint. A
+ * layer placed by hand is not moved: its blocks are already in the usable footprint's frame.
+ */
 export function layerOffset(
-  layer: Layer,
+  layer: Pick<LayerPattern, 'blocks' | 'kind'>,
   a: number,
   b: number,
   usable: { x: number; y: number },
 ): { x: number; y: number } {
+  if (layer.kind === 'manual') return { x: 0, y: 0 };
   const { min, size } = blocksBounds(layer.blocks, a, b);
   return { x: (usable.x - size.x) / 2 - min.x, y: (usable.y - size.y) / 2 - min.y };
 }

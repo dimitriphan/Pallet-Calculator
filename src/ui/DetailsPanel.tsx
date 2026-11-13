@@ -1,10 +1,17 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
 import { AnalyticsTab } from './AnalyticsTab';
+import { EDITOR_ENTRY_REASON_ID, useEditorEntry } from './editor/useEditorEntry';
 import { ExplanationTab } from './ExplanationTab';
+import { BUTTON } from './ModalDialog';
 import { SelectionTab } from './SelectionTab';
 import { StaleBadge } from './StaleBadge';
-import { useScene } from './StoreContext';
+import { useResults, useScene } from './StoreContext';
 import { useSelectedAnalytics } from './useSelectedAnalytics';
+
+/** Why a selected manual layout that is out of date cannot be edited as it stands. */
+export const EDIT_OUT_OF_DATE =
+  'This layout is out of date. Rebuild it under “Your layouts” to edit it.';
+const EDIT_REASON_ID = 'details-edit-reason';
 
 const TABS = ['Analytics', 'Explanation', 'Selection'] as const;
 type Tab = (typeof TABS)[number];
@@ -15,6 +22,23 @@ export function DetailsPanel() {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const selected = useSelectedAnalytics();
   const selection = useScene((s) => s.selection);
+  const selectedIndex = useResults((s) => s.selectedIndex);
+  const entry = useEditorEntry();
+  // A manual layout that is out of date can only be rebuilt, not edited as it stands.
+  const outOfDate = selected?.ranked.manual?.status === 'outOfDate';
+  const manualSelected = selected?.ranked.manual !== undefined;
+  // Why the button is off, said in its title and described to a screen reader.
+  const editReason = outOfDate
+    ? EDIT_OUT_OF_DATE
+    : manualSelected
+      ? entry.blocked
+      : entry.blockedCalculated;
+  const editOff = editReason !== null;
+  const edit = () => {
+    const manual = selected?.ranked.manual;
+    if (manual) entry.openSaved(manual.id);
+    else entry.openCalculated(selectedIndex);
+  };
 
   const onKeyDown = (e: KeyboardEvent) => {
     const k = TABS.indexOf(active);
@@ -37,7 +61,8 @@ export function DetailsPanel() {
   let content;
   if (!selected)
     content = <p className="text-sm text-gray-600 dark:text-harbor-mist">No layout to show yet.</p>;
-  else if (active === 'Analytics') content = <AnalyticsTab analytics={selected.analytics} />;
+  else if (active === 'Analytics')
+    content = <AnalyticsTab analytics={selected.analytics} unchecked={outOfDate} />;
   else if (active === 'Explanation') content = <ExplanationTab ranked={selected.ranked} />;
   else
     content = (
@@ -81,6 +106,28 @@ export function DetailsPanel() {
         </div>
         <StaleBadge className="ml-auto" />
       </div>
+      {selected && (
+        <div className="border-b border-gray-200 px-4 py-2 dark:border-harbor-foam/40">
+          <button
+            type="button"
+            disabled={editOff}
+            // Any other reason is the line by the entry buttons over the comparison table.
+            aria-describedby={
+              outOfDate ? EDIT_REASON_ID : editOff ? EDITOR_ENTRY_REASON_ID : undefined
+            }
+            title={editReason ?? undefined}
+            onClick={edit}
+            className={BUTTON}
+          >
+            Edit layout by hand
+          </button>
+          {outOfDate && (
+            <p id={EDIT_REASON_ID} className="mt-1 text-xs text-gray-600 dark:text-harbor-mist">
+              {editReason}
+            </p>
+          )}
+        </div>
+      )}
       <div
         role="tabpanel"
         id={`details-panel-${active}`}

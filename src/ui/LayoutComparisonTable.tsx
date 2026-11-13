@@ -17,10 +17,13 @@ import {
   weightTrimText,
   withUnit,
 } from './format';
+import { DESIGN_OWN_ID, EDITOR_ENTRY_REASON_ID, useEditorEntry } from './editor/useEditorEntry';
+import { BelowMinimumBadge, MinimumNote, useBelowMinimum } from './MinimumNotes';
 import { useUnit } from './useUnit';
 import { StabilityBadge } from './StabilityBadge';
 import { StatusMessages } from './StatusMessages';
 import { useResults } from './StoreContext';
+import { BUTTON } from './ModalDialog';
 
 /** "Pinwheel" under the layer count of a layout that has a pinwheel layer. */
 const PINWHEEL_BADGE =
@@ -53,9 +56,13 @@ const TARGET_BADGE: Record<Exclude<TargetStatus, 'none'>, { label: string; class
 export function LayoutComparisonTable() {
   const result = useResults((s) => s.result);
   const inputs = useResults((s) => s.inputs);
-  const selectedIndex = useResults((s) => s.selectedIndex);
+  // While a manual layout is selected no calculated row is.
+  const selectedIndex = useResults((s) => (s.selectedManualId === null ? s.selectedIndex : -1));
   const select = useResults((s) => s.select);
   const unit = useUnit();
+  const belowMinimum = useBelowMinimum();
+  const entry = useEditorEntry();
+  const entryOff = entry.blockedCalculated !== null;
   // Weight is shown only when the result was computed with a box weight.
   const weighed = !!inputs && inputs.weights.productBox !== null;
 
@@ -78,14 +85,30 @@ export function LayoutComparisonTable() {
   const td = 'whitespace-nowrap px-1 py-1.5 tabular-nums';
   return (
     <section aria-labelledby="comparison-heading" className="shrink-0 space-y-2">
-      <div className="flex items-baseline justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="comparison-heading" className="heading text-sm text-gray-900 dark:text-harbor-foam">
           Layout comparison
         </h2>
+        <button
+          type="button"
+          id={DESIGN_OWN_ID}
+          disabled={entryOff}
+          aria-describedby={entryOff ? EDITOR_ENTRY_REASON_ID : undefined}
+          onClick={() => entry.openOwn()}
+          className={BUTTON}
+        >
+          Design my own carton
+        </button>
       </div>
+      {entryOff && (
+        <p id={EDITOR_ENTRY_REASON_ID} className="text-xs text-gray-600 dark:text-harbor-mist">
+          {entry.blockedCalculated}
+        </p>
+      )}
       <StatusMessages />
+      {rows.length > 0 && <MinimumNote />}
       {rows.length > 0 && (
-        <div className="overflow-x-auto border border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel">
+        <div className="relative overflow-x-auto border border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel">
           <table aria-label="Layout comparison" className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600 dark:border-harbor-foam/40 dark:bg-harbor-raised dark:text-harbor-mist">
               <tr>
@@ -121,6 +144,10 @@ export function LayoutComparisonTable() {
                 <th scope="col" className={`${th} text-right`}>
                   Score
                 </th>
+                {/* Positioned, so the hidden label stays inside the table's own scroll box. */}
+                <th scope="col" className={`${th} relative`}>
+                  <span className="sr-only">Edit</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -144,7 +171,16 @@ export function LayoutComparisonTable() {
                   >
                     <td className={td}>{ranked.rank}</td>
                     <td className={td}>
-                      {formatDims(cartonDisplayDims(ranked.layout, 'outer'), unit)}
+                      {belowMinimum ? (
+                        // Under the carton size, the one column wide enough to hold the mark
+                        // without widening the table past its panel.
+                        <span className="flex flex-col items-start gap-0.5">
+                          <span>{formatDims(cartonDisplayDims(ranked.layout, 'outer'), unit)}</span>
+                          <BelowMinimumBadge />
+                        </span>
+                      ) : (
+                        formatDims(cartonDisplayDims(ranked.layout, 'outer'), unit)
+                      )}
                     </td>
                     <td className={`${td} text-right`}>
                       <span className="flex flex-col items-end gap-0.5">
@@ -195,6 +231,23 @@ export function LayoutComparisonTable() {
                       {formatVolume(analytics.totals.remainingVolume, unit)}
                     </td>
                     <td className={`${td} text-right`}>{fmtDecimal(ranked.score.total)}</td>
+                    <td className={`${td} text-right`}>
+                      <button
+                        type="button"
+                        aria-label={`Edit layout ${ranked.rank} by hand`}
+                        disabled={entryOff}
+                        aria-describedby={entryOff ? EDITOR_ENTRY_REASON_ID : undefined}
+                        // The row selects on click and on Enter; the button only edits.
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          entry.openCalculated(index);
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className={`${BUTTON} !px-1.5 !py-0.5 text-xs font-normal`}
+                      >
+                        Edit by hand
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

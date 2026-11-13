@@ -237,13 +237,17 @@ Each check yields none, a caution, or a serious warning.
 
 ## 10. Not in this round
 
-- Mixed products on one pallet (stage 2).
+- Mixed products on one pallet (withdrawn, see section 11).
 - Crush strength, load on bottom cartons.
 - Partial top layers chosen automatically.
 - A maximum weight per carton.
 - Separate unit choices per field.
 
-## 11. Stage 2 (recorded, not built now): mixed pallets
+## 11. Stage 2: mixed pallets (withdrawn)
+
+**Withdrawn by the owner on 2026-11-12.** Mixed pallets are no longer
+part of the process; see the Round 5 design. The notes below are kept
+only as a record.
 
 Agreed with the owner:
 

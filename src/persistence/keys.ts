@@ -3,4 +3,5 @@ export const STORAGE_KEYS = {
   scenarios: 'pc.scenarios.v1',
   inputs: 'pc.inputs.v1',
   prefs: 'pc.prefs.v1',
+  manualLayouts: 'pc.manualLayouts.v1',
 } as const;

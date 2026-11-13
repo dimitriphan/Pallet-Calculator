@@ -1,0 +1,1687 @@
+{
+  "default": {
+    "hash": "0897575d26ccad034493aaf56c95",
+    "layouts": [
+      "1 1x1x5|L:10:5x2u/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t/W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t 260 fair",
+      "2 1x1x5|L:10:5x2u/L:10:5x2u/L:10:5x2u/L:10:5x2u/L:10:5x2u 250 fair",
+      "3 1x2x5|W:7:1x2u,1x2u,1x3r/W:7:1x2u,1x2u,1x3r:t/W:7:1x2u,1x2u,1x3r/L:4:2x2u 250 fair",
+      "4 1x1x3|H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u:t/H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u:t/H:16:1x3r,1x3r,1x3r,1x3r,1x4u 240 fair",
+      "5 1x2x3|H:8:1x2u,2x3r/H:8:1x2u,2x3r:t/H:8:1x2u,2x3r/H:8:1x2u,2x3r:t/H:8:1x2u,2x3r 240 fair"
+    ],
+    "emptyReason": null
+  },
+  "cubes": {
+    "hash": "010f4a5d45f326072b45dde4698a",
+    "layouts": [
+      "1 1x2x2|L:4:2x2u/L:4:2x2u 32 good",
+      "2 1x1x2|L:8:2x4r/L:8:2x4r 32 good",
+      "3 1x1x1|H:16:4x4u/H:16:4x4u 32 good",
+      "4 1x2x2|H:8:2x4r 32 fair",
+      "5 1x1x2|H:16:4x4u 32 fair"
+    ],
+    "emptyReason": null
+  },
+  "pinwheel": {
+    "hash": "00fee411dcf3f916b18023daf551",
+    "layouts": [
+      "1 1x1x1|H:10:1x2u,1x2u,3x1r,3x1r/H:10:1x2u,1x2u,3x1r,3x1r/H:10:1x2u,1x2u,3x1r,3x1r 30 fair",
+      "2 1x1x1|H:9:1x2r,1x2r,1x2r,1x3u/H:9:1x2r,1x2r,1x2r,1x3u:t/H:9:1x2r,1x2r,1x2r,1x3u 27 fair",
+      "3 1x1x1|L:9:1x2u,2x1r,2x1r,3x1u/L:9:1x2u,2x1r,2x1r,3x1u:t/L:9:1x2u,2x1r,2x1r,3x1u 27 fair",
+      "4 1x1x1|H:8:4x2r/H:8:4x2r/H:8:4x2r 24 fair",
+      "5 1x1x1|L:8:4x2u/L:8:4x2u/L:8:4x2u 24 fair"
+    ],
+    "emptyReason": null
+  },
+  "pinwheel, overhang, upright": {
+    "hash": "10352166379586069925b1884dd0",
+    "layouts": [
+      "1 1x1x1|H:12:3x4u/H:12:3x4u/H:12:3x4u 36 fair",
+      "2 1x1x1|W:6:3x2u/W:6:3x2u/W:6:3x2u/W:6:3x2u/W:6:3x2u 30 fair",
+      "3 1x1x1|L:10:1x2u,2x4r/L:10:1x2u,2x4r:t/L:10:1x2u,2x4r 30 fair",
+      "4 1x1x1|H:8:4x2r/H:8:4x2r/H:8:4x2r 24 fair",
+      "5 1x1x1|L:8:2x4r/L:8:2x4r/L:8:2x4r 24 fair"
+    ],
+    "emptyReason": null
+  },
+  "overhang, target, six per carton": {
+    "hash": "14bba4cd00a61a18d90403c69346",
+    "layouts": [
+      "1 1x2x3|H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u:t/H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u:t/H:10:3x1r,3x1r,4x1u 300 fair",
+      "2 1x2x3|H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r 270 fair",
+      "3 1x2x3|H:8:4x2u/H:8:4x2u/H:8:4x2u/H:8:4x2u/H:8:4x2u 240 fair"
+    ],
+    "emptyReason": null
+  },
+  "small product": {
+    "hash": "0e1135201142030bb2549ebf01ac",
+    "layouts": [
+      "1 2x5x3|L:10:5x2r/L:10:5x2r/L:10:5x2r/L:10:5x2r/L:10:5x2r 1500 fair",
+      "2 2x5x5|L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r 1500 fair",
+      "3 1x5x5|H:14:7x2u/H:14:7x2u/L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r 1450 fair",
+      "4 1x5x3|H:14:7x2u/L:10:5x2r/L:10:5x2r/L:10:5x2r/L:10:5x2r/L:10:5x2r/L:10:5x2r/L:10:5x2r/L:10:5x2r 1410 fair",
+      "5 3x3x3|L:15:5x3r/L:15:5x3r/L:15:5x3r/H:7:1x2r,1x2r,1x3u 1404 fair"
+    ],
+    "emptyReason": null
+  },
+  "weight limit": {
+    "hash": "18c5a24ff0669a1864b2535a4e40",
+    "layouts": [
+      "1 1x1x5|L:10:5x2u/L:10:5x2u/L:10:5x2u 150 good",
+      "2 1x1x1|H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r 150 fair",
+      "3 1x1x1|W:30:10x3r/W:30:10x3r/W:30:10x3r/W:30:10x3r/W:30:10x3r 150 fair",
+      "4 1x1x2|H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r 150 fair",
+      "5 1x1x5|H:15:5x3r/H:15:5x3r 150 fair"
+    ],
+    "emptyReason": null
+  },
+  "pinwheel too heavy": {
+    "hash": "1aed2dee913e681dd25a21bf5a2e",
+    "layouts": [
+      "1 1x1x1|H:9:1x2r,1x2r,1x2r,1x3u 9 fair",
+      "2 1x1x1|H:8:4x2r 8 fair",
+      "3 1x1x1|H:6:2x3u 6 fair"
+    ],
+    "emptyReason": null
+  },
+  "nothing fits": {
+    "hash": "0b79adf64329a018fc4da05aef4c",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_FITS"
+  },
+  "no carton of seven": {
+    "hash": "03d854ca8b3b360ef292b182a624",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 0": {
+    "hash": "0723e66868607f03536c23ab8de7",
+    "layouts": [
+      "1 1x2x1|H:10:3x1u,3x1u,4x1r/H:10:3x1u,3x1u,4x1r:t/H:10:3x1u,3x1u,4x1r/H:10:3x1u,3x1u,4x1r:t/H:10:3x1u,3x1u,4x1r 100 good",
+      "2 1x4x1|H:5:2x1r,3x1u/H:5:2x1r,3x1u:t/H:5:2x1r,3x1u/H:5:2x1r,3x1u:t/H:5:2x1r,3x1u 100 good",
+      "3 1x2x2|L:8:4x2u/L:8:4x2u/L:8:4x2u 96 good",
+      "4 1x4x2|L:4:2x2u/L:4:2x2u/L:4:2x2u 96 good",
+      "5 1x2x1|L:16:4x4u/L:16:4x4u/L:16:4x4u 96 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 1": {
+    "hash": "1feaca756944a719e4608546771a",
+    "layouts": [],
+    "emptyReason": "OVER_WEIGHT"
+  },
+  "random 2": {
+    "hash": "000c082e98f49900e6353d2a69dc",
+    "layouts": [
+      "1 1x2x2|W:18:3x6u 72 poor",
+      "2 2x1x2|W:8:1x1r,1x1r,1x6u/W:8:1x1r,1x1r,1x6u:t 64 fair",
+      "3 2x1x2|W:7:7x1r/W:7:7x1r 56 fair",
+      "4 1x2x2|W:14:7x2r 56 poor",
+      "5 2x1x2|H:4:4x1r/H:4:4x1r/H:4:4x1r 48 good"
+    ],
+    "emptyReason": null
+  },
+  "random 3": {
+    "hash": "1704b0db0e5b9d16e808e45328d6",
+    "layouts": [
+      "1 1x1x1|L:18:6x3u/L:18:6x3u/L:18:6x3u 54 fair",
+      "2 1x1x1|W:9:3x3u/W:9:3x3u/W:9:3x3u/W:9:3x3u/W:9:3x3u/W:9:3x3u 54 fair",
+      "3 1x1x2|L:9:3x3r/L:9:3x3r/L:9:3x3r 54 fair",
+      "4 1x2x1|L:9:3x3u/L:9:3x3u/L:9:3x3u 54 fair",
+      "5 1x3x1|L:6:2x3u/L:6:2x3u/L:6:2x3u 54 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 4": {
+    "hash": "1eaf038056d8c218b8fd53dc2fa0",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 5": {
+    "hash": "1a2e44a59843bc1acf2c4bbd7f5e",
+    "layouts": [
+      "1 1x1x1|W:16:1x2r,1x2r,2x6u/W:16:1x2r,1x2r,2x6u:t/W:16:1x2r,1x2r,2x6u/W:16:1x2r,1x2r,2x6u:t/W:16:1x2r,1x2r,2x6u/W:16:1x2r,1x2r,2x6u:t 96 fair",
+      "2 2x1x1|W:8:1x1r,1x1r,1x6u/W:8:1x1r,1x1r,1x6u:t/W:8:1x1r,1x1r,1x6u/W:8:1x1r,1x1r,1x6u:t/W:8:1x1r,1x1r,1x6u/W:8:1x1r,1x1r,1x6u:t 96 fair",
+      "3 1x1x1|H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u 88 fair",
+      "4 2x1x1|H:4:1x1r,1x3u/H:4:1x1r,1x3u:t/H:4:1x1r,1x3u/H:4:1x1r,1x3u:t/H:4:1x1r,1x3u/H:4:1x1r,1x3u:t/H:4:1x1r,1x3u/H:4:1x1r,1x3u:t/H:4:1x1r,1x3u/H:4:1x1r,1x3u:t/H:4:1x1r,1x3u 88 fair",
+      "5 3x1x1|L:21:7x3r 63 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 6": {
+    "hash": "0e7debaa07e9e908101c24dec1f6",
+    "layouts": [
+      "1 1x1x1|L:12:4x3r/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u 57 fair",
+      "2 1x3x1|W:10:3x1u,3x1u,4x1r/H:3:3x1u/H:3:3x1u/H:3:3x1u 57 poor",
+      "3 1x1x1|H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u 54 fair",
+      "4 1x3x1|H:3:3x1u/H:3:3x1u/H:3:3x1u/H:3:3x1u/H:3:3x1u/H:3:3x1u 54 fair",
+      "5 1x2x1|W:10:3x1u,3x1u,4x1r/W:10:3x1u,3x1u,4x1r:t/L:6:1x1u,1x1u,2x1r,2x1r 52 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 7": {
+    "hash": "0737c6d933d5521231d76f26cdd6",
+    "layouts": [
+      "1 1x1x2|L:30:10x3u/L:30:10x3u/L:30:10x3u/L:30:10x3u/L:30:10x3u/L:30:10x3u/L:30:10x3u/L:30:10x3u 480 fair",
+      "2 3x1x1|H:16:2x8u/H:16:2x8u/H:16:2x8u/H:16:2x8u/H:16:2x8u/H:16:2x8u/H:16:2x8u/H:16:2x8u/H:16:2x8u/H:16:2x8u 480 fair",
+      "3 1x1x3|L:20:10x2u/L:20:10x2u/L:20:10x2u/L:20:10x2u/L:20:10x2u/L:20:10x2u/L:20:10x2u/L:20:10x2u 480 fair",
+      "4 1x1x2|W:16:1x3u,1x3u,1x3u,1x3u,1x4r/W:16:1x3u,1x3u,1x3u,1x3u,1x4r:t/W:16:1x3u,1x3u,1x3u,1x3u,1x4r/W:16:1x3u,1x3u,1x3u,1x3u,1x4r:t/W:16:1x3u,1x3u,1x3u,1x3u,1x4r/W:16:1x3u,1x3u,1x3u,1x3u,1x4r:t/W:16:1x3u,1x3u,1x3u,1x3u,1x4r/W:16:1x3u,1x3u,1x3u,1x3u,1x4r:t/W:16:1x3u,1x3u,1x3u,1x3u,1x4r/W:16:1x3u,1x3u,1x3u,1x3u,1x4r:t/W:16:1x3u,1x3u,1x3u,1x3u,1x4r/W:16:1x3u,1x3u,1x3u,1x3u,1x4r:t/W:16:1x3u,1x3u,1x3u,1x3u,1x4r/W:16:1x3u,1x3u,1x3u,1x3u,1x4r:t/W:16:1x3u,1x3u,1x3u,1x3u,1x4r 480 fair",
+      "5 3x1x1|L:53:1x5u,6x8r/L:53:1x5u,6x8r:t/L:53:1x5u,6x8r 477 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 8": {
+    "hash": "12e4fbbfd06963054b44af69ac7a",
+    "layouts": [
+      "1 2x1x4|H:4:2x2u 32 fair",
+      "2 1x1x4|H:8:4x2u 32 poor",
+      "3 1x1x1|H:8:4x2u/H:8:4x2u/H:8:4x2u 24 good",
+      "4 1x1x1|L:8:4x2r/L:8:4x2r/L:8:4x2r 24 good",
+      "5 1x2x1|H:4:4x1u/H:4:4x1u/H:4:4x1u 24 good"
+    ],
+    "emptyReason": null
+  },
+  "random 9": {
+    "hash": "102a4524c2f1cb1b1488035a4f74",
+    "layouts": [
+      "1 1x2x3|H:30:6x5u/H:30:6x5u/L:20:4x5r/L:20:4x5r 600 good",
+      "2 1x2x4|H:30:6x5u/H:30:6x5u/L:15:3x5r 600 fair",
+      "3 1x2x5|H:30:6x5u/H:30:6x5u 600 fair",
+      "4 1x3x4|H:20:4x5r/H:20:4x5r/L:10:3x1r,3x1r,4x1u 600 fair",
+      "5 1x3x5|H:20:4x5r/H:20:4x5r 600 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 10": {
+    "hash": "0d5a83a3a073db0146960afd5f64",
+    "layouts": [
+      "1 1x1x2|L:23:1x1u,1x5u,2x1u,2x3r,3x3r/L:23:1x1u,1x5u,2x1u,2x3r,3x3r:t/H:10:1x3u,2x1u,2x1u,3x1r 112 fair",
+      "2 1x1x1|L:46:1x10u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x3r,3x3r,3x3r,3x3r/L:46:1x10u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x3r,3x3r,3x3r,3x3r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t 112 poor",
+      "3 1x1x1|H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t 100 good",
+      "4 1x1x2|H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r 100 good",
+      "5 1x1x2|L:23:1x1u,1x5u,2x1u,2x3r,3x3r/L:23:1x1u,1x5u,2x1u,2x3r,3x3r:t 92 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 11": {
+    "hash": "12031fe651390313edcf20bd67a1",
+    "layouts": [
+      "1 1x1x1|H:16:1x2r,1x2r,1x2r,2x5u/H:16:1x2r,1x2r,1x2r,2x5u:t/H:16:1x2r,1x2r,1x2r,2x5u 48 good",
+      "2 1x1x1|W:12:1x2u,2x1r,2x2u,4x1r/W:12:1x2u,2x1r,2x2u,4x1r:t/W:12:1x2u,2x1r,2x2u,4x1r/W:12:1x2u,2x1r,2x2u,4x1r:t 48 good",
+      "3 1x1x2|W:6:1x1r,1x1u,2x1r,2x1u/W:6:1x1r,1x1u,2x1r,2x1u:t/W:6:1x1r,1x1u,2x1r,2x1u/W:6:1x1r,1x1u,2x1r,2x1u:t 48 good",
+      "4 1x1x1|H:15:3x5u/H:15:3x5u/H:15:3x5u 45 good",
+      "5 1x1x2|H:16:1x2r,1x2r,1x2r,2x5u/W:5:1x1u,2x2r 42 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 12": {
+    "hash": "103ed0450be020193f9776f219f5",
+    "layouts": [
+      "1 1x2x1|H:12:3x4r/H:12:3x4r/H:12:3x4r/H:12:3x4r/H:12:3x4r/H:12:3x4r 144 fair",
+      "2 1x3x1|H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r 144 fair",
+      "3 1x2x2|H:12:3x4r/H:12:3x4r/H:12:3x4r 144 fair",
+      "4 2x2x1|H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u 144 fair",
+      "5 1x1x1|H:28:4x7u/H:28:4x7u/H:28:4x7u/H:28:4x7u/H:28:4x7u 140 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 13": {
+    "hash": "0ef788928783d60feb973f067c77",
+    "layouts": [
+      "1 1x2x1|H:9:2x1r,2x1r,5x1u/H:9:2x1r,2x1r,5x1u:t/H:9:2x1r,2x1r,5x1u/H:9:2x1r,2x1r,5x1u:t/H:9:2x1r,2x1r,5x1u/H:9:2x1r,2x1r,5x1u:t/H:9:2x1r,2x1r,5x1u 126 good",
+      "2 1x1x1|H:17:1x3u,3x1r,3x1r,4x2u/H:17:1x3u,3x1r,3x1r,4x2u:t/H:17:1x3u,3x1r,3x1r,4x2u/H:17:1x3u,3x1r,3x1r,4x2u:t/H:17:1x3u,3x1r,3x1r,4x2u/H:17:1x3u,3x1r,3x1r,4x2u:t/H:17:1x3u,3x1r,3x1r,4x2u 119 good",
+      "3 2x1x1|H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u 112 good",
+      "4 1x2x1|H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r 112 fair",
+      "5 2x2x1|H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r 112 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 14": {
+    "hash": "1c2c28057f78dc100c65d8e7f694",
+    "layouts": [
+      "1 1x1x1|H:14:1x2u,3x4r/H:14:1x2u,3x4r:t/H:14:1x2u,3x4r/H:14:1x2u,3x4r:t/L:10:1x2r,1x2r,2x3u/L:10:1x2r,1x2r,2x3u 76 fair",
+      "2 1x2x1|H:6:1x1u,1x1u,1x4r/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u 72 fair",
+      "3 1x1x1|H:14:1x2u,3x4r/H:14:1x2u,3x4r:t/H:14:1x2u,3x4r/H:14:1x2u,3x4r:t/H:14:1x2u,3x4r 70 fair",
+      "4 1x2x1|L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u/L:5:1x1r,1x1r,1x3u 70 fair",
+      "5 1x3x1|H:4:1x4r/H:4:1x4r/H:4:1x4r/H:4:1x4r/L:3:1x3u/L:3:1x3u 66 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 15": {
+    "hash": "038459d79c5d4c1171c47a41f5dd",
+    "layouts": [
+      "1 1x1x1|W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t 77 fair",
+      "2 1x1x1|W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t 76 fair",
+      "3 1x1x1|W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u 72 fair",
+      "4 1x1x1|H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r 70 good",
+      "5 1x1x1|W:16:8x2r/W:16:8x2r/W:16:8x2r/W:16:8x2r 64 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 16": {
+    "hash": "0cdf022292270a1ad56f8f33c472",
+    "layouts": [
+      "1 1x2x2|H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t 160 poor",
+      "2 1x2x1|W:16:4x4r/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t 152 poor",
+      "3 1x2x3|H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/W:5:1x1u,1x4r 150 poor",
+      "4 1x3x2|H:6:1x1u,1x1u,1x4r/H:6:1x1u,1x1u,1x4r/H:6:1x1u,1x1u,1x4r/H:6:1x1u,1x1u,1x4r 144 poor",
+      "5 1x2x1|H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r 140 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 17": {
+    "hash": "14e960b31ad33c1370f5fc679553",
+    "layouts": [
+      "1 2x1x1|L:23:1x4u,1x4u,3x5r/L:23:1x4u,1x4u,3x5r:t/L:23:1x4u,1x4u,3x5r 138 fair",
+      "2 1x1x1|H:30:6x5u/H:30:6x5u/W:24:6x4u/W:24:6x4u/W:24:6x4u 132 good",
+      "3 1x2x1|H:15:3x5r/H:15:3x5r/L:12:3x4u/L:12:3x4u/L:12:3x4u 132 good",
+      "4 1x1x1|H:30:6x5u/H:30:6x5u/H:30:6x5u/H:30:6x5u 120 fair",
+      "5 1x2x1|H:15:3x5r/H:15:3x5r/H:15:3x5r/H:15:3x5r 120 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 18": {
+    "hash": "0e630252189e7d18ebd69feb1233",
+    "layouts": [
+      "1 1x1x1|H:15:1x3r,3x4u/H:15:1x3r,3x4u:t/H:15:1x3r,3x4u/H:15:1x3r,3x4u:t 60 good",
+      "2 3x1x1|H:5:1x1r,1x4u/H:5:1x1r,1x4u:t/H:5:1x1r,1x4u/H:5:1x1r,1x4u:t 60 good",
+      "3 1x1x2|H:15:1x3r,3x4u/H:15:1x3r,3x4u:t 60 fair",
+      "4 3x1x2|H:5:1x1r,1x4u/H:5:1x1r,1x4u:t 60 fair",
+      "5 1x2x1|H:7:1x2u,1x2u,1x3r/H:7:1x2u,1x2u,1x3r:t/H:7:1x2u,1x2u,1x3r/H:7:1x2u,1x2u,1x3r:t 56 good"
+    ],
+    "emptyReason": null
+  },
+  "random 19": {
+    "hash": "12089351073d1315ff630cd0052e",
+    "layouts": [
+      "1 1x1x1|L:20:1x1u,1x1u,1x6u,3x2r,3x2r/L:20:1x1u,1x1u,1x6u,3x2r,3x2r:t 40 poor",
+      "2 2x1x1|L:20:1x1u,1x1u,1x6u,3x2r,3x2r 40 poor",
+      "3 1x1x2|L:9:3x3u/L:9:3x3u 36 fair",
+      "4 1x3x2|L:3:1x3u/L:3:1x3u 36 fair",
+      "5 1x1x1|L:18:3x6u/L:18:3x6u 36 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 20": {
+    "hash": "1a134a8ca9d8c50f46ce3b1751e7",
+    "layouts": [
+      "1 1x1x1|L:61:10x1u,1x2r,1x4u,5x9r/L:61:10x1u,1x2r,1x4u,5x9r:t/L:61:10x1u,1x2r,1x4u,5x9r/L:61:10x1u,1x2r,1x4u,5x9r:t/L:61:10x1u,1x2r,1x4u,5x9r/W:20:5x4u/W:20:5x4u 345 fair",
+      "2 1x2x1|L:30:3x1r,3x1u,3x4r,3x4u/L:30:3x1r,3x1u,3x4r,3x4u:t/L:30:3x1r,3x1u,3x4r,3x4u/L:30:3x1r,3x1u,3x4r,3x4u:t/L:30:3x1r,3x1u,3x4r,3x4u/W:20:5x4u 340 good",
+      "3 1x1x1|L:60:1x11r,1x11r,1x4u,3x1r,3x1r,7x4u/L:60:1x11r,1x11r,1x4u,3x1r,3x1r,7x4u:t/L:60:1x11r,1x11r,1x4u,3x1r,3x1r,7x4u/L:60:1x11r,1x11r,1x4u,3x1r,3x1r,7x4u:t/L:60:1x11r,1x11r,1x4u,3x1r,3x1r,7x4u/W:20:5x4u/W:20:5x4u 340 fair",
+      "4 1x2x1|L:29:1x5r,1x5r,1x5r,2x1r,3x4u/L:29:1x5r,1x5r,1x5r,2x1r,3x4u:t/L:29:1x5r,1x5r,1x5r,2x1r,3x4u/L:29:1x5r,1x5r,1x5r,2x1r,3x4u:t/L:29:1x5r,1x5r,1x5r,2x1r,3x4u/W:20:5x4u 330 good",
+      "5 1x3x1|W:20:5x4u/W:20:5x4u/W:20:5x4u/L:19:1x4u,1x4u,2x1u,3x3r/L:19:1x4u,1x4u,2x1u,3x3r:t 294 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 21": {
+    "hash": "0ebc05a12615d4052ac5f72ceb83",
+    "layouts": [
+      "1 1x1x4|H:35:7x5u/H:35:7x5u/H:35:7x5u/H:35:7x5u 560 fair",
+      "2 2x1x2|L:40:8x5r/L:40:8x5r/L:40:8x5r/W:18:1x2r,3x1u,3x1u,3x1u,7x1r 552 fair",
+      "3 1x1x2|L:40:8x5r/L:40:8x5r/L:40:8x5r/L:40:8x5r/L:40:8x5r/W:37:7x1u,7x1u,7x1u,8x2r/H:35:7x5u 544 fair",
+      "4 2x1x4|H:17:1x2r,3x5u/H:17:1x2r,3x5u:t/H:17:1x2r,3x5u/H:17:1x2r,3x5u:t 544 fair",
+      "5 1x2x4|H:17:1x1r,1x1r,1x1r,1x2u,2x2u,2x2u,2x2u/H:17:1x1r,1x1r,1x1r,1x2u,2x2u,2x2u,2x2u:t/H:17:1x1r,1x1r,1x1r,1x2u,2x2u,2x2u,2x2u/H:17:1x1r,1x1r,1x1r,1x2u,2x2u,2x2u,2x2u:t 544 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 22": {
+    "hash": "0f4929addb23130458ac3bdfc37d",
+    "layouts": [
+      "1 1x1x2|H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t 36 fair",
+      "2 1x2x1|L:5:2x1u,3x1r/H:4:2x2r/H:4:2x2r/H:4:2x2r 34 fair",
+      "3 2x1x1|H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r 32 fair",
+      "4 1x1x2|H:8:4x2r/H:8:4x2r 32 fair",
+      "5 1x2x1|H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r 32 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 23": {
+    "hash": "13851f071201820da15cf724ab39",
+    "layouts": [
+      "1 1x3x1|H:9:1x9r/H:9:1x9r/H:9:1x9r/H:9:1x9r/H:9:1x9r/H:9:1x9r 162 fair",
+      "2 1x3x2|H:9:1x9r/H:9:1x9r/H:9:1x9r 162 poor",
+      "3 1x1x2|H:37:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x9r/H:37:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x9r:t 148 poor",
+      "4 1x2x1|H:18:2x9r/H:18:2x9r/H:18:2x9r/H:18:2x9r 144 fair",
+      "5 1x1x1|H:36:4x9r/H:36:4x9r/H:36:4x9r/H:36:4x9r 144 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 24": {
+    "hash": "0217bc6969da1b00d8bdba645657",
+    "layouts": [
+      "1 1x2x1|W:20:5x4u/W:20:5x4u/W:20:5x4u/W:20:5x4u/W:20:5x4u 200 fair",
+      "2 1x2x2|W:10:5x2u/W:10:5x2u/W:10:5x2u/W:10:5x2u/W:10:5x2u 200 fair",
+      "3 1x4x1|W:20:5x4u/W:20:5x4u/L:10:5x2r 200 fair",
+      "4 1x1x2|H:40:5x8u/H:40:5x8u/L:20:10x2u 200 poor",
+      "5 1x3x1|W:20:5x4u/W:20:5x4u/L:13:1x1u,1x4u,1x4u,2x2r/L:13:1x1u,1x4u,1x4u,2x2r:t 198 good"
+    ],
+    "emptyReason": null
+  },
+  "random 25": {
+    "hash": "04942d598c25480ab2bec9e8403d",
+    "layouts": [
+      "1 1x1x1|W:27:3x9u/W:27:3x9u/W:27:3x9u/H:6:3x2u 87 poor",
+      "2 3x1x1|W:9:1x9u/W:9:1x9u/W:9:1x9u/H:2:1x2u 87 poor",
+      "3 1x1x3|L:8:1x2r,2x3u/L:8:1x2r,2x3u:t/H:6:3x2u/H:6:3x2u 84 good",
+      "4 1x2x3|L:4:1x1r,1x3u/L:4:1x1r,1x3u:t/H:3:3x1u/H:3:3x1u 84 good",
+      "5 1x1x2|W:14:1x1u,2x1u,2x1u,2x1u,2x2r,3x1r/W:14:1x1u,2x1u,2x1u,2x1u,2x2r,3x1r:t/W:14:1x1u,2x1u,2x1u,2x1u,2x2r,3x1r 84 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 26": {
+    "hash": "190f9d254d54ab1adea2782f7648",
+    "layouts": [
+      "1 1x1x3|H:8:2x1r,3x2u/H:8:2x1r,3x2u:t 48 fair",
+      "2 1x1x1|H:8:2x1r,3x2u/H:8:2x1r,3x2u:t/H:8:2x1r,3x2u/H:8:2x1r,3x2u:t/H:8:2x1r,3x2u 40 good",
+      "3 1x2x1|H:4:1x1r,3x1u/H:4:1x1r,3x1u:t/H:4:1x1r,3x1u/H:4:1x1r,3x1u:t/H:4:1x1r,3x1u 40 good",
+      "4 2x1x1|H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u 40 fair",
+      "5 1x1x3|H:6:2x3r/H:6:2x3r 36 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 27": {
+    "hash": "033eecd0223ece05a14fe1f7f399",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 28": {
+    "hash": "1eaf038056d8c218b8fd53dc2fa0",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 29": {
+    "hash": "051556cbe5efb414cb6f23807f64",
+    "layouts": [
+      "1 1x1x1|L:20:1x3r,1x4u,3x1u,3x1u,3x1u,4x1r/L:20:1x3r,1x4u,3x1u,3x1u,3x1u,4x1r:t/L:20:1x3r,1x4u,3x1u,3x1u,3x1u,4x1r/L:20:1x3r,1x4u,3x1u,3x1u,3x1u,4x1r:t 80 good",
+      "2 2x1x1|L:20:1x3r,1x4u,3x1u,3x1u,3x1u,4x1r/L:20:1x3r,1x4u,3x1u,3x1u,3x1u,4x1r:t 80 fair",
+      "3 1x2x1|L:9:1x1r,2x4u/H:7:1x1u,2x3r/H:7:1x1u,2x3r:t/H:7:1x1u,2x3r/H:7:1x1u,2x3r:t 74 good",
+      "4 1x1x1|L:18:6x3r/L:18:6x3r/L:18:6x3r/L:18:6x3r 72 fair",
+      "5 2x2x1|L:9:1x1r,2x4u/L:9:1x1r,2x4u:t 72 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 30": {
+    "hash": "18a5fd89ead30407c5d0ce762f88",
+    "layouts": [
+      "1 1x2x1|L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r:t/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r:t/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r:t/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r:t/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r/L:28:1x1u,1x1u,1x1u,1x1u,2x3r,2x3r,2x3r,2x3r:t 560 good",
+      "2 2x1x2|L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r 560 fair",
+      "3 1x1x2|L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r/L:28:4x7r 560 fair",
+      "4 2x1x1|L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r 560 fair",
+      "5 1x1x1|L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r/L:56:8x7r 560 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 31": {
+    "hash": "06819ba55725561578cee5b31473",
+    "layouts": [
+      "1 1x1x7|H:11:1x3r,2x4u/H:11:1x3r,2x4u:t 154 poor",
+      "2 2x1x1|L:28:1x4r,3x8u/L:28:1x4r,3x8u:t/H:5:1x1r,1x4u/H:5:1x1r,1x4u/H:5:1x1r,1x4u 142 poor",
+      "3 1x1x3|H:11:1x3r,2x4u/L:9:1x1r,1x4r,2x2u/L:9:1x1r,1x4r,2x2u:t/L:9:1x1r,1x4r,2x2u/L:9:1x1r,1x4r,2x2u:t 141 fair",
+      "4 1x1x1|L:28:1x4r,3x8u/L:28:1x4r,3x8u:t/L:28:1x4r,3x8u/L:28:1x4r,3x8u:t/L:28:1x4r,3x8u 140 fair",
+      "5 1x2x1|L:14:1x2r,1x2r,1x2r,1x8u/L:14:1x2r,1x2r,1x2r,1x8u:t/L:14:1x2r,1x2r,1x2r,1x8u/L:14:1x2r,1x2r,1x2r,1x8u:t/L:14:1x2r,1x2r,1x2r,1x8u 140 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 32": {
+    "hash": "13f53dd4d69fc700202886e865f7",
+    "layouts": [
+      "1 1x1x1|H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u 72 fair",
+      "2 1x3x1|H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r 72 fair",
+      "3 1x1x2|H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u 72 fair",
+      "4 1x3x2|H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r 72 fair",
+      "5 1x2x1|H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r 64 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 33": {
+    "hash": "105ff41f29efbd147bf485da3a75",
+    "layouts": [
+      "1 1x1x1|L:41:1x1r,1x8r,1x8r,1x8r,1x8r,2x4u/H:32:4x8u/H:32:4x8u/H:32:4x8u 137 fair",
+      "2 1x2x1|L:20:5x4r/H:16:4x4u/H:16:4x4u/H:16:4x4u 136 good",
+      "3 1x3x1|L:14:3x1u,3x1u,3x1u,5x1r/H:10:3x1r,3x1r,4x1u/H:10:3x1r,3x1r,4x1u:t/H:10:3x1r,3x1r,4x1u 132 good",
+      "4 1x1x1|H:32:4x8u/H:32:4x8u/H:32:4x8u/H:32:4x8u 128 fair",
+      "5 1x2x1|H:16:4x4u/H:16:4x4u/H:16:4x4u/H:16:4x4u 128 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 34": {
+    "hash": "188f218d483b3d16363cd001b62d",
+    "layouts": [
+      "1 1x1x1|L:10:1x3u,1x3u,1x4r/L:10:1x3u,1x3u,1x4r:t/L:10:1x3u,1x3u,1x4r/L:10:1x3u,1x3u,1x4r:t 40 fair",
+      "2 1x1x1|H:10:1x3r,1x3r,1x4u/H:10:1x3r,1x3r,1x4u:t/H:10:1x3r,1x3r,1x4u/H:10:1x3r,1x3r,1x4u:t 40 fair",
+      "3 1x1x1|H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r 36 fair",
+      "4 1x1x1|L:9:3x3u/L:9:3x3u/L:9:3x3u/L:9:3x3u 36 fair",
+      "5 1x1x1|L:8:2x4r/L:8:2x4r/L:8:2x4r/L:8:2x4r 32 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 35": {
+    "hash": "141ce5bd072a15176f58af6e4db6",
+    "layouts": [
+      "1 2x2x1|W:10:1x1r,1x1u,8x1r/W:10:1x1r,1x1u,8x1r:t/H:2:1x2u/H:2:1x2u/H:2:1x2u 104 poor",
+      "2 2x1x1|W:10:1x1r,1x1u,8x1r/W:10:1x1r,1x1u,8x1r:t/W:10:1x1r,1x1u,8x1r/W:10:1x1r,1x1u,8x1r:t/W:10:1x1r,1x1u,8x1r 100 fair",
+      "3 1x1x2|W:10:5x2r/W:10:5x2r/W:10:5x2r/W:10:5x2r/W:10:5x2r 100 fair",
+      "4 2x1x2|W:5:5x1r/W:5:5x1r/W:5:5x1r/W:5:5x1r/W:5:5x1r 100 fair",
+      "5 1x2x1|L:21:1x2r,1x2r,2x1u,2x1u,2x1u,2x1u,2x1u,7x1r/L:21:1x2r,1x2r,2x1u,2x1u,2x1u,2x1u,2x1u,7x1r:t/H:4:2x2u/H:4:2x2u 100 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 36": {
+    "hash": "066490890759ff128be7abafde5a",
+    "layouts": [
+      "1 1x1x1|L:32:1x2u,1x3r,3x7u,6x1r/L:32:1x2u,1x3r,3x7u,6x1r:t/L:32:1x2u,1x3r,3x7u,6x1r/L:32:1x2u,1x3r,3x7u,6x1r:t/L:32:1x2u,1x3r,3x7u,6x1r 160 fair",
+      "2 1x1x1|L:31:1x3r,1x9u,2x1u,2x1u,5x3r/L:31:1x3r,1x9u,2x1u,2x1u,5x3r:t/L:31:1x3r,1x9u,2x1u,2x1u,5x3r/L:31:1x3r,1x9u,2x1u,2x1u,5x3r:t/L:31:1x3r,1x9u,2x1u,2x1u,5x3r 155 fair",
+      "3 1x1x1|W:36:1x3u,2x3r,3x5u,6x2r/W:36:1x3u,2x3r,3x5u,6x2r:t/W:36:1x3u,2x3r,3x5u,6x2r/W:36:1x3u,2x3r,3x5u,6x2r:t 144 poor",
+      "4 1x1x1|W:35:1x4r,1x4r,3x9u/W:35:1x4r,1x4r,3x9u:t/W:35:1x4r,1x4r,3x9u/W:35:1x4r,1x4r,3x9u:t 140 poor",
+      "5 1x1x1|L:27:3x9u/L:27:3x9u/L:27:3x9u/L:27:3x9u/L:27:3x9u 135 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 37": {
+    "hash": "0ed77169dd51d91da5d31045acc5",
+    "layouts": [
+      "1 1x2x1|H:34:1x4r,1x4r,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r/H:34:1x4r,1x4r,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r:t/H:34:1x4r,1x4r,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r/H:34:1x4r,1x4r,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r:t/H:34:1x4r,1x4r,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r/H:34:1x4r,1x4r,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r:t 408 good",
+      "2 1x1x1|H:65:1x12u,1x12u,1x12u,1x12u,1x1u,1x4r,3x4r/H:65:1x12u,1x12u,1x12u,1x12u,1x1u,1x4r,3x4r:t/H:65:1x12u,1x12u,1x12u,1x12u,1x1u,1x4r,3x4r/H:65:1x12u,1x12u,1x12u,1x12u,1x1u,1x4r,3x4r:t/H:65:1x12u,1x12u,1x12u,1x12u,1x1u,1x4r,3x4r/H:65:1x12u,1x12u,1x12u,1x12u,1x1u,1x4r,3x4r:t 390 fair",
+      "3 1x2x1|H:32:8x4r/H:32:8x4r/H:32:8x4r/H:32:8x4r/H:32:8x4r/H:32:8x4r 384 fair",
+      "4 1x1x1|H:60:5x12u/H:60:5x12u/H:60:5x12u/H:60:5x12u/H:60:5x12u/H:60:5x12u 360 fair",
+      "5 1x3x1|H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u 360 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 38": {
+    "hash": "073829ba95fc340fe8c875475c9b",
+    "layouts": [
+      "1 1x1x1|L:42:6x7u/L:42:6x7u/W:16:1x2r,2x7u/W:16:1x2r,2x7u:t 116 poor",
+      "2 2x1x1|L:42:6x7u/W:8:1x1r,1x7u/W:8:1x1r,1x7u:t 116 poor",
+      "3 1x1x1|H:16:1x2r,2x7u/H:16:1x2r,2x7u:t/H:16:1x2r,2x7u/H:16:1x2r,2x7u:t/H:16:1x2r,2x7u/H:16:1x2r,2x7u:t/H:16:1x2r,2x7u 112 good",
+      "4 2x1x1|H:8:1x1r,1x7u/H:8:1x1r,1x7u:t/H:8:1x1r,1x7u/H:8:1x1r,1x7u:t/H:8:1x1r,1x7u/H:8:1x1r,1x7u:t/H:8:1x1r,1x7u 112 good",
+      "5 1x1x1|H:14:2x7u/H:14:2x7u/H:14:2x7u/H:14:2x7u/H:14:2x7u/H:14:2x7u/H:14:2x7u 98 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 39": {
+    "hash": "1eaf038056d8c218b8fd53dc2fa0",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 40": {
+    "hash": "088d104b229af0148e1aaefa828c",
+    "layouts": [
+      "1 1x3x1|L:7:2x1u,2x1u,3x1r/L:7:2x1u,2x1u,3x1r:t/L:7:2x1u,2x1u,3x1r/L:7:2x1u,2x1u,3x1r:t 84 fair",
+      "2 1x2x2|H:7:2x1u,2x1u,3x1r/H:7:2x1u,2x1u,3x1r:t/H:7:2x1u,2x1u,3x1r 84 fair",
+      "3 1x1x1|L:21:3x7r/L:21:3x7r/L:21:3x7r/L:21:3x7r 84 poor",
+      "4 2x1x1|L:21:3x7r/L:21:3x7r 84 poor",
+      "5 1x1x2|H:14:2x7u/H:14:2x7u/H:14:2x7u 84 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 41": {
+    "hash": "0013cf17244afa02f5e68cd33118",
+    "layouts": [
+      "1 1x1x1|L:18:1x1u,2x1u,2x3r,3x3r/L:18:1x1u,2x1u,2x3r,3x3r:t/L:18:1x1u,2x1u,2x3r,3x3r 54 good",
+      "2 2x1x1|L:18:1x1u,2x1u,2x3r,3x3r/H:8:1x2u,1x2u,2x1r,2x1r 52 fair",
+      "3 2x1x1|L:18:1x1u,2x1u,2x3r,3x3r/H:7:1x2r,1x2r,1x3u 50 fair",
+      "4 1x2x1|H:8:1x2r,1x2r,2x1u,2x1u/H:8:1x2r,1x2r,2x1u,2x1u/H:8:1x2r,1x2r,2x1u,2x1u 48 good",
+      "5 1x2x2|L:4:1x1r,1x1r,1x1u,1x1u/L:4:1x1r,1x1r,1x1u,1x1u/L:4:1x1r,1x1r,1x1u,1x1u 48 good"
+    ],
+    "emptyReason": null
+  },
+  "random 42": {
+    "hash": "065f863a65232f0351144f942160",
+    "layouts": [
+      "1 1x1x1|L:18:1x2r,1x2u,3x2r,4x2u/L:18:1x2r,1x2u,3x2r,4x2u:t 36 fair",
+      "2 2x1x1|L:18:1x2r,1x2u,3x2r,4x2u 36 poor",
+      "3 1x1x1|L:17:1x3u,1x4r,2x1r,2x1r,3x2u/L:17:1x3u,1x4r,2x1r,2x1r,3x2u:t 34 fair",
+      "4 2x1x1|L:17:1x3u,1x4r,2x1r,2x1r,3x2u 34 poor",
+      "5 1x1x2|L:8:1x2r,1x2r,2x1u,2x1u/L:8:1x2r,1x2r,2x1u,2x1u 32 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 43": {
+    "hash": "0d906cf5015004056c49b408c83b",
+    "layouts": [
+      "1 1x3x1|W:20:1x2u,2x2r,2x2u,5x2r/W:20:1x2u,2x2r,2x2u,5x2r:t/W:20:1x2u,2x2r,2x2u,5x2r 180 good",
+      "2 1x1x2|H:39:1x4u,2x9u,4x2r,9x1r/H:39:1x4u,2x9u,4x2r,9x1r:t/W:9:1x1u,1x2r,2x1r,2x2u 174 poor",
+      "3 1x3x1|W:19:1x1u,1x1u,1x2r,1x2r,1x7u,3x2r/W:19:1x1u,1x1u,1x2r,1x2r,1x7u,3x2r:t/W:19:1x1u,1x1u,1x2r,1x2r,1x7u,3x2r 171 good",
+      "4 1x1x1|L:105:1x7u,7x14r/W:20:1x2u,2x2r,2x2u,5x2r/W:20:1x2u,2x2r,2x2u,5x2r:t/W:20:1x2u,2x2r,2x2u,5x2r 165 poor",
+      "5 1x3x2|W:9:1x1u,1x2r,2x1r,2x2u/W:9:1x1u,1x2r,2x1r,2x2u/W:9:1x1u,1x2r,2x1r,2x2u 162 good"
+    ],
+    "emptyReason": null
+  },
+  "random 44": {
+    "hash": "0a45a13238f0971d4a7b72c73821",
+    "layouts": [
+      "1 1x1x1|L:147:1x7r,7x20u/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r 237 poor",
+      "2 1x2x1|L:71:14x3r,1x14u,3x1r,3x4u/H:8:1x1u,1x3u,2x2r/H:8:1x1u,1x3u,2x2r:t/H:8:1x1u,1x3u,2x2r/H:8:1x1u,1x3u,2x2r:t/H:8:1x1u,1x3u,2x2r 222 poor",
+      "3 1x2x1|L:70:11x3r,1x20u,1x3r,1x3r,1x3r,2x1u,2x1u,2x1u,2x1u/H:8:1x1u,1x3u,2x2r/H:8:1x1u,1x3u,2x2r:t/H:8:1x1u,1x3u,2x2r/H:8:1x1u,1x3u,2x2r:t/H:8:1x1u,1x3u,2x2r 220 poor",
+      "4 1x1x2|H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t 216 good",
+      "5 1x1x1|H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r/H:18:1x1u,1x1u,1x1u,1x1u,1x2r,3x2r,3x2r:t 216 good"
+    ],
+    "emptyReason": null
+  },
+  "random 45": {
+    "hash": "0dda5ed3c3c33c0187d1172d432d",
+    "layouts": [
+      "1 1x1x1|H:20:1x2r,1x2u,4x2r,4x2u/H:20:1x2r,1x2u,4x2r,4x2u:t/H:20:1x2r,1x2u,4x2r,4x2u/H:20:1x2r,1x2u,4x2r,4x2u:t/H:20:1x2r,1x2u,4x2r,4x2u/H:20:1x2r,1x2u,4x2r,4x2u:t/H:20:1x2r,1x2u,4x2r,4x2u 140 poor",
+      "2 2x1x1|H:10:5x2r/H:10:5x2r/H:10:5x2r/H:10:5x2r/H:10:5x2r/H:10:5x2r/H:10:5x2r 140 poor",
+      "3 1x2x1|H:10:1x2r,1x2r,3x1u,3x1u/H:10:1x2r,1x2r,3x1u,3x1u/H:10:1x2r,1x2r,3x1u,3x1u/H:10:1x2r,1x2r,3x1u,3x1u/H:10:1x2r,1x2r,3x1u,3x1u/H:10:1x2r,1x2r,3x1u,3x1u/H:10:1x2r,1x2r,3x1u,3x1u 140 poor",
+      "4 2x1x1|L:17:1x4r,3x1r,3x1r,3x1r,4x1u/L:17:1x4r,3x1r,3x1r,3x1r,4x1u:t/L:17:1x4r,3x1r,3x1r,3x1r,4x1u/L:17:1x4r,3x1r,3x1r,3x1r,4x1u:t 136 fair",
+      "5 1x1x1|L:17:1x4r,3x1r,3x1r,3x1r,4x1u/L:17:1x4r,3x1r,3x1r,3x1r,4x1u:t/L:17:1x4r,3x1r,3x1r,3x1r,4x1u/L:17:1x4r,3x1r,3x1r,3x1r,4x1u:t/L:17:1x4r,3x1r,3x1r,3x1r,4x1u/L:17:1x4r,3x1r,3x1r,3x1r,4x1u:t/L:17:1x4r,3x1r,3x1r,3x1r,4x1u/L:17:1x4r,3x1r,3x1r,3x1r,4x1u:t 136 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 46": {
+    "hash": "13e336ddc2ca800351bed1d48f6e",
+    "layouts": [
+      "1 1x1x1|H:39:1x6r,1x8u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x1r/H:39:1x6r,1x8u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x1r:t/L:24:6x4u/W:18:3x6r 120 fair",
+      "2 1x2x1|H:20:1x4u,1x4u,2x6r/H:20:1x4u,1x4u,2x6r:t/H:20:1x4u,1x4u,2x6r 120 fair",
+      "3 1x4x1|H:10:1x2u,1x2u,1x6r/H:10:1x2u,1x2u,1x6r:t/H:10:1x2u,1x2u,1x6r 120 fair",
+      "4 1x1x2|H:39:1x6r,1x8u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x1r/L:12:6x2u/W:8:4x2u 118 poor",
+      "5 1x1x1|H:39:1x6r,1x8u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x1r/H:39:1x6r,1x8u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x1r:t/H:39:1x6r,1x8u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x1r 117 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 47": {
+    "hash": "118499019d914a1939f5dd892395",
+    "layouts": [
+      "1 3x1x1|H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u 60 fair",
+      "2 1x1x3|H:17:1x5u,2x1u,5x2r 51 poor",
+      "3 1x1x3|H:15:3x5u 45 poor",
+      "4 1x1x3|H:14:7x2r 42 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 48": {
+    "hash": "1895d56e093a7719adcebaf52841",
+    "layouts": [
+      "1 1x1x1|H:70:7x10u/H:70:7x10u/H:70:7x10u/H:70:7x10u/H:70:7x10u/H:70:7x10u/H:70:7x10u/H:70:7x10u/H:70:7x10u/H:70:7x10u 700 fair",
+      "2 1x1x1|H:63:9x7r/H:63:9x7r/H:63:9x7r/H:63:9x7r/H:63:9x7r/H:63:9x7r/H:63:9x7r/H:63:9x7r/H:63:9x7r/H:63:9x7r 630 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 49": {
+    "hash": "025378de0f263f098013eb803577",
+    "layouts": [
+      "1 1x1x1|H:7:1x1r,2x3u/H:7:1x1r,2x3u:t/H:7:1x1r,2x3u 21 good",
+      "2 1x1x3|H:7:1x1r,2x3u 21 poor",
+      "3 1x1x5|L:3:1x3r/W:1:1x1r 20 fair",
+      "4 1x1x1|H:6:2x3u/H:6:2x3u/H:6:2x3u 18 good",
+      "5 2x1x1|H:3:1x3u/H:3:1x3u/H:3:1x3u 18 good"
+    ],
+    "emptyReason": null
+  },
+  "random 50": {
+    "hash": "1175cdaa1f1af203c32c53ed2a62",
+    "layouts": [
+      "1 1x2x1|H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u:t/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u:t/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u:t/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u:t/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u:t 520 fair",
+      "2 1x2x2|H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u:t/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u:t/H:26:1x4r,1x4r,1x4r,1x4r,1x4r,1x6u 520 fair",
+      "3 1x1x1|H:48:12x4r/H:48:12x4r/H:48:12x4r/H:48:12x4r/H:48:12x4r/H:48:12x4r/H:48:12x4r/H:48:12x4r/H:48:12x4r/H:48:12x4r 480 fair",
+      "4 1x2x1|H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u 480 fair",
+      "5 1x2x2|H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u 480 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 51": {
+    "hash": "0f9864fa399eb012b9ce0247a9cd",
+    "layouts": [
+      "1 2x1x1|H:23:1x1u,1x5u,2x1u,2x3r,3x3r/H:23:1x1u,1x5u,2x1u,2x3r,3x3r:t/H:23:1x1u,1x5u,2x1u,2x3r,3x3r/H:23:1x1u,1x5u,2x1u,2x3r,3x3r:t/H:23:1x1u,1x5u,2x1u,2x3r,3x3r 230 good",
+      "2 1x1x1|H:45:1x7r,2x1r,2x1r,3x1r,3x1r,3x4u,4x4u/H:45:1x7r,2x1r,2x1r,3x1r,3x1r,3x4u,4x4u:t/H:45:1x7r,2x1r,2x1r,3x1r,3x1r,3x4u,4x4u/H:45:1x7r,2x1r,2x1r,3x1r,3x1r,3x4u,4x4u:t/H:45:1x7r,2x1r,2x1r,3x1r,3x1r,3x4u,4x4u 225 good",
+      "3 3x1x1|H:15:1x1u,2x2r,2x3u,4x1r/H:15:1x1u,2x2r,2x3u,4x1r:t/H:15:1x1u,2x2r,2x3u,4x1r/H:15:1x1u,2x2r,2x3u,4x1r:t/H:15:1x1u,2x2r,2x3u,4x1r 225 good",
+      "4 1x2x1|H:22:1x1r,1x1r,1x7r,1x7r,3x2u/H:22:1x1r,1x1r,1x7r,1x7r,3x2u:t/H:22:1x1r,1x1r,1x7r,1x7r,3x2u/H:22:1x1r,1x1r,1x7r,1x7r,3x2u:t/H:22:1x1r,1x1r,1x7r,1x7r,3x2u 220 good",
+      "5 2x2x1|H:11:1x3r,2x1r,3x2u/H:11:1x3r,2x1r,3x2u:t/H:11:1x3r,2x1r,3x2u/H:11:1x3r,2x1r,3x2u:t/H:11:1x3r,2x1r,3x2u 220 good"
+    ],
+    "emptyReason": null
+  },
+  "random 52": {
+    "hash": "090ff2c445984b1b27de1163eee4",
+    "layouts": [
+      "1 1x1x1|H:7:1x1r,2x3u/H:7:1x1r,2x3u:t/H:7:1x1r,2x3u/H:7:1x1r,2x3u:t/H:7:1x1r,2x3u/H:7:1x1r,2x3u:t/H:7:1x1r,2x3u/H:7:1x1r,2x3u:t/H:7:1x1r,2x3u/H:7:1x1r,2x3u:t/H:7:1x1r,2x3u/H:7:1x1r,2x3u:t/H:7:1x1r,2x3u 91 poor",
+      "2 1x1x1|H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u 78 poor",
+      "3 1x3x1|H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u 78 poor",
+      "4 1x2x1|H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r 52 poor",
+      "5 1x2x1|H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u/H:2:2x1u 52 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 53": {
+    "hash": "03159d15e33e0712b6d14c451a0e",
+    "layouts": [
+      "1 1x3x1|H:3:3x1u/H:3:3x1u/H:3:3x1u 27 good",
+      "2 1x1x1|H:6:3x2u/H:6:3x2u/H:6:3x2u 18 good",
+      "3 1x2x1|H:3:3x1u/H:3:3x1u/H:3:3x1u 18 good",
+      "4 1x3x1|H:2:1x2r/H:2:1x2r/H:2:1x2r 18 good",
+      "5 2x3x1|H:1:1x1r/H:1:1x1r/H:1:1x1r 18 good"
+    ],
+    "emptyReason": null
+  },
+  "random 54": {
+    "hash": "1a7445c43399940ab6ffe8b41296",
+    "layouts": [
+      "1 1x1x1|H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r/H:16:8x2r 256 poor",
+      "2 2x1x1|H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r/H:8:8x1r 256 poor",
+      "3 3x1x1|H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u 240 poor",
+      "4 1x1x1|H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u 160 poor",
+      "5 2x1x1|H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u 160 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 55": {
+    "hash": "0801552bb021910705760805cfb8",
+    "layouts": [
+      "1 1x1x1|H:6:3x2r/H:6:3x2r 12 good",
+      "2 1x1x1|H:6:3x2u/H:6:3x2u 12 good",
+      "3 2x1x1|H:3:3x1r/H:3:3x1r 12 good",
+      "4 1x2x1|H:3:3x1u/H:3:3x1u 12 good",
+      "5 1x2x1|L:5:5x1r 10 good"
+    ],
+    "emptyReason": null
+  },
+  "random 56": {
+    "hash": "11ae266cfd851c170735b7de478e",
+    "layouts": [
+      "1 1x1x2|L:30:2x2u,2x5u,4x1r,4x3r/L:30:2x2u,2x5u,4x1r,4x3r:t/L:30:2x2u,2x5u,4x1r,4x3r/L:30:2x2u,2x5u,4x1r,4x3r:t/L:30:2x2u,2x5u,4x1r,4x3r/L:30:2x2u,2x5u,4x1r,4x3r:t 360 fair",
+      "2 2x1x2|L:30:2x2u,2x5u,4x1r,4x3r/L:30:2x2u,2x5u,4x1r,4x3r:t/L:30:2x2u,2x5u,4x1r,4x3r 360 poor",
+      "3 1x1x1|L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u/L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u:t/L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u/L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u:t/L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u/L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u:t 354 poor",
+      "4 2x1x1|L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u/L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u:t/L:59:11x1r,1x4r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u 354 poor",
+      "5 1x1x2|L:29:1x4r,1x6u,1x6u,2x1u,2x1u,3x3r/L:29:1x4r,1x6u,1x6u,2x1u,2x1u,3x3r:t/L:29:1x4r,1x6u,1x6u,2x1u,2x1u,3x3r/L:29:1x4r,1x6u,1x6u,2x1u,2x1u,3x3r:t/L:29:1x4r,1x6u,1x6u,2x1u,2x1u,3x3r/L:29:1x4r,1x6u,1x6u,2x1u,2x1u,3x3r:t 348 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 57": {
+    "hash": "1d23fdc88b5d5002b0c1cb8b6a7e",
+    "layouts": [
+      "1 4x1x1|H:10:5x2r/H:10:5x2r/H:10:5x2r 120 fair",
+      "2 1x3x1|H:13:1x2u,1x2u,1x2u,1x7r/H:13:1x2u,1x2u,1x2u,1x7r:t/H:13:1x2u,1x2u,1x2u,1x7r 117 fair",
+      "3 1x2x1|H:19:1x3u,1x3u,1x3u,1x3u,1x7r/H:19:1x3u,1x3u,1x3u,1x3u,1x7r:t/H:19:1x3u,1x3u,1x3u,1x3u,1x7r 114 fair",
+      "4 1x2x3|H:19:1x3u,1x3u,1x3u,1x3u,1x7r 114 poor",
+      "5 1x1x1|H:37:1x7r,1x7r,3x1r,4x5u/H:37:1x7r,1x7r,3x1r,4x5u:t/H:37:1x7r,1x7r,3x1r,4x5u 111 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 58": {
+    "hash": "19cd18c9f4207c1ad25a137df2d0",
+    "layouts": [
+      "1 1x1x1|H:65:1x6u,1x6u,1x6u,1x6u,1x8r,1x8r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u/H:65:1x6u,1x6u,1x6u,1x6u,1x8r,1x8r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u:t/H:65:1x6u,1x6u,1x6u,1x6u,1x8r,1x8r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u/H:65:1x6u,1x6u,1x6u,1x6u,1x8r,1x8r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u:t/H:65:1x6u,1x6u,1x6u,1x6u,1x8r,1x8r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u 325 fair",
+      "2 2x1x1|H:32:1x4r,1x4r,4x6u/H:32:1x4r,1x4r,4x6u:t/H:32:1x4r,1x4r,4x6u/H:32:1x4r,1x4r,4x6u:t/H:32:1x4r,1x4r,4x6u 320 good",
+      "3 1x2x1|H:32:1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x8r/H:32:1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x8r:t/H:32:1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x8r/H:32:1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x8r:t/H:32:1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x3u,1x8r 320 fair",
+      "4 3x1x1|H:20:1x2r,3x6u/H:20:1x2r,3x6u:t/H:20:1x2r,3x6u/H:20:1x2r,3x6u:t/H:20:1x2r,3x6u 300 good",
+      "5 1x2x1|H:30:10x3u/H:30:10x3u/H:30:10x3u/H:30:10x3u/H:30:10x3u 300 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 59": {
+    "hash": "0e51f8fd1e035301f63b5abf0a19",
+    "layouts": [
+      "1 1x1x2|W:45:1x1u,1x1u,1x1u,1x1u,1x1u,2x4r,2x4r,2x4r,2x4r,2x4r/W:45:1x1u,1x1u,1x1u,1x1u,1x1u,2x4r,2x4r,2x4r,2x4r,2x4r:t/W:45:1x1u,1x1u,1x1u,1x1u,1x1u,2x4r,2x4r,2x4r,2x4r,2x4r 270 fair",
+      "2 1x1x1|W:90:11x4r,1x1u,1x1u,1x1u,1x1u,1x4r,3x1u,3x1u,4x4r,4x4r/W:90:11x4r,1x1u,1x1u,1x1u,1x1u,1x4r,3x1u,3x1u,4x4r,4x4r:t/W:90:11x4r,1x1u,1x1u,1x1u,1x1u,1x4r,3x1u,3x1u,4x4r,4x4r 270 poor",
+      "3 1x2x2|W:45:1x1u,1x1u,1x1u,1x1u,1x1u,2x4r,2x4r,2x4r,2x4r,2x4r/L:20:10x2r 260 poor",
+      "4 1x2x1|W:90:11x4r,1x1u,1x1u,1x1u,1x1u,1x4r,3x1u,3x1u,4x4r,4x4r/L:40:20x2r 260 poor",
+      "5 1x2x2|H:10:5x2u/H:10:5x2u/H:10:5x2u/H:10:5x2u/H:10:5x2u/H:10:5x2u 240 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 60": {
+    "hash": "1dd93e5d5656fe1daf7a03e983bd",
+    "layouts": [
+      "1 1x1x1|H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r:t/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r:t/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r:t/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r:t 208 good",
+      "2 1x1x2|H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r:t/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r:t 208 fair",
+      "3 1x1x4|H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r/H:26:1x4u,1x4u,1x4u,1x4u,1x4u,1x6r:t 208 poor",
+      "4 5x1x1|H:5:1x1r,1x4u/H:5:1x1r,1x4u:t/H:5:1x1r,1x4u/H:5:1x1r,1x4u:t/H:5:1x1r,1x4u/H:5:1x1r,1x4u:t/H:5:1x1r,1x4u/H:5:1x1r,1x4u:t 200 good",
+      "5 5x1x2|H:5:1x1r,1x4u/H:5:1x1r,1x4u:t/H:5:1x1r,1x4u/H:5:1x1r,1x4u:t 200 good"
+    ],
+    "emptyReason": null
+  },
+  "random 61": {
+    "hash": "03ce2dbd6f67fa0b4a5d1b047d22",
+    "layouts": [
+      "1 1x1x2|L:34:2x6r,2x6r,5x1u,5x1u/L:34:2x6r,2x6r,5x1u,5x1u/L:34:2x6r,2x6r,5x1u,5x1u/L:34:2x6r,2x6r,5x1u,5x1u/L:34:2x6r,2x6r,5x1u,5x1u 340 poor",
+      "2 1x1x2|H:28:1x3r,1x3r,1x3r,1x3r,2x8u/H:28:1x3r,1x3r,1x3r,1x3r,2x8u:t/H:28:1x3r,1x3r,1x3r,1x3r,2x8u/H:28:1x3r,1x3r,1x3r,1x3r,2x8u:t/H:28:1x3r,1x3r,1x3r,1x3r,2x8u/H:28:1x3r,1x3r,1x3r,1x3r,2x8u:t 336 fair",
+      "3 2x1x2|H:14:1x3u,1x3u,4x1r,4x1r/H:14:1x3u,1x3u,4x1r,4x1r/H:14:1x3u,1x3u,4x1r,4x1r/H:14:1x3u,1x3u,4x1r,4x1r/H:14:1x3u,1x3u,4x1r,4x1r/H:14:1x3u,1x3u,4x1r,4x1r 336 fair",
+      "4 1x1x1|L:66:1x8r,1x8r,6x1r,6x1r,6x1r,6x1r,6x1r,6x1r,7x2u/L:66:1x8r,1x8r,6x1r,6x1r,6x1r,6x1r,6x1r,6x1r,7x2u:t/L:66:1x8r,1x8r,6x1r,6x1r,6x1r,6x1r,6x1r,6x1r,7x2u/L:66:1x8r,1x8r,6x1r,6x1r,6x1r,6x1r,6x1r,6x1r,7x2u:t/L:66:1x8r,1x8r,6x1r,6x1r,6x1r,6x1r,6x1r,6x1r,7x2u 330 poor",
+      "5 1x1x1|L:64:8x8r/L:64:8x8r/L:64:8x8r/L:64:8x8r/L:64:8x8r 320 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 62": {
+    "hash": "01291bbf3dc3e110c33eea1a1abd",
+    "layouts": [
+      "1 1x2x1|W:22:5x1r,5x1r,5x1r,7x1u/W:22:5x1r,5x1r,5x1r,7x1u:t/H:9:1x1r,1x4r,4x1u 106 poor",
+      "2 1x1x1|W:22:5x1r,5x1r,5x1r,7x1u/W:22:5x1r,5x1r,5x1r,7x1u:t/W:22:5x1r,5x1r,5x1r,7x1u/W:22:5x1r,5x1r,5x1r,7x1u:t/L:13:4x1u,4x1u,5x1r 101 fair",
+      "3 1x2x1|L:7:2x1u,5x1r/L:7:2x1u,5x1r:t/L:7:2x1u,5x1r/L:7:2x1u,5x1r:t/L:7:2x1u,5x1r/L:7:2x1u,5x1r:t/L:7:2x1u,5x1r 98 fair",
+      "4 1x1x3|H:18:1x1r,2x2u,3x1r,5x2u/W:7:7x1u/W:7:7x1u 96 poor",
+      "5 1x1x2|H:18:1x1r,2x2u,3x1r,5x2u/H:18:1x1r,2x2u,3x1r,5x2u:t/L:6:1x1u,2x1r,3x1u/L:6:1x1u,2x1r,3x1u 96 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 63": {
+    "hash": "01b21768e645e9099eb2a416cbdf",
+    "layouts": [
+      "1 1x1x3|L:41:11x2u,1x2u,1x2u,1x9r,3x1r,3x1r/L:41:11x2u,1x2u,1x2u,1x9r,3x1r,3x1r:t/L:41:11x2u,1x2u,1x2u,1x9r,3x1r,3x1r/L:41:11x2u,1x2u,1x2u,1x9r,3x1r,3x1r:t 492 poor",
+      "2 1x1x2|H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/W:15:1x2u,2x1r,3x2u,5x1r 486 fair",
+      "3 1x1x2|H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/W:14:1x2r,1x2r,1x3u,2x1u,2x1u,3x1r 484 fair",
+      "4 1x1x1|L:117:1x7u,1x7u,1x7u,1x7u,1x7u,1x9r,1x9r,7x1r,7x1r,7x1r,7x1r,9x4u/L:117:1x7u,1x7u,1x7u,1x7u,1x7u,1x9r,1x9r,7x1r,7x1r,7x1r,7x1r,9x4u:t/L:117:1x7u,1x7u,1x7u,1x7u,1x7u,1x9r,1x9r,7x1r,7x1r,7x1r,7x1r,9x4u/L:117:1x7u,1x7u,1x7u,1x7u,1x7u,1x9r,1x9r,7x1r,7x1r,7x1r,7x1r,9x4u:t 468 poor",
+      "5 1x1x1|H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t/H:38:1x2r,4x9u/H:38:1x2r,4x9u:t 456 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 64": {
+    "hash": "08b2f22b5c2cd30f90bb313ab17e",
+    "layouts": [
+      "1 1x1x2|H:58:2x12u,2x2u,6x1r,6x4r/L:44:1x2r,2x11r,4x3u,8x1u/L:44:1x2r,2x11r,4x3u,8x1u:t/L:44:1x2r,2x11r,4x3u,8x1u 380 poor",
+      "2 1x1x1|L:88:1x7u,1x7u,1x7u,1x7u,4x15r/L:88:1x7u,1x7u,1x7u,1x7u,4x15r:t/L:88:1x7u,1x7u,1x7u,1x7u,4x15r/H:58:2x12u,2x2u,6x1r,6x4r/H:58:2x12u,2x2u,6x1r,6x4r:t 380 poor",
+      "3 1x1x1|L:88:1x7u,1x7u,1x7u,1x7u,4x15r/L:88:1x7u,1x7u,1x7u,1x7u,4x15r:t/L:88:1x7u,1x7u,1x7u,1x7u,4x15r/H:56:1x15u,1x15u,1x1u,1x1u,1x4r,1x4r,4x4r/H:56:1x15u,1x15u,1x1u,1x1u,1x4r,1x4r,4x4r:t 376 poor",
+      "4 1x2x1|L:42:6x7u/H:29:2x1u,2x6u,3x1r,3x4r/H:29:2x1u,2x6u,3x1r,3x4r:t/H:29:2x1u,2x6u,3x1r,3x4r/H:29:2x1u,2x6u,3x1r,3x4r:t/H:29:2x1u,2x6u,3x1r,3x4r 374 fair",
+      "5 1x3x1|L:29:1x5r,1x5r,1x5r,2x7u/L:29:1x5r,1x5r,1x5r,2x7u:t/L:29:1x5r,1x5r,1x5r,2x7u/H:18:1x4r,1x4r,2x5u/H:18:1x4r,1x4r,2x5u:t 369 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 65": {
+    "hash": "19d521be9dcadc12ee1f073869a4",
+    "layouts": [
+      "1 3x1x2|H:5:5x1r/H:5:5x1r/H:5:5x1r/H:5:5x1r 120 fair",
+      "2 3x1x1|H:5:5x1r/H:5:5x1r/H:5:5x1r/H:5:5x1r/H:5:5x1r/H:5:5x1r/H:5:5x1r/H:5:5x1r 120 fair",
+      "3 1x1x2|H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r 120 fair",
+      "4 1x1x1|H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r 120 fair",
+      "5 1x1x1|L:24:2x1u,2x1u,3x1u,3x1u,3x2r,4x2r/L:24:2x1u,2x1u,3x1u,3x1u,3x2r,4x2r:t/L:24:2x1u,2x1u,3x1u,3x1u,3x2r,4x2r/L:24:2x1u,2x1u,3x1u,3x1u,3x2r,4x2r:t/L:24:2x1u,2x1u,3x1u,3x1u,3x2r,4x2r 120 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 66": {
+    "hash": "1bd3e268c97d440fd24858383f2c",
+    "layouts": [
+      "1 1x1x1|W:13:1x3r,2x5u/W:13:1x3r,2x5u:t/W:13:1x3r,2x5u/W:13:1x3r,2x5u:t/H:9:3x3r/H:9:3x3r/H:9:3x3r 79 poor",
+      "2 1x1x1|W:13:1x3r,2x5u/W:13:1x3r,2x5u:t/W:13:1x3r,2x5u/W:13:1x3r,2x5u:t/W:13:1x3r,2x5u/W:13:1x3r,2x5u:t 78 fair",
+      "3 1x3x1|W:13:1x3r,2x5u/W:13:1x3r,2x5u:t 78 poor",
+      "4 1x2x1|W:13:1x3r,2x5u/W:13:1x3r,2x5u:t/W:13:1x3r,2x5u 78 poor",
+      "5 2x1x1|L:15:3x5u/L:15:3x5u/H:4:1x1u,3x1r/H:4:1x1u,3x1r:t 76 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 67": {
+    "hash": "0e40fa8a350ea813e3c4c6980bbe",
+    "layouts": [
+      "1 1x1x3|H:17:1x3u,1x3u,1x3u,2x4r/H:17:1x3u,1x3u,1x3u,2x4r:t 102 poor",
+      "2 1x1x2|H:17:1x3u,1x3u,1x3u,2x4r/H:17:1x3u,1x3u,1x3u,2x4r:t/H:17:1x3u,1x3u,1x3u,2x4r 102 poor",
+      "3 1x1x1|H:17:1x3u,1x3u,1x3u,2x4r/H:17:1x3u,1x3u,1x3u,2x4r:t/H:17:1x3u,1x3u,1x3u,2x4r/H:17:1x3u,1x3u,1x3u,2x4r:t/H:17:1x3u,1x3u,1x3u,2x4r/H:17:1x3u,1x3u,1x3u,2x4r:t 102 poor",
+      "4 4x2x2|H:2:2x1r/H:2:2x1r/H:2:2x1r 96 poor",
+      "5 2x2x3|H:4:2x2r/H:4:2x2r 96 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 68": {
+    "hash": "0452ca35bc3bee12e91f6a4bf3b1",
+    "layouts": [
+      "1 3x1x1|H:6:1x6u/H:6:1x6u/H:6:1x6u/H:6:1x6u/H:6:1x6u 90 fair",
+      "2 1x1x1|H:18:3x6u/H:18:3x6u/H:18:3x6u/H:18:3x6u/H:18:3x6u 90 fair",
+      "3 3x1x1|L:30:1x4r,2x1u,4x2r,8x2u 90 poor",
+      "4 1x1x1|L:30:1x4r,2x1u,4x2r,8x2u/L:30:1x4r,2x1u,4x2r,8x2u:t/L:30:1x4r,2x1u,4x2r,8x2u 90 poor",
+      "5 3x1x2|L:14:1x1u,1x1u,2x6r 84 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 69": {
+    "hash": "0cdd30471e6b350a3aea19ad6f3f",
+    "layouts": [
+      "1 1x2x2|H:15:1x1r,1x1r,1x1r,1x7r,5x1u 60 poor",
+      "2 1x1x2|H:29:1x7r,3x1r,3x1r,3x1r,3x1r,3x1r,7x1u 58 poor",
+      "3 1x1x2|H:28:4x7r 56 poor",
+      "4 1x2x2|H:14:2x7r 56 poor",
+      "5 1x2x1|H:15:1x1r,1x1r,1x1r,1x7r,5x1u/L:6:2x3u/L:6:2x3u 54 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 70": {
+    "hash": "17c7205591e2681b4168d803f5f1",
+    "layouts": [
+      "1 4x1x1|L:20:5x4u/L:20:5x4u/L:20:5x4u/L:20:5x4u 320 fair",
+      "2 4x2x1|L:10:1x2r,2x4u/L:10:1x2r,2x4u:t/L:10:1x2r,2x4u/L:10:1x2r,2x4u:t 320 fair",
+      "3 3x1x1|L:20:5x4u/L:20:5x4u/L:20:5x4u/L:20:5x4u/L:20:5x4u 300 fair",
+      "4 3x1x2|L:10:5x2u/L:10:5x2u/L:10:5x2u/L:10:5x2u/L:10:5x2u 300 fair",
+      "5 3x2x1|L:10:1x2r,2x4u/L:10:1x2r,2x4u:t/L:10:1x2r,2x4u/L:10:1x2r,2x4u:t/L:10:1x2r,2x4u 300 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 71": {
+    "hash": "15fe27cbc7d5ce08f8b6e99cd85c",
+    "layouts": [
+      "1 1x1x7|L:11:2x1r,2x1r,7x1u/L:11:2x1r,2x1r,7x1u:t/L:11:2x1r,2x1r,7x1u/L:11:2x1r,2x1r,7x1u:t 308 fair",
+      "2 1x1x3|H:25:1x1u,2x3r,3x1u,5x3r/H:25:1x1u,2x3r,3x1u,5x3r:t/H:25:1x1u,2x3r,3x1u,5x3r/H:25:1x1u,2x3r,3x1u,5x3r:t 300 good",
+      "3 1x1x5|W:10:1x3r,2x1r,2x1r,3x1u/W:10:1x3r,2x1r,2x1r,3x1u:t/W:10:1x3r,2x1r,2x1r,3x1u/W:10:1x3r,2x1r,2x1r,3x1u:t/W:10:1x3r,2x1r,2x1r,3x1u/W:10:1x3r,2x1r,2x1r,3x1u:t 300 good",
+      "4 2x1x5|W:5:2x1u,3x1r/W:5:2x1u,3x1r:t/W:5:2x1u,3x1r/W:5:2x1u,3x1r:t/W:5:2x1u,3x1r/W:5:2x1u,3x1r:t 300 good",
+      "5 1x1x5|L:15:3x5r/L:15:3x5r/L:15:3x5r/L:15:3x5r 300 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 72": {
+    "hash": "1c189e4062e31e11a682bcefdf9d",
+    "layouts": [
+      "1 3x1x1|L:21:1x1r,1x3u,1x8r,3x3u/H:8:1x8u/H:8:1x8u 111 poor",
+      "2 3x2x1|H:4:1x4u/H:4:1x4u/H:4:1x4u/W:3:1x3u/W:3:1x3u 108 fair",
+      "3 3x2x2|H:4:1x4u/H:4:1x4u/W:1:1x1u 108 fair",
+      "4 3x1x3|H:8:1x8u/W:1:1x1u/W:1:1x1u/W:1:1x1u/W:1:1x1u 108 poor",
+      "5 3x1x2|H:8:1x8u/H:8:1x8u/W:1:1x1u/W:1:1x1u 108 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 73": {
+    "hash": "05ee0f609cddcf070f5935d5ead4",
+    "layouts": [
+      "1 1x1x3|H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u 465 poor",
+      "2 1x1x1|H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u/H:31:1x3r,4x7u:t/H:31:1x3r,4x7u 465 poor",
+      "3 2x3x3|H:5:2x1u,3x1r/H:5:2x1u,3x1r:t/H:5:2x1u,3x1r/H:5:2x1u,3x1r:t/H:5:2x1u,3x1r 450 poor",
+      "4 1x3x3|H:10:1x3r,2x1r,2x1r,3x1u/H:10:1x3r,2x1r,2x1r,3x1u:t/H:10:1x3r,2x1r,2x1r,3x1u/H:10:1x3r,2x1r,2x1r,3x1u:t/H:10:1x3r,2x1r,2x1r,3x1u 450 poor",
+      "5 2x1x3|H:15:1x1r,2x7u/H:15:1x1r,2x7u:t/H:15:1x1r,2x7u/H:15:1x1r,2x7u:t/H:15:1x1r,2x7u 450 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 74": {
+    "hash": "1a56d48a7e0f4e165845f6ca468c",
+    "layouts": [
+      "1 2x1x2|H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u 168 good",
+      "2 2x2x2|H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u 168 good",
+      "3 1x1x2|H:12:3x4u/H:12:3x4u/H:12:3x4u/H:12:3x4u/H:12:3x4u/H:12:3x4u/H:12:3x4u 168 fair",
+      "4 1x2x2|H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u 168 fair",
+      "5 2x1x1|H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t/H:6:1x1r,1x1r,1x4u 156 good"
+    ],
+    "emptyReason": null
+  },
+  "random 75": {
+    "hash": "1c61259df2443515fde53667046b",
+    "layouts": [
+      "1 1x1x1|H:27:1x3r,4x6u/H:27:1x3r,4x6u:t/H:27:1x3r,4x6u/H:27:1x3r,4x6u:t/H:27:1x3r,4x6u 135 fair",
+      "2 1x3x1|H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r 135 fair",
+      "3 2x1x1|H:13:1x1r,2x6u/H:13:1x1r,2x6u:t/H:13:1x1r,2x6u/H:13:1x1r,2x6u:t/H:13:1x1r,2x6u 130 fair",
+      "4 1x1x1|H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u/H:24:4x6u 120 fair",
+      "5 2x1x1|H:12:2x6u/H:12:2x6u/H:12:2x6u/H:12:2x6u/H:12:2x6u 120 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 76": {
+    "hash": "1b37ada9832f031cdfdcce61f743",
+    "layouts": [
+      "1 1x2x1|H:30:10x3u/H:30:10x3u/H:30:10x3u 180 fair",
+      "2 1x3x1|H:20:10x2u/H:20:10x2u/H:20:10x2u 180 fair",
+      "3 1x6x1|H:10:10x1u/H:10:10x1u/H:10:10x1u 180 fair",
+      "4 1x5x1|H:12:1x1r,1x1r,5x1u,5x1u/H:12:1x1r,1x1r,5x1u,5x1u:t/H:12:1x1r,1x1r,5x1u,5x1u 180 fair",
+      "5 1x2x3|H:30:10x3u 180 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 77": {
+    "hash": "0969fb331083690677718827a004",
+    "layouts": [
+      "1 1x1x1|H:12:4x3r/H:12:4x3r/H:12:4x3r 36 good",
+      "2 1x1x1|H:12:4x3u/H:12:4x3u/H:12:4x3u 36 good",
+      "3 1x2x1|H:6:2x3r/H:6:2x3r/H:6:2x3r 36 good",
+      "4 2x1x1|H:6:2x3u/H:6:2x3u/H:6:2x3u 36 good",
+      "5 1x3x1|H:4:4x1u/H:4:4x1u/H:4:4x1u 36 good"
+    ],
+    "emptyReason": null
+  },
+  "random 78": {
+    "hash": "05dcdbac228d12181b91cf7bd76b",
+    "layouts": [
+      "1 1x1x2|H:6:3x2r/H:6:3x2r/H:6:3x2r 36 good",
+      "2 1x1x2|H:6:3x2u/H:6:3x2u/H:6:3x2u 36 good",
+      "3 1x1x3|H:6:3x2r/H:6:3x2r 36 good",
+      "4 1x1x3|H:6:3x2u/H:6:3x2u 36 good",
+      "5 2x1x2|H:3:3x1r/H:3:3x1r/H:3:3x1r 36 good"
+    ],
+    "emptyReason": null
+  },
+  "random 79": {
+    "hash": "0743bfb20a4c0e0da7092d2a9499",
+    "layouts": [
+      "1 1x2x1|H:12:6x2u/H:12:6x2u 48 fair",
+      "2 2x1x1|H:11:1x3u,2x1u,3x2r/H:11:1x3u,2x1u,3x2r:t 44 good",
+      "3 1x1x2|H:22:2x1r,2x1r,3x3u,3x3u 44 poor",
+      "4 1x2x1|H:10:2x5r/H:10:2x5r 40 fair",
+      "5 1x1x2|H:20:4x5r 40 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 80": {
+    "hash": "0172c62a290d3419b2209419f175",
+    "layouts": [
+      "1 1x1x3|H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r 48 good",
+      "2 1x1x6|H:8:1x2u,1x2u,2x1r,2x1r 48 poor",
+      "3 1x1x3|H:7:1x2r,1x2r,1x3u/H:7:1x2r,1x2r,1x3u 42 good",
+      "4 1x1x6|H:7:1x2r,1x2r,1x3u 42 poor",
+      "5 1x1x1|H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r 40 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 81": {
+    "hash": "1d94e3f5b3289f085602db2b7e6a",
+    "layouts": [
+      "1 1x3x1|H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r 48 fair",
+      "2 2x3x1|H:2:2x1r/H:2:2x1r/H:2:2x1r/H:2:2x1r 48 fair",
+      "3 1x1x1|H:10:5x2r/H:10:5x2r/H:10:5x2r/H:10:5x2r 40 fair",
+      "4 2x1x1|H:5:5x1r/H:5:5x1r/H:5:5x1r/H:5:5x1r 40 fair",
+      "5 1x1x2|H:10:5x2r/H:10:5x2r 40 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 82": {
+    "hash": "06bf0db31aa4a116406e60e9f868",
+    "layouts": [
+      "1 1x1x1|H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u:t/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u:t/L:8:4x2u/L:8:4x2u 72 poor",
+      "2 1x1x2|H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u:t/L:4:4x1u/L:4:4x1u 72 poor",
+      "3 1x1x1|H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u:t/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u:t/H:14:2x1r,2x1r,2x1r,2x1r,3x1u,3x1u 70 poor",
+      "4 1x2x1|W:13:1x2u,1x2u,1x2u,2x1r,2x1r,3x1u/H:6:6x1u/L:4:2x2u/L:4:2x2u/L:4:2x2u/L:4:2x2u 70 poor",
+      "5 1x1x2|L:4:4x1u/L:4:4x1u/L:4:4x1u/L:4:4x1u/L:4:4x1u/L:4:4x1u/L:4:4x1u/L:4:4x1u 64 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 83": {
+    "hash": "1521789b1da53001be225eb01afe",
+    "layouts": [
+      "1 1x2x2|W:69:1x6u,9x7r/W:69:1x6u,9x7r:t/W:69:1x6u,9x7r 828 poor",
+      "2 1x2x3|W:46:1x4u,6x7r/W:46:1x4u,6x7r:t/W:46:1x4u,6x7r 828 poor",
+      "3 1x1x2|L:45:2x2u,3x3r,5x5u,7x1r/L:45:2x2u,3x3r,5x5u,7x1r:t/L:45:2x2u,3x3r,5x5u,7x1r/L:45:2x2u,3x3r,5x5u,7x1r:t/L:45:2x2u,3x3r,5x5u,7x1r/L:45:2x2u,3x3r,5x5u,7x1r:t/L:45:2x2u,3x3r,5x5u,7x1r/L:45:2x2u,3x3r,5x5u,7x1r:t/L:45:2x2u,3x3r,5x5u,7x1r 810 good",
+      "4 1x1x5|L:18:4x1r,7x2u/L:18:4x1r,7x2u:t/L:18:4x1r,7x2u/L:18:4x1r,7x2u:t/L:18:4x1r,7x2u/L:18:4x1r,7x2u:t/L:18:4x1r,7x2u/L:18:4x1r,7x2u:t/L:18:4x1r,7x2u 810 good",
+      "5 3x1x2|L:45:2x2u,3x3r,5x5u,7x1r/L:45:2x2u,3x3r,5x5u,7x1r:t/L:45:2x2u,3x3r,5x5u,7x1r 810 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 84": {
+    "hash": "0b9643263dc056124bdf91a0780c",
+    "layouts": [
+      "1 1x1x7|H:25:4x1r,7x3u 175 poor",
+      "2 1x1x7|H:24:4x6r 168 poor",
+      "3 1x1x1|H:25:4x1r,7x3u/H:25:4x1r,7x3u:t/H:25:4x1r,7x3u/H:25:4x1r,7x3u:t/H:25:4x1r,7x3u/H:25:4x1r,7x3u:t 150 good",
+      "4 1x1x2|H:25:4x1r,7x3u/H:25:4x1r,7x3u:t/H:25:4x1r,7x3u 150 good",
+      "5 1x1x3|H:25:4x1r,7x3u/H:25:4x1r,7x3u:t 150 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 85": {
+    "hash": "0564a72d69530b013f829400804c",
+    "layouts": [
+      "1 1x2x2|H:10:1x3r,2x1r,2x1r,3x1u 40 fair",
+      "2 2x1x2|H:10:5x2r 40 poor",
+      "3 1x1x2|H:20:2x1r,2x3u,3x1u,3x3r 40 poor",
+      "4 1x1x2|H:19:1x1u,1x4u,1x4u,1x4u,2x3r 38 poor",
+      "5 1x2x2|H:9:3x3r 36 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 86": {
+    "hash": "0cce1b77f7e2ff0b14f8a94bc8a4",
+    "layouts": [
+      "1 1x1x2|L:22:2x4u,2x4u,3x1r,3x1r/L:22:2x4u,2x4u,3x1r,3x1r/H:9:1x2r,2x1u,2x1u,3x1r 106 fair",
+      "2 1x1x2|L:21:1x5u,1x5u,2x1u,3x3r/L:21:1x5u,1x5u,2x1u,3x3r:t/H:9:1x2r,2x1u,2x1u,3x1r 102 fair",
+      "3 1x1x1|L:42:11x2r,4x1u,4x1u,4x1u,4x1u,4x1u/L:42:11x2r,4x1u,4x1u,4x1u,4x1u,4x1u:t/H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t 102 poor",
+      "4 1x1x1|H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t/H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t/H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t/H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t/H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t 90 good",
+      "5 1x1x3|L:12:4x3u/H:9:1x2r,2x1u,2x1u,3x1r/H:9:1x2r,2x1u,2x1u,3x1r:t 90 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 87": {
+    "hash": "0b82984b056062099c568ae0b3e2",
+    "layouts": [
+      "1 3x1x2|H:12:4x3r/H:12:4x3r 144 good",
+      "2 3x1x2|H:12:4x3u/H:12:4x3u 144 good",
+      "3 3x2x1|H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r 144 fair",
+      "4 6x1x1|H:6:2x3u/H:6:2x3u/H:6:2x3u/H:6:2x3u 144 fair",
+      "5 1x2x3|H:22:2x11r 132 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 88": {
+    "hash": "09a582fe1c8082174a116af60870",
+    "layouts": [
+      "1 1x2x1|H:33:1x4u,5x1r,6x4u/H:33:1x4u,5x1r,6x4u:t/H:33:1x4u,5x1r,6x4u/H:33:1x4u,5x1r,6x4u:t/H:33:1x4u,5x1r,6x4u 330 fair",
+      "2 2x1x1|H:33:11x3r/H:33:11x3r/H:33:11x3r/H:33:11x3r/H:33:11x3r 330 poor",
+      "3 3x1x1|H:22:11x2r/H:22:11x2r/H:22:11x2r/H:22:11x2r/H:22:11x2r 330 poor",
+      "4 1x1x1|H:65:1x9u,1x9u,5x1u,5x1u,5x1u,8x4r/H:65:1x9u,1x9u,5x1u,5x1u,5x1u,8x4r:t/H:65:1x9u,1x9u,5x1u,5x1u,5x1u,8x4r/H:65:1x9u,1x9u,5x1u,5x1u,5x1u,8x4r:t/H:65:1x9u,1x9u,5x1u,5x1u,5x1u,8x4r 325 poor",
+      "5 2x2x1|H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u:t/H:16:1x3r,1x3r,1x3r,1x3r,1x4u/H:16:1x3r,1x3r,1x3r,1x3r,1x4u:t/H:16:1x3r,1x3r,1x3r,1x3r,1x4u 320 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 89": {
+    "hash": "07e598d10727901013204a0499e0",
+    "layouts": [
+      "1 1x1x1|H:10:1x2u,2x4r/H:10:1x2u,2x4r:t 20 good",
+      "2 1x2x1|H:5:1x1u,1x4r/H:5:1x1u,1x4r:t 20 good",
+      "3 1x1x2|H:10:1x2u,2x4r 20 poor",
+      "4 1x2x2|H:5:1x1u,1x4r 20 poor",
+      "5 1x1x1|H:8:2x4r/H:8:2x4r 16 good"
+    ],
+    "emptyReason": null
+  },
+  "random 90": {
+    "hash": "00361c7f9b26291450f05b7f9f17",
+    "layouts": [
+      "1 1x2x2|L:3:1x1r,1x2u/L:3:1x1r,1x2u/L:3:1x1r,1x2u/L:3:1x1r,1x2u/L:3:1x1r,1x2u 60 fair",
+      "2 2x1x2|L:7:1x2u,1x2u,1x3r/L:7:1x2u,1x2u,1x3r:t 56 fair",
+      "3 2x2x1|L:6:1x1r,1x1r,1x4u/L:6:1x1r,1x1r,1x4u/H:1:1x1u 52 fair",
+      "4 2x1x2|L:6:2x3r/L:6:2x3r 48 fair",
+      "5 1x2x2|H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r 48 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 91": {
+    "hash": "03c78f33efb1e8087692bf8a2163",
+    "layouts": [
+      "1 1x1x1|H:88:2x1r,2x1r,2x1r,3x1r,3x1r,3x1r,3x1r,3x6u,3x6u,3x6u,4x4u/H:88:2x1r,2x1r,2x1r,3x1r,3x1r,3x1r,3x1r,3x6u,3x6u,3x6u,4x4u:t/H:88:2x1r,2x1r,2x1r,3x1r,3x1r,3x1r,3x1r,3x6u,3x6u,3x6u,4x4u/W:39:13x3u 303 poor",
+      "2 1x1x3|H:88:2x1r,2x1r,2x1r,3x1r,3x1r,3x1r,3x1r,3x6u,3x6u,3x6u,4x4u/W:13:13x1u 303 poor",
+      "3 1x1x2|H:88:2x1r,2x1r,2x1r,3x1r,3x1r,3x1r,3x1r,3x6u,3x6u,3x6u,4x4u/W:19:1x1u,2x9r/L:13:1x1r,1x1r,1x6r,5x1u/L:13:1x1r,1x1r,1x6r,5x1u:t/L:13:1x1r,1x1r,1x6r,5x1u 292 poor",
+      "4 1x1x1|W:39:13x3u/W:39:13x3u/W:39:13x3u/W:39:13x3u/W:39:13x3u/W:39:13x3u/W:39:13x3u 273 fair",
+      "5 1x1x3|W:13:13x1u/W:13:13x1u/W:13:13x1u/W:13:13x1u/W:13:13x1u/W:13:13x1u/W:13:13x1u 273 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 92": {
+    "hash": "1d164943fe38f01752173c7f2fea",
+    "layouts": [
+      "1 1x1x1|H:13:1x3r,2x5u/H:13:1x3r,2x5u:t/H:13:1x3r,2x5u/H:13:1x3r,2x5u:t/H:13:1x3r,2x5u/H:13:1x3r,2x5u:t/H:13:1x3r,2x5u/H:13:1x3r,2x5u:t/H:13:1x3r,2x5u/H:13:1x3r,2x5u:t/H:13:1x3r,2x5u/H:13:1x3r,2x5u:t 156 good",
+      "2 1x1x1|H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r 144 fair",
+      "3 1x2x1|H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r 144 fair",
+      "4 1x3x1|H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r/H:3:1x3r 108 fair",
+      "5 1x2x1|H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u/H:4:2x2u 96 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 93": {
+    "hash": "01fa68c4636acb007d731e20cb56",
+    "layouts": [
+      "1 1x1x2|H:16:1x3r,1x3r,2x5u/H:16:1x3r,1x3r,2x5u:t/H:16:1x3r,1x3r,2x5u/H:16:1x3r,1x3r,2x5u:t 128 good",
+      "2 1x1x2|L:32:1x5r,1x5r,1x5r,1x5r,2x6u/L:32:1x5r,1x5r,1x5r,1x5r,2x6u:t 128 fair",
+      "3 2x1x2|H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r 128 fair",
+      "4 2x1x2|L:32:1x5r,1x5r,1x5r,1x5r,2x6u 128 poor",
+      "5 3x1x2|H:5:1x5u/H:5:1x5u/H:5:1x5u/H:5:1x5u 120 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 94": {
+    "hash": "18423475e83f8d07d92ee3880cf7",
+    "layouts": [
+      "1 2x1x1|H:5:1x2r,1x3u/H:5:1x2r,1x3u:t/H:5:1x2r,1x3u/H:5:1x2r,1x3u:t/H:5:1x2r,1x3u 50 good",
+      "2 1x1x1|H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u 45 fair",
+      "3 3x1x1|H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u 45 fair",
+      "4 2x1x2|H:5:1x2r,1x3u/H:5:1x2r,1x3u:t 40 good",
+      "5 1x1x1|H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r/H:8:2x4r 40 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 95": {
+    "hash": "1e4b2e5880a61002119a6e6a01ec",
+    "layouts": [
+      "1 1x1x3|L:4:4x1u/L:4:4x1u 24 good",
+      "2 1x2x3|L:2:2x1u/L:2:2x1u 24 good",
+      "3 1x4x3|L:1:1x1u/L:1:1x1u 24 good",
+      "4 2x2x3|H:2:2x1r 24 good",
+      "5 2x2x3|L:2:2x1u 24 good"
+    ],
+    "emptyReason": null
+  },
+  "random 96": {
+    "hash": "11921d888c16400a32a2e29bd6d9",
+    "layouts": [
+      "1 3x1x3|H:36:11x1r,11x1r,1x7u,1x7u/H:36:11x1r,11x1r,1x7u,1x7u 648 poor",
+      "2 2x1x3|H:53:13x1r,1x13u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u/H:53:13x1r,1x13u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u:t 636 poor",
+      "3 1x1x3|H:105:15x1r,1x13u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/H:105:15x1r,1x13u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u:t 630 poor",
+      "4 3x1x3|H:35:1x13u,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r/H:35:1x13u,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r:t 630 poor",
+      "5 1x1x3|H:104:8x13u/H:104:8x13u 624 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 97": {
+    "hash": "05d1818dfd31a61ed7c1f40c496c",
+    "layouts": [
+      "1 3x1x1|W:7:1x1r,1x1u,2x1u,3x1r/H:6:1x1r,1x1u,2x1r,2x1u 39 fair",
+      "2 3x1x1|H:6:1x1r,1x1u,2x1r,2x1u/H:6:1x1r,1x1u,2x1r,2x1u:t 36 good",
+      "3 1x1x1|W:20:1x1r,1x1r,1x1r,1x1r,2x2u,2x2u,2x2u,2x2u/H:16:8x2u 36 fair",
+      "4 2x1x1|H:8:4x2u/H:8:4x2u 32 good",
+      "5 2x1x1|L:8:4x2r/L:8:4x2r 32 good"
+    ],
+    "emptyReason": null
+  },
+  "random 98": {
+    "hash": "19f225ad0d255c015713fdde62a0",
+    "layouts": [
+      "1 1x1x1|W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u/W:14:1x2r,3x4u:t/W:14:1x2r,3x4u 266 poor",
+      "2 1x1x1|H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r/H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r:t/H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r/H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r:t/H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r/H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r:t/H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r/H:32:1x1u,1x1u,1x2r,1x2r,1x9u,1x9u,4x2r:t 256 fair",
+      "3 1x1x1|L:58:1x1r,1x9r,1x9r,1x9r,1x9r,1x9r,3x4u/L:58:1x1r,1x9r,1x9r,1x9r,1x9r,1x9r,3x4u:t/L:58:1x1r,1x9r,1x9r,1x9r,1x9r,1x9r,3x4u/L:58:1x1r,1x9r,1x9r,1x9r,1x9r,1x9r,3x4u:t 232 poor",
+      "4 1x1x1|W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u/W:12:3x4u 228 poor",
+      "5 1x1x1|W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r/W:12:6x2r 228 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 99": {
+    "hash": "086c77ae98bacd0e58aa76f5a7e8",
+    "layouts": [
+      "1 3x1x2|H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u 108 fair",
+      "2 3x1x1|H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u/H:3:1x3u 108 fair",
+      "3 1x1x2|H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u 108 fair",
+      "4 1x1x1|H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u/H:9:3x3u 108 fair",
+      "5 2x1x2|H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r 96 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 100": {
+    "hash": "0cf64188c7c986133fe530ad62cb",
+    "layouts": [
+      "1 1x1x1|H:14:2x7u/H:14:2x7u/H:14:2x7u/H:14:2x7u/H:14:2x7u 70 fair",
+      "2 2x1x1|H:7:1x7u/H:7:1x7u/H:7:1x7u/H:7:1x7u/H:7:1x7u 70 fair",
+      "3 1x1x1|H:12:6x2r/H:12:6x2r/H:12:6x2r/H:12:6x2r/H:12:6x2r 60 fair",
+      "4 2x1x1|H:6:6x1r/H:6:6x1r/H:6:6x1r/H:6:6x1r/H:6:6x1r 60 fair",
+      "5 1x1x2|H:14:2x7u/H:14:2x7u 56 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 101": {
+    "hash": "0fc11e38885c26145992c81fb193",
+    "layouts": [
+      "1 1x1x1|H:33:1x3u,2x8u,3x2r,8x1r/H:33:1x3u,2x8u,3x2r,8x1r:t/H:33:1x3u,2x8u,3x2r,8x1r/H:33:1x3u,2x8u,3x2r,8x1r:t/H:33:1x3u,2x8u,3x2r,8x1r/H:33:1x3u,2x8u,3x2r,8x1r:t/H:33:1x3u,2x8u,3x2r,8x1r/H:33:1x3u,2x8u,3x2r,8x1r:t/H:33:1x3u,2x8u,3x2r,8x1r/H:33:1x3u,2x8u,3x2r,8x1r:t/H:33:1x3u,2x8u,3x2r,8x1r 363 fair",
+      "2 1x2x3|L:12:1x3r,1x3r,3x1u,3x1u/L:12:1x3r,1x3r,3x1u,3x1u/L:12:1x3r,1x3r,3x1u,3x1u/L:12:1x3r,1x3r,3x1u,3x1u/L:12:1x3r,1x3r,3x1u,3x1u 360 fair",
+      "3 1x6x1|L:12:1x3u,1x3u,3x1r,3x1r/L:12:1x3u,1x3u,3x1r,3x1r/L:12:1x3u,1x3u,3x1r,3x1r/L:12:1x3u,1x3u,3x1r,3x1r/L:12:1x3u,1x3u,3x1r,3x1r 360 fair",
+      "4 1x3x1|L:24:2x3u,2x3u,3x2r,3x2r/L:24:2x3u,2x3u,3x2r,3x2r/L:24:2x3u,2x3u,3x2r,3x2r/L:24:2x3u,2x3u,3x2r,3x2r/L:24:2x3u,2x3u,3x2r,3x2r 360 fair",
+      "5 1x2x2|L:18:1x4r,2x1u,2x2r,4x2u/L:18:1x4r,2x1u,2x2r,4x2u:t/L:18:1x4r,2x1u,2x2r,4x2u/L:18:1x4r,2x1u,2x2r,4x2u:t/L:18:1x4r,2x1u,2x2r,4x2u 360 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 102": {
+    "hash": "14d655dce54c9a0d877c739eb133",
+    "layouts": [
+      "1 1x1x1|H:28:4x7r/H:28:4x7r/H:28:4x7r/H:28:4x7r/H:28:4x7r/H:28:4x7r/H:28:4x7r/H:28:4x7r 224 fair",
+      "2 1x2x1|H:14:2x7r/H:14:2x7r/H:14:2x7r/H:14:2x7r/H:14:2x7r/H:14:2x7r/H:14:2x7r/H:14:2x7r 224 fair",
+      "3 1x1x2|H:28:4x7r/H:28:4x7r/H:28:4x7r/H:28:4x7r 224 poor",
+      "4 1x1x4|H:28:4x7r/H:28:4x7r 224 poor",
+      "5 1x2x2|H:14:2x7r/H:14:2x7r/H:14:2x7r/H:14:2x7r 224 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 103": {
+    "hash": "13b3addb3c5f661786b8755ed275",
+    "layouts": [
+      "1 1x1x1|L:14:3x1r,3x1r,4x2u/L:14:3x1r,3x1r,4x2u:t/L:14:3x1r,3x1r,4x2u/L:14:3x1r,3x1r,4x2u:t/L:14:3x1r,3x1r,4x2u/L:14:3x1r,3x1r,4x2u:t 84 good",
+      "2 1x2x1|L:7:2x1u,2x1u,3x1r/L:7:2x1u,2x1u,3x1r:t/L:7:2x1u,2x1u,3x1r/L:7:2x1u,2x1u,3x1r:t/L:7:2x1u,2x1u,3x1r/L:7:2x1u,2x1u,3x1r:t 84 good",
+      "3 2x1x1|H:14:3x1u,3x1u,4x2r/H:14:3x1u,3x1u,4x2r:t/H:14:3x1u,3x1u,4x2r 84 good",
+      "4 2x1x1|L:14:3x1r,3x1r,4x2u/L:14:3x1r,3x1r,4x2u:t/L:14:3x1r,3x1r,4x2u 84 good",
+      "5 3x1x1|W:7:2x1u,2x1u,3x1r/W:7:2x1u,2x1u,3x1r:t/W:7:2x1u,2x1u,3x1r/W:7:2x1u,2x1u,3x1r:t 84 good"
+    ],
+    "emptyReason": null
+  },
+  "random 104": {
+    "hash": "037aca3c8702f80c8709c096496b",
+    "layouts": [
+      "1 1x2x1|H:40:1x4r,2x2u,4x4r,8x2u/H:40:1x4r,2x2u,4x4r,8x2u:t/H:40:1x4r,2x2u,4x4r,8x2u/H:40:1x4r,2x2u,4x4r,8x2u:t/H:40:1x4r,2x2u,4x4r,8x2u/H:40:1x4r,2x2u,4x4r,8x2u:t/H:40:1x4r,2x2u,4x4r,8x2u/H:40:1x4r,2x2u,4x4r,8x2u:t/H:40:1x4r,2x2u,4x4r,8x2u/H:40:1x4r,2x2u,4x4r,8x2u:t 800 good",
+      "2 1x2x2|H:40:1x4r,2x2u,4x4r,8x2u/H:40:1x4r,2x2u,4x4r,8x2u:t/H:40:1x4r,2x2u,4x4r,8x2u/H:40:1x4r,2x2u,4x4r,8x2u:t/H:40:1x4r,2x2u,4x4r,8x2u 800 good",
+      "3 2x2x1|H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u/H:20:5x4u 800 fair",
+      "4 1x2x1|H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r:t/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r:t/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r:t/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r:t/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r:t 780 good",
+      "5 1x2x2|H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r:t/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r:t/H:39:1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x4u,1x7r 780 good"
+    ],
+    "emptyReason": null
+  },
+  "random 105": {
+    "hash": "143d84de37ca671cf0d6234cdf4b",
+    "layouts": [
+      "1 1x7x1|L:7:7x1r/L:7:7x1r/L:7:7x1r/H:3:3x1u 168 fair",
+      "2 1x5x1|L:9:1x1u,1x4u,4x1r/L:9:1x1u,1x4u,4x1r:t/L:9:1x1u,1x4u,4x1r/H:4:2x2r 155 fair",
+      "3 1x1x1|H:22:1x2r,1x2r,3x6u/H:22:1x2r,1x2r,3x6u:t/H:22:1x2r,1x2r,3x6u/H:22:1x2r,1x2r,3x6u:t/H:22:1x2r,1x2r,3x6u/H:22:1x2r,1x2r,3x6u:t/H:22:1x2r,1x2r,3x6u 154 fair",
+      "4 1x2x1|H:11:1x2r,3x3u/H:11:1x2r,3x3u:t/H:11:1x2r,3x3u/H:11:1x2r,3x3u:t/H:11:1x2r,3x3u/H:11:1x2r,3x3u:t/H:11:1x2r,3x3u 154 fair",
+      "5 1x2x3|H:11:1x2r,3x3u/L:7:1x1u,2x3r/L:7:1x1u,2x3r:t 150 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 106": {
+    "hash": "07342b70ce48aa0514952a9031b1",
+    "layouts": [
+      "1 1x1x1|H:18:3x6u/H:18:3x6u/H:18:3x6u 54 good",
+      "2 1x1x3|H:18:3x6u 54 poor",
+      "3 1x1x2|L:13:1x1r,1x6r,3x2u/L:13:1x1r,1x6r,3x2u:t 52 fair",
+      "4 2x1x2|L:13:1x1r,1x6r,3x2u 52 poor",
+      "5 1x1x1|L:25:1x6r,1x6r,2x1r,2x1r,3x3u/L:25:1x6r,1x6r,2x1r,2x1r,3x3u:t 50 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 107": {
+    "hash": "07d01a902e7fdf08109ecdadcca1",
+    "layouts": [
+      "1 2x1x1|H:4:4x1r/H:4:4x1r 16 good",
+      "2 1x2x1|H:4:2x2u/H:4:2x2u 16 good",
+      "3 2x2x1|H:2:1x2u/H:2:1x2u 16 good",
+      "4 1x4x1|H:2:2x1u/H:2:2x1u 16 good",
+      "5 1x2x2|H:4:2x2u 16 good"
+    ],
+    "emptyReason": null
+  },
+  "random 108": {
+    "hash": "02719f8fc8aec9118a3dfb0c1678",
+    "layouts": [
+      "1 1x1x1|H:13:1x3r,1x3r,1x3r,1x4u/H:13:1x3r,1x3r,1x3r,1x4u:t/H:13:1x3r,1x3r,1x3r,1x4u/H:13:1x3r,1x3r,1x3r,1x4u:t 52 good",
+      "2 1x1x1|W:16:1x3r,1x3r,2x5u/W:16:1x3r,1x3r,2x5u:t/W:16:1x3r,1x3r,2x5u 48 good",
+      "3 2x1x1|W:8:1x2u,1x2u,2x1r,2x1r/W:8:1x2u,1x2u,2x1r,2x1r/W:8:1x2u,1x2u,2x1r,2x1r 48 good",
+      "4 1x3x1|H:4:1x1u,1x3r/H:4:1x1u,1x3r:t/H:4:1x1u,1x3r/H:4:1x1u,1x3r:t 48 good",
+      "5 1x2x1|H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r 48 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 109": {
+    "hash": "1c6643d18cb115114003fe115aaf",
+    "layouts": [
+      "1 1x1x1|L:23:1x3r,4x5u/H:10:1x3u,2x1u,2x1u,3x1r 33 fair",
+      "2 1x2x1|L:11:1x1r,2x5u/H:5:2x1r,3x1u 32 fair",
+      "3 1x1x1|H:10:1x3u,2x1u,2x1u,3x1r/H:10:1x3u,2x1u,2x1u,3x1r:t/H:10:1x3u,2x1u,2x1u,3x1r 30 good",
+      "4 1x2x1|H:5:2x1r,3x1u/H:5:2x1r,3x1u:t/H:5:2x1r,3x1u 30 good",
+      "5 1x3x1|L:7:1x1r,1x1r,1x5u/H:3:3x1u 30 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 110": {
+    "hash": "12c96c2f5b2aa619ededa49dd847",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 111": {
+    "hash": "1027b5f6da53c6166acf03c2287a",
+    "layouts": [
+      "1 3x2x1|H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u 126 fair",
+      "2 1x2x3|H:9:1x2u,1x2u,1x2u,1x3r/H:9:1x2u,1x2u,1x2u,1x3r:t/L:3:1x1u,1x2r 126 poor",
+      "3 3x1x2|L:9:1x1u,2x4r/H:6:1x1r,1x1r,1x4u/H:6:1x1r,1x1r,1x4u:t 126 poor",
+      "4 2x1x3|H:9:1x1r,2x4u/L:6:1x1u,1x1u,1x4r/L:6:1x1u,1x1u,1x4r 126 poor",
+      "5 1x2x2|H:9:1x2u,1x2u,1x2u,1x3r/H:9:1x2u,1x2u,1x2u,1x3r:t/H:9:1x2u,1x2u,1x2u,1x3r/L:4:2x2r 124 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 112": {
+    "hash": "01cc98d84bc6f9058292ef659dbc",
+    "layouts": [
+      "1 1x2x2|H:31:3x1u,3x4u,4x1r,4x3r/H:31:3x1u,3x4u,4x1r,4x3r:t/H:31:3x1u,3x4u,4x1r,4x3r/H:31:3x1u,3x4u,4x1r,4x3r:t 496 good",
+      "2 1x2x1|H:31:3x1u,3x4u,4x1r,4x3r/H:31:3x1u,3x4u,4x1r,4x3r:t/H:31:3x1u,3x4u,4x1r,4x3r/H:31:3x1u,3x4u,4x1r,4x3r:t/H:31:3x1u,3x4u,4x1r,4x3r/H:31:3x1u,3x4u,4x1r,4x3r:t/H:31:3x1u,3x4u,4x1r,4x3r/H:31:3x1u,3x4u,4x1r,4x3r:t 496 good",
+      "3 1x1x1|L:187:17x11u/L:187:17x11u/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r:t 496 poor",
+      "4 1x1x2|L:93:1x5u,8x11r/L:93:1x5u,8x11r:t/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r 494 poor",
+      "5 1x1x1|H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r:t/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r:t/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r:t/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r/H:61:1x11u,1x11u,1x11u,1x11u,1x1u,1x1u,1x3r,4x3r:t 488 good"
+    ],
+    "emptyReason": null
+  },
+  "random 113": {
+    "hash": "1e01150c69ab4a17d1ba618e1ec8",
+    "layouts": [
+      "1 1x2x1|H:44:1x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x2r,4x2r/H:44:1x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,4x2r,4x2r:t 176 fair",
+      "2 1x1x1|H:83:12x1r,2x5u,4x10u,7x3r/H:83:12x1r,2x5u,4x10u,7x3r:t 166 poor",
+      "3 1x1x1|H:82:1x1u,1x1u,1x1u,1x1u,1x4r,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,3x4r,3x4r,5x3r,5x3r/H:82:1x1u,1x1u,1x1u,1x1u,1x4r,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,2x1u,3x4r,3x4r,5x3r,5x3r:t 164 poor",
+      "4 1x2x1|H:36:6x6u/H:36:6x6u 144 fair",
+      "5 1x2x1|H:36:9x4r/H:36:9x4r 144 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 114": {
+    "hash": "0e00e6edd6e4460ed72a3de6fff0",
+    "layouts": [
+      "1 2x3x1|H:4:4x1u/H:4:4x1u 48 good",
+      "2 2x3x1|L:4:4x1r/L:4:4x1r 48 good",
+      "3 2x1x3|L:3:3x1u/L:3:3x1u 36 good",
+      "4 6x1x1|H:3:3x1r/H:3:3x1r 36 good",
+      "5 2x1x3|L:2:1x2r/L:2:1x2r 24 good"
+    ],
+    "emptyReason": null
+  },
+  "random 115": {
+    "hash": "1a4a91cfb90c2001baac21351c27",
+    "layouts": [
+      "1 1x1x1|H:56:8x7u 56 poor",
+      "2 1x2x1|H:28:4x7r 56 poor",
+      "3 2x2x1|H:12:4x3u 48 good",
+      "4 1x2x1|H:24:8x3u 48 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 116": {
+    "hash": "0e3b211bb4074a0509c689f909b2",
+    "layouts": [
+      "1 4x1x2|L:12:3x4r/L:12:3x4r 192 poor",
+      "2 2x1x1|H:17:1x4u,3x1u,3x1u,3x1u,4x1r/H:17:1x4u,3x1u,3x1u,3x1u,4x1r:t/H:17:1x4u,3x1u,3x1u,3x1u,4x1r/H:17:1x4u,3x1u,3x1u,3x1u,4x1r:t/H:17:1x4u,3x1u,3x1u,3x1u,4x1r 170 good",
+      "3 1x1x2|L:12:3x4r/L:12:3x4r/L:12:3x4r/L:12:3x4r/L:12:3x4r/L:12:3x4r/L:12:3x4r 168 fair",
+      "4 1x1x3|L:8:2x4r/L:8:2x4r/L:8:2x4r/L:8:2x4r/L:8:2x4r/L:8:2x4r/L:8:2x4r 168 fair",
+      "5 1x2x2|L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r/L:6:3x2r 168 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 117": {
+    "hash": "021ade85fa878c13add9c068162d",
+    "layouts": [
+      "1 2x2x1|H:4:2x2r/H:4:2x2r 32 good",
+      "2 1x2x1|H:8:2x4r/H:8:2x4r 32 good",
+      "3 2x1x1|H:8:4x2r/H:8:4x2r 32 good",
+      "4 1x1x1|H:16:4x4r/H:16:4x4r 32 good",
+      "5 1x2x2|H:8:2x4r 32 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 118": {
+    "hash": "03623a6e6550c7115ccb704e9b4f",
+    "layouts": [
+      "1 1x4x2|L:10:2x5u/H:6:2x3r 128 fair",
+      "2 1x7x2|L:6:6x1r/H:3:3x1u 126 fair",
+      "3 1x3x2|L:14:1x2r,2x1u,5x2r/H:7:1x2u,1x2u,1x3r 126 fair",
+      "4 1x1x6|H:21:7x3r 126 poor",
+      "5 1x3x1|W:34:10x1r,1x3r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u/H:7:1x2u,1x2u,1x3r 123 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 119": {
+    "hash": "03d854ca8b3b360ef292b182a624",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 120": {
+    "hash": "13624d15d47a221d6afd857a87e0",
+    "layouts": [
+      "1 1x1x1|H:9:1x1u,1x2r,2x1r,2x2u/H:9:1x1u,1x2r,2x1r,2x2u:t/H:9:1x1u,1x2r,2x1r,2x2u/H:9:1x1u,1x2r,2x1r,2x2u:t/H:9:1x1u,1x2r,2x1r,2x2u 45 good",
+      "2 1x1x1|H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u/H:8:1x2r,2x3u:t/H:8:1x2r,2x3u 40 good",
+      "3 2x1x1|H:4:1x1r,1x3u/H:4:1x1r,1x3u:t/H:4:1x1r,1x3u/H:4:1x1r,1x3u:t/H:4:1x1r,1x3u 40 good",
+      "4 1x2x1|H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u 40 fair",
+      "5 1x2x1|H:3:1x1u,1x2r/H:3:1x1u,1x2r:t/H:3:1x1u,1x2r/H:3:1x1u,1x2r:t/H:3:1x1u,1x2r 30 good"
+    ],
+    "emptyReason": null
+  },
+  "random 121": {
+    "hash": "1f48b7fb4f86960750d156818015",
+    "layouts": [
+      "1 1x1x1|H:29:1x2r,3x9u/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t 257 fair",
+      "2 1x1x1|W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r/W:19:1x1u,1x6u,1x6u,3x2r:t/W:19:1x1u,1x6u,1x6u,3x2r 247 good",
+      "3 1x1x1|W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u/W:18:3x6u 234 fair",
+      "4 1x1x1|H:29:1x2r,3x9u/H:29:1x2r,3x9u:t/H:29:1x2r,3x9u/H:29:1x2r,3x9u:t/H:29:1x2r,3x9u/H:29:1x2r,3x9u:t/H:29:1x2r,3x9u/H:29:1x2r,3x9u:t 232 fair",
+      "5 1x1x1|L:75:1x6u,1x6u,7x9r/L:75:1x6u,1x6u,7x9r:t/L:75:1x6u,1x6u,7x9r 225 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 122": {
+    "hash": "1ea3f404798194073e8621425bf2",
+    "layouts": [
+      "1 1x1x1|W:17:1x1u,1x4u,1x4u,1x4u,2x2r/W:17:1x1u,1x4u,1x4u,1x4u,2x2r:t/W:17:1x1u,1x4u,1x4u,1x4u,2x2r/W:17:1x1u,1x4u,1x4u,1x4u,2x2r:t 68 good",
+      "2 1x1x1|L:16:4x4u/L:16:4x4u/L:16:4x4u/L:16:4x4u 64 fair",
+      "3 1x1x1|W:16:4x4u/W:16:4x4u/W:16:4x4u/W:16:4x4u 64 fair",
+      "4 1x1x2|L:8:4x2u/L:8:4x2u/L:8:4x2u/L:8:4x2u 64 fair",
+      "5 1x1x2|W:8:4x2u/W:8:4x2u/W:8:4x2u/W:8:4x2u 64 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 123": {
+    "hash": "05f2dfe7d6f9321a0ed18533e551",
+    "layouts": [
+      "1 1x1x2|H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r 144 fair",
+      "2 1x1x3|H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r 135 fair",
+      "3 1x2x2|H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r 128 fair",
+      "4 1x1x1|H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r/H:9:3x3r 126 fair",
+      "5 1x2x3|H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r/H:4:1x1u,1x3r 120 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 124": {
+    "hash": "1f7df77ee0222201db35955ed28d",
+    "layouts": [
+      "1 2x1x1|L:17:1x1u,1x1u,1x3r,2x3r,2x3r/L:17:1x1u,1x1u,1x3r,2x3r,2x3r:t/L:17:1x1u,1x1u,1x3r,2x3r,2x3r/L:17:1x1u,1x1u,1x3r,2x3r,2x3r:t 136 fair",
+      "2 4x1x1|L:17:1x1u,1x1u,1x3r,2x3r,2x3r/L:17:1x1u,1x1u,1x3r,2x3r,2x3r:t 136 poor",
+      "3 3x1x1|L:17:1x1u,1x1u,1x3r,2x3r,2x3r/L:17:1x1u,1x1u,1x3r,2x3r,2x3r:t/H:5:1x2r,1x3u/H:5:1x2r,1x3u:t 132 poor",
+      "4 2x2x1|L:8:1x1r,1x1u,1x1u,1x1u,4x1r/L:8:1x1r,1x1u,1x1u,1x1u,4x1r:t/L:8:1x1r,1x1u,1x1u,1x1u,4x1r/L:8:1x1r,1x1u,1x1u,1x1u,4x1r:t 128 fair",
+      "5 2x1x1|L:15:5x3r/L:15:5x3r/L:15:5x3r/L:15:5x3r 120 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 125": {
+    "hash": "138758a62b64ec0fc4e218abaf0c",
+    "layouts": [
+      "1 1x1x1|L:10:1x2u,2x4r/L:10:1x2u,2x4r:t/L:10:1x2u,2x4r 30 good",
+      "2 1x1x2|L:5:1x1u,1x4r/L:5:1x1u,1x4r:t/L:5:1x1u,1x4r 30 good",
+      "3 1x3x1|L:3:1x1r,1x2u/L:3:1x1r,1x2u:t/L:3:1x1r,1x2u 27 good",
+      "4 1x1x1|L:8:2x4r/L:8:2x4r/L:8:2x4r 24 good",
+      "5 1x1x2|L:4:1x4r/L:4:1x4r/L:4:1x4r 24 good"
+    ],
+    "emptyReason": null
+  },
+  "random 126": {
+    "hash": "087850ec49671011a1ff861e51bb",
+    "layouts": [
+      "1 1x1x1|H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r 60 fair",
+      "2 1x2x1|H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r 60 fair",
+      "3 3x1x1|H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r 60 fair",
+      "4 3x1x1|L:10:5x2r/L:10:5x2r 60 poor",
+      "5 1x1x2|H:12:4x3r/H:12:4x3r/L:5:1x1u,2x2r 58 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 127": {
+    "hash": "1d7bb606c065991601ab73c2f24a",
+    "layouts": [
+      "1 1x1x1|H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r/H:39:1x1u,1x4r,2x4r,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,3x1u,5x1r:t 624 good",
+      "2 1x3x1|H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t/H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t/H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t/H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t/H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t/H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t/H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t/H:13:1x3u,1x3u,1x3u,1x4r/H:13:1x3u,1x3u,1x3u,1x4r:t 624 good",
+      "3 1x3x1|H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u/H:12:4x3u 576 fair",
+      "4 1x2x1|L:71:15x1r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u/L:71:15x1r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u:t/L:71:15x1r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u/L:71:15x1r,1x4r,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u,4x1u:t 568 poor",
+      "5 1x1x1|L:136:1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r/L:136:1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r:t/L:136:1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r/L:136:1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,1x1u,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r,2x8r:t 544 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 128": {
+    "hash": "185f271b743c3704d445a2b62b1d",
+    "layouts": [
+      "1 1x1x1|H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u/H:6:3x2u 42 poor",
+      "2 1x2x1|H:3:3x1u/H:3:3x1u/H:3:3x1u/H:3:3x1u/H:3:3x1u/H:3:3x1u/H:3:3x1u 42 poor",
+      "3 3x1x1|H:2:1x2u/H:2:1x2u/H:2:1x2u/H:2:1x2u/H:2:1x2u/H:2:1x2u/H:2:1x2u 42 poor",
+      "4 2x1x1|H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u/H:3:1x1r,1x2u:t/H:3:1x1r,1x2u 42 poor",
+      "5 1x1x1|H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r/H:4:2x2r 28 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 129": {
+    "hash": "141e828f0149bb0264624feff9b8",
+    "layouts": [
+      "1 3x1x4|H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r/H:15:5x3r 900 poor",
+      "2 2x1x4|H:22:1x4r,3x6u/H:22:1x4r,3x6u:t/H:22:1x4r,3x6u/H:22:1x4r,3x6u:t/H:22:1x4r,3x6u 880 poor",
+      "3 1x1x4|H:43:1x6u,1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u/H:43:1x6u,1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u:t/H:43:1x6u,1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u/H:43:1x6u,1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u:t/H:43:1x6u,1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,3x1r,4x1u 860 poor",
+      "4 1x1x4|H:42:7x6u/H:42:7x6u/H:42:7x6u/H:42:7x6u/H:42:7x6u 840 poor",
+      "5 1x2x4|H:21:7x3u/H:21:7x3u/H:21:7x3u/H:21:7x3u/H:21:7x3u 840 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 130": {
+    "hash": "08f2c9e29f21af1f1d29ede32aa5",
+    "layouts": [
+      "1 1x1x1|H:23:1x3r,4x5u/H:23:1x3r,4x5u:t 46 fair",
+      "2 1x1x2|H:23:1x3r,4x5u 46 poor",
+      "3 1x1x1|L:22:1x3u,1x3u,1x3u,1x3u,2x5r/L:22:1x3u,1x3u,1x3u,1x3u,2x5r:t 44 fair",
+      "4 2x1x1|H:11:1x1r,2x5u/H:11:1x1r,2x5u:t 44 fair",
+      "5 1x1x2|L:11:1x1r,1x1r,1x5r,4x1u/L:11:1x1r,1x1r,1x5r,4x1u:t 44 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 131": {
+    "hash": "14a5304d614cb013d021b01e6c28",
+    "layouts": [
+      "1 2x2x1|L:32:1x3r,1x3r,1x3r,1x3r,2x10u 128 poor",
+      "2 2x1x1|L:62:1x10u,1x1u,2x5r,4x1u,4x1u,4x1u,4x1u,4x1u,7x3r 124 poor",
+      "3 2x1x1|H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u/H:10:2x5u 120 fair",
+      "4 1x2x1|H:12:3x4r/H:12:3x4r/H:12:3x4r/H:12:3x4r/H:12:3x4r 120 fair",
+      "5 1x2x1|L:30:10x3r/L:30:10x3r 120 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 132": {
+    "hash": "07bbbca9d7ea3d0b996e550b585d",
+    "layouts": [
+      "1 1x1x1|H:29:2x3u,3x1r,4x2u,6x2r/H:29:2x3u,3x1r,4x2u,6x2r:t 58 good",
+      "2 1x1x2|H:29:2x3u,3x1r,4x2u,6x2r 58 poor",
+      "3 1x1x1|H:28:1x4u,1x4u,2x1u,2x1u,2x1u,2x1u,3x2r,3x2r/H:28:1x4u,1x4u,2x1u,2x1u,2x1u,2x1u,3x2r,3x2r:t 56 good",
+      "4 2x1x1|H:14:1x1u,1x1u,1x1u,1x1u,1x4u,3x1r,3x1r/H:14:1x1u,1x1u,1x1u,1x1u,1x4u,3x1r,3x1r:t 56 good",
+      "5 1x2x1|H:14:1x2u,1x2u,3x1r,3x1r,4x1u/H:14:1x2u,1x2u,3x1r,3x1r,4x1u:t 56 good"
+    ],
+    "emptyReason": null
+  },
+  "random 133": {
+    "hash": "188a29932be3641e6da3789bfb8d",
+    "layouts": [
+      "1 1x1x2|H:20:4x5u/H:20:4x5u/H:20:4x5u 120 poor",
+      "2 1x1x3|H:20:4x5u/H:20:4x5u 120 poor",
+      "3 2x1x2|H:10:2x5u/H:10:2x5u/H:10:2x5u 120 poor",
+      "4 2x1x3|H:10:2x5u/H:10:2x5u 120 poor",
+      "5 1x2x2|H:9:1x2u,2x1r,2x1r,3x1u/H:9:1x2u,2x1r,2x1r,3x1u:t/H:9:1x2u,2x1r,2x1r,3x1u 108 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 134": {
+    "hash": "1d174464a1d3741d43866a7d5f8c",
+    "layouts": [
+      "1 1x1x1|W:20:4x5r/W:20:4x5r 40 good",
+      "2 1x2x1|W:20:4x5r 40 poor",
+      "3 1x1x1|L:13:1x3r,1x3r,1x3r,1x4u/L:13:1x3r,1x3r,1x3r,1x4u:t/L:13:1x3r,1x3r,1x3r,1x4u 39 good",
+      "4 1x3x1|L:4:1x4u/L:4:1x4u/L:4:1x4u 36 good",
+      "5 1x2x1|H:8:1x2r,1x2r,2x1u,2x1u/H:8:1x2r,1x2r,2x1u,2x1u 32 good"
+    ],
+    "emptyReason": null
+  },
+  "random 135": {
+    "hash": "188d67782289ca1c9385ab5f34c6",
+    "layouts": [
+      "1 1x2x3|H:10:5x2u 60 poor",
+      "2 3x2x1|H:3:3x1r/H:3:3x1r/H:3:3x1r 54 good",
+      "3 2x1x3|H:9:1x1r,2x4u 54 poor",
+      "4 2x1x3|H:8:2x4u 48 poor",
+      "5 1x3x2|H:7:2x1r,5x1u 42 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 136": {
+    "hash": "12c96c2f5b2aa619ededa49dd847",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 137": {
+    "hash": "07c755c614da5114053d5c23a5c3",
+    "layouts": [
+      "1 1x1x1|H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r/H:12:4x3r 60 fair",
+      "2 1x2x1|H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r/H:6:2x3r 60 fair",
+      "3 1x1x3|L:4:4x1u/L:4:4x1u/L:4:4x1u/L:4:4x1u/L:4:4x1u 60 fair",
+      "4 3x1x1|H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r/H:4:4x1r 60 fair",
+      "5 1x2x3|L:2:2x1u/L:2:2x1u/L:2:2x1u/L:2:2x1u/L:2:2x1u 60 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 138": {
+    "hash": "1192cabdc7a17c170f3db177da97",
+    "layouts": [
+      "1 2x1x1|H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r/H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r:t/H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r/H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r:t/H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r/H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r:t/H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r/H:30:1x1u,1x1u,3x1u,3x1u,3x2r,8x2r:t 480 poor",
+      "2 3x1x1|L:38:1x7r,4x1r,9x3u/L:38:1x7r,4x1r,9x3u:t/L:38:1x7r,4x1r,9x3u/L:38:1x7r,4x1r,9x3u:t/W:7:1x1r,2x3u 477 poor",
+      "3 1x1x2|H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u:t/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/L:19:1x3r,2x3r,3x1u,7x1u/L:19:1x3r,2x3r,3x1u,7x1u:t/W:12:1x1u,1x1u,2x5r/W:12:1x1u,1x1u,2x5r 466 poor",
+      "4 1x1x2|H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u:t/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/L:17:1x1u,1x1u,1x1u,2x7r/L:17:1x1u,1x1u,1x1u,2x7r/W:12:1x1u,1x1u,2x5r/W:12:1x1u,1x1u,2x5r 458 poor",
+      "5 1x1x1|H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u:t/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u:t/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u:t/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u/H:57:10x1r,1x5r,7x1u,7x1u,7x1u,7x1u,7x1u,7x1u:t 456 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 139": {
+    "hash": "169ee5291b5ba71a17e24f6af55f",
+    "layouts": [
+      "1 1x1x1|H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r 40 fair",
+      "2 1x2x1|H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u 40 fair",
+      "3 1x1x1|H:7:1x2r,1x2r,1x3u/H:7:1x2r,1x2r,1x3u:t/H:7:1x2r,1x2r,1x3u/H:7:1x2r,1x2r,1x3u:t/H:7:1x2r,1x2r,1x3u 35 poor",
+      "4 1x1x2|H:8:1x2u,1x2u,2x1r,2x1r/H:8:1x2u,1x2u,2x1r,2x1r 32 fair",
+      "5 1x2x2|H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u 32 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 140": {
+    "hash": "0f38b952b813be1c3f952e635110",
+    "layouts": [
+      "1 3x1x1|H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u/H:4:1x1r,1x1r,1x1u,1x1u 108 poor",
+      "2 2x1x1|L:10:1x2r,2x4u/L:10:1x2r,2x4u:t/L:10:1x2r,2x4u/L:10:1x2r,2x4u:t/L:10:1x2r,2x4u 100 poor",
+      "3 2x2x1|L:5:1x1r,1x4u/L:5:1x1r,1x4u:t/L:5:1x1r,1x4u/L:5:1x1r,1x4u:t/L:5:1x1r,1x4u 100 poor",
+      "4 3x1x1|L:10:1x2r,2x4u/L:10:1x2r,2x4u:t/L:10:1x2r,2x4u/H:3:1x1r,1x2u 99 poor",
+      "5 1x1x1|H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r/H:10:1x2u,2x4r:t/H:10:1x2u,2x4r 90 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 141": {
+    "hash": "03d854ca8b3b360ef292b182a624",
+    "layouts": [],
+    "emptyReason": "NO_CARTON_WITH_COUNT"
+  },
+  "random 142": {
+    "hash": "0eb0c36259948f0e8042193dee7a",
+    "layouts": [
+      "1 1x1x1|H:26:1x5u,1x5u,8x1r,8x1r/H:26:1x5u,1x5u,8x1r,8x1r/H:26:1x5u,1x5u,8x1r,8x1r/H:26:1x5u,1x5u,8x1r,8x1r/H:26:1x5u,1x5u,8x1r,8x1r 130 fair",
+      "2 1x1x1|H:25:1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x9u/H:25:1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x9u:t/H:25:1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x9u/H:25:1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x9u:t/H:25:1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x2r,1x9u 125 fair",
+      "3 1x3x1|H:8:4x2r/H:8:4x2r/H:8:4x2r/H:8:4x2r/H:8:4x2r 120 fair",
+      "4 1x2x1|H:12:6x2r/H:12:6x2r/H:12:6x2r/H:12:6x2r/H:12:6x2r 120 fair",
+      "5 1x1x2|H:26:1x5u,1x5u,8x1r,8x1r/H:26:1x5u,1x5u,8x1r,8x1r 104 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 143": {
+    "hash": "0ffc4e58c0f0aa1fd8e46d163631",
+    "layouts": [
+      "1 1x1x1|W:32:1x1u,1x1u,1x6u,1x6u,1x6u,2x3r,2x3r/L:26:1x6u,3x1u,3x1u,7x2r/L:26:1x6u,3x1u,3x1u,7x2r:t/L:26:1x6u,3x1u,3x1u,7x2r 110 fair",
+      "2 1x1x1|L:26:1x6u,3x1u,3x1u,7x2r/L:26:1x6u,3x1u,3x1u,7x2r:t/L:26:1x6u,3x1u,3x1u,7x2r/L:26:1x6u,3x1u,3x1u,7x2r:t 104 fair",
+      "3 1x1x1|H:14:4x1r,5x2u/H:14:4x1r,5x2u:t/H:14:4x1r,5x2u/H:14:4x1r,5x2u:t/H:14:4x1r,5x2u/H:14:4x1r,5x2u:t/H:14:4x1r,5x2u 98 good",
+      "4 1x1x1|L:24:4x6u/L:24:4x6u/L:24:4x6u/L:24:4x6u 96 fair",
+      "5 1x1x1|W:32:1x1u,1x1u,1x6u,1x6u,1x6u,2x3r,2x3r/W:32:1x1u,1x1u,1x6u,1x6u,1x6u,2x3r,2x3r:t/W:32:1x1u,1x1u,1x6u,1x6u,1x6u,2x3r,2x3r 96 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 144": {
+    "hash": "056d762ef6747b0853bd6c81cfb0",
+    "layouts": [
+      "1 1x3x3|L:4:2x2u/L:4:2x2u/L:4:2x2u 108 good",
+      "2 3x2x2|H:3:3x1r/H:3:3x1r/H:3:3x1r 108 good",
+      "3 3x3x2|H:2:2x1r/H:2:2x1r/H:2:2x1r 108 good",
+      "4 3x2x3|H:3:3x1r/H:3:3x1r 108 good",
+      "5 3x3x3|H:2:2x1r/H:2:2x1r 108 good"
+    ],
+    "emptyReason": null
+  },
+  "random 145": {
+    "hash": "16a94a3553c2d01ff4e4a7c0e6f6",
+    "layouts": [
+      "1 1x1x1|H:37:7x1r,7x1r,7x1r,8x2u/H:37:7x1r,7x1r,7x1r,8x2u:t/H:37:7x1r,7x1r,7x1r,8x2u/H:37:7x1r,7x1r,7x1r,8x2u:t 148 good",
+      "2 1x1x2|H:37:7x1r,7x1r,7x1r,8x2u/H:37:7x1r,7x1r,7x1r,8x2u:t 148 fair",
+      "3 2x1x1|H:18:4x1u,7x2r/H:18:4x1u,7x2r:t/H:18:4x1u,7x2r/H:18:4x1u,7x2r:t 144 good",
+      "4 1x2x1|H:18:1x2u,3x1r,3x1r,3x1r,7x1u/H:18:1x2u,3x1r,3x1r,3x1r,7x1u:t/H:18:1x2u,3x1r,3x1r,3x1r,7x1u/H:18:1x2u,3x1r,3x1r,3x1r,7x1u:t 144 good",
+      "5 2x1x2|H:18:4x1u,7x2r/H:18:4x1u,7x2r:t 144 fair"
+    ],
+    "emptyReason": null
+  },
+  "random 146": {
+    "hash": "176f630b05b2221e46b2d605a313",
+    "layouts": [
+      "1 1x1x3|L:9:1x1r,1x1u,1x1u,6x1u/L:9:1x1r,1x1u,1x1u,6x1u:t/L:9:1x1r,1x1u,1x1u,6x1u 81 fair",
+      "2 1x2x1|H:12:4x3r/H:12:4x3r/H:12:4x3r 72 good",
+      "3 1x2x1|H:12:4x3u/H:12:4x3u/H:12:4x3u 72 good",
+      "4 1x3x1|H:8:4x2u/H:8:4x2u/H:8:4x2u 72 good",
+      "5 1x4x1|H:6:2x3r/H:6:2x3r/H:6:2x3r 72 good"
+    ],
+    "emptyReason": null
+  },
+  "random 147": {
+    "hash": "1ecfcf1ac7e2ae1dfaf41f9763ee",
+    "layouts": [
+      "1 1x1x3|L:17:2x1u,2x3u,3x1r,3x2r/L:17:2x1u,2x3u,3x1r,3x2r:t/L:17:2x1u,2x3u,3x1r,3x2r/H:6:3x2r 171 fair",
+      "2 1x1x3|L:16:1x1u,1x2r,2x1u,2x1u,2x1u,2x2r,3x1r/L:16:1x1u,1x2r,2x1u,2x1u,2x1u,2x2r,3x1r/L:16:1x1u,1x2r,2x1u,2x1u,2x1u,2x2r,3x1r/H:6:3x2r 162 fair",
+      "3 2x1x3|L:17:2x1u,2x3u,3x1r,3x2r/H:3:3x1r/H:3:3x1r/H:3:3x1r 156 poor",
+      "4 3x1x3|L:17:2x1u,2x3u,3x1r,3x2r 153 poor",
+      "5 2x1x3|L:16:1x1u,1x2r,2x1u,2x1u,2x1u,2x2r,3x1r/H:3:3x1r/H:3:3x1r/H:3:3x1r 150 poor"
+    ],
+    "emptyReason": null
+  },
+  "random 148": {
+    "hash": "08fced00218a470296fe9de63be0",
+    "layouts": [
+      "1 2x1x1|H:32:1x6u,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r/H:32:1x6u,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r:t/H:32:1x6u,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r/H:32:1x6u,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r:t 256 fair",
+      "2 1x1x1|H:64:1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,4x5u,4x5u/H:64:1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,4x5u,4x5u:t/H:64:1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,4x5u,4x5u/H:64:1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,4x5u,4x5u:t 256 poor",
+      "3 1x1x2|H:64:1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,4x5u,4x5u/H:64:1x6u,1x6u,3x1r,3x1r,3x1r,3x1r,4x5u,4x5u:t 256 poor",
+      "4 2x1x2|H:32:1x6u,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r/H:32:1x6u,2x1u,2x1u,2x1u,2x1u,3x3r,3x3r:t 256 poor",
+      "5 1x1x1|L:20:1x1r,1x1r,1x6r,1x6r,3x2u/L:20:1x1r,1x1r,1x6r,1x6r,3x2u:t/L:20:1x1r,1x1r,1x6r,1x6r,3x2u/L:20:1x1r,1x1r,1x6r,1x6r,3x2u:t/L:20:1x1r,1x1r,1x6r,1x6r,3x2u/L:20:1x1r,1x1r,1x6r,1x6r,3x2u:t/L:20:1x1r,1x1r,1x6r,1x6r,3x2u/L:20:1x1r,1x1r,1x6r,1x6r,3x2u:t/L:20:1x1r,1x1r,1x6r,1x6r,3x2u/L:20:1x1r,1x1r,1x6r,1x6r,3x2u:t/L:20:1x1r,1x1r,1x6r,1x6r,3x2u/L:20:1x1r,1x1r,1x6r,1x6r,3x2u:t 240 good"
+    ],
+    "emptyReason": null
+  },
+  "random 149": {
+    "hash": "0bbaa7a06368801e6e8e8dfe6891",
+    "layouts": [
+      "1 1x4x1|L:11:3x1u,4x2r/L:11:3x1u,4x2r:t/L:11:3x1u,4x2r 132 good",
+      "2 3x4x1|L:11:3x1u,4x2r 132 poor",
+      "3 1x2x3|L:7:1x1r,1x1u,5x1u/L:7:1x1r,1x1u,5x1u:t/L:7:1x1r,1x1u,5x1u 126 fair",
+      "4 3x2x3|L:7:1x1r,1x1u,5x1u 126 poor",
+      "5 1x5x1|L:8:4x2r/L:8:4x2r/L:8:4x2r 120 good"
+    ],
+    "emptyReason": null
+  }
+}

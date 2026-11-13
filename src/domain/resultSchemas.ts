@@ -32,16 +32,21 @@ const layer = z.object({
   extent: z.object({ x: num, y: num }),
   z: num,
   // Added in Round 4: absent on straight-cut layers and on results stored before it.
-  kind: z.enum(['grid', 'pinwheel']).optional(),
+  // 'manual' added in Round 5: a layer placed by hand.
+  kind: z.enum(['grid', 'pinwheel', 'manual']).optional(),
   // Added in Round 4: only on layers turned half a turn to interlock.
   turned: z.boolean().optional(),
 });
 
 const stabilityWarning = z.object({
-  check: z.enum(['stackHeight', 'cartonHeight', 'support', 'columns']),
+  // 'deck' added in Round 5: only on layouts placed by hand.
+  check: z.enum(['stackHeight', 'cartonHeight', 'support', 'columns', 'deck']),
   level: z.enum(['caution', 'serious']),
   value: num,
   layer: num.optional(),
+  // Added in Round 5, on warnings of layouts placed by hand only.
+  freeStanding: z.literal(true).optional(),
+  cartons: num.optional(),
 });
 
 const stability = z.object({
@@ -93,6 +98,13 @@ export const optimizeResultSchema: z.ZodType<OptimizeResult> = z.object({
   truncated: z.boolean(),
   // Added in Round 2: optional, so results saved before it still load.
   nearestCounts: z.object({ below: num.nullable(), above: num.nullable() }).optional(),
+  // Added in Round 5: only on results worked out with a minimum stability.
+  belowMinimum: z.boolean().optional(),
+  autoBestProducts: num.optional(),
+  // Added in Round 5: only when Pinwheel only found no pinwheel and shows the Auto result.
+  patternFallback: z.boolean().optional(),
+  // Added in the Round 5 review: the fallback when the weight maximum is the reason.
+  pinwheelOverWeight: z.boolean().optional(),
 });
 
 /** Analytics as stored, where fields added after the first release may be missing. */
@@ -143,6 +155,8 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
     // recomputes analytics when they are missing).
     headroomVolume: num.optional(),
     layerGapVolume: num.optional(),
+    // Added in Round 5; present only for a layout placed by hand.
+    volumeOutsideEnvelope: num.optional(),
   }),
   target: z.object({
     status: z.enum(['none', 'met', 'exceeded', 'notAchievable']),
@@ -179,6 +193,9 @@ export const analyticsSchema: z.ZodType<StoredAnalytics> = z.object({
         cartonHeight: z.object({ ratio: num, layer: num }).nullable(),
         support: z.object({ share: num, layer: num }).nullable(),
         columns: z.object({ layers: num, from: num }).nullable(),
+        // Added in Round 5, on layouts placed by hand only.
+        freeStandingGroups: num.optional(),
+        deck: z.object({ share: num, cartons: num }).optional(),
       }),
       turnedLayers: z.array(num),
     })

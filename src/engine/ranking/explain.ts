@@ -1,16 +1,21 @@
 import type { RankedLayout, StabilityRating } from '../../domain/types';
-import { ratingOrder } from './score';
+import { isPinwheelLayout, ratingOrder } from './score';
 
 const RATING_WORD: Record<StabilityRating, string> = { good: 'Good', fair: 'Fair', poor: 'Poor' };
 
 /** Score differences at or below this count as the same score (matches compareRanked). */
 const SCORE_TIE = 1e-9;
 
-/** One sentence saying why `current` ranks above `next` (null when it is the last shown). */
+/**
+ * One sentence saying why `current` ranks above `next` (null when it is the last shown).
+ * `preferPinwheel` is the layer pattern setting Prefer pinwheel, under which a pinwheel layout
+ * ranks above a straight-cut one of the same quantity before the rating is looked at.
+ */
 export function explainRanking(
   current: RankedLayout,
   next: RankedLayout | null,
   total: number,
+  preferPinwheel = false,
 ): string {
   const a = `Layout #${current.rank}`;
   if (next === null) {
@@ -29,6 +34,9 @@ export function explainRanking(
           ? 'despite lower utilization.'
           : 'while maintaining similar utilization.';
     return `${head} fits ${extra} additional ${extra === 1 ? 'unit' : 'units'} ${tail}`;
+  }
+  if (preferPinwheel && isPinwheelLayout(current.layout) && !isPinwheelLayout(next.layout)) {
+    return `${head} uses pinwheel layers, which you asked to prefer, at the same quantity.`;
   }
   const mine = current.layout.stability;
   const theirs = next.layout.stability;
