@@ -246,8 +246,10 @@ export function buildSheetContent(a: {
     ? { belowMinimum: null, patternFallback: null, autoMore: null }
     : resultNotes(inputs, result);
   const manualLines = a.manual ? flagLines(a.manual.flags, unit) : [];
-  const manualBelow = !!a.manual && isBelowMinimum(layout.stability?.rating, inputs.minStability);
   const outOfDate = a.manual?.status === 'outOfDate';
+  // As on screen: an out-of-date layout is not judged against the minimum now set.
+  const manualBelow =
+    !!a.manual && !outOfDate && isBelowMinimum(layout.stability?.rating, inputs.minStability);
 
   const trimmed = a.jobName.trim().slice(0, MAX_JOB_NAME);
   const placements = cartonPlacements(layout, inputs);

@@ -34,7 +34,7 @@ export interface ExportPayload {
   notes: string[];
   /**
    * True when every layout is shown although it rates below the minimum stability; for a
-   * manual layout, when its own rating is under the minimum.
+   * manual layout, when its own rating is under the minimum (never for one that is out of date).
    */
   belowMinimum: boolean;
   /**
@@ -103,7 +103,11 @@ export function buildExportPayload(
       inputs,
       // The notes are about the calculated result, which this is not.
       notes: [],
-      belowMinimum: isBelowMinimum(layout.stability?.rating, inputs.minStability),
+      // As on screen: an out-of-date layout is shown as it was made, and is not judged
+      // against the minimum now set.
+      belowMinimum:
+        manual.status !== 'outOfDate' &&
+        isBelowMinimum(layout.stability?.rating, inputs.minStability),
       selectedLayout: { rank: null, score: null, explanation: null, layout, manual },
       analytics: computeAnalytics(layout, inputs),
       comparison: [],

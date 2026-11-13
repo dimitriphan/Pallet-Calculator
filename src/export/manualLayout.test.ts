@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { optimizeResultSchema } from '../domain/resultSchemas';
 import { scenarioSchema } from '../domain/schemas';
 import { computeAnalytics } from '../engine/analytics/analytics';
-import { overhangingLayout, OVERHANG_INPUTS as I, resultOf } from '../engine/manual/testSupport';
+import { buildManualLayout } from '../engine/manual/build';
+import {
+  manualSpec,
+  overhangingLayout,
+  OVERHANG_INPUTS as I,
+  resultOf,
+} from '../engine/manual/testSupport';
+import type { ManualMarker } from '../store/manualLayoutsStore';
 import { buildSheetContent, drawingBounds } from './buildSheet';
 import { renderBuildSheetPdf } from './buildSheetPdf';
 import { buildCsv } from './csv';
@@ -161,5 +168,63 @@ describe('exports of a manual layout', () => {
     expect(lines.some((l) => l.startsWith('Stack height ÷ shorter side of base,'))).toBe(false);
     expect(lines).toContain('Least share of a bottom carton resting on the pallet,69%');
     expect(captionLines(payload).join('\n')).not.toMatch(/NaN|Infinity/);
+  });
+});
+
+describe('"Below your minimum" on the exports of a manual layout', () => {
+  // The overhanging layout rates Poor, so Good only puts it under the minimum.
+  const spec = manualSpec();
+  const exportsUnder = (inputs: typeof I) => {
+    const build = buildManualLayout(spec, inputs);
+    const manual: ManualMarker = {
+      id: spec.id,
+      name: spec.name,
+      flags: build.flags,
+      status: build.status,
+      upperLayers: spec.upperLayers,
+      madeFor: spec.madeFor,
+    };
+    const stale = build.status === 'outOfDate';
+    const result = resultOf(build.layout);
+    const payload = buildExportPayload(build.inputs, result, 0, NOW, stale, manual);
+    const sheet = buildSheetContent({
+      inputs: build.inputs,
+      result,
+      selectedIndex: 0,
+      jobName: '',
+      stale,
+      now: NOW,
+      manual,
+    });
+    return { build, payload, sheet, csv: buildCsv(payload).split('\r\n') };
+  };
+  const stabilityRow = (sheet: ReturnType<typeof exportsUnder>['sheet']) =>
+    sheet.palletAndLoad.find((r) => r.label === 'Stability')!.value;
+
+  it('is said of a current layout that rates under the minimum', () => {
+    const { build, payload, sheet, csv } = exportsUnder({ ...I, minStability: 'good' });
+    expect(build.status).toBe('current');
+    expect(build.layout.stability!.rating).toBe('poor');
+    expect(payload.belowMinimum).toBe(true);
+    expect(csv).toContain('Stability mark,Below your minimum');
+    expect(stabilityRow(sheet)).toBe('Poor (Below your minimum)');
+  });
+
+  it('is not said of an out-of-date layout, as the screen does not say it', async () => {
+    const { build, payload, sheet, csv } = exportsUnder({
+      ...I,
+      minStability: 'good',
+      product: { ...I.product, length: 13 },
+    });
+    expect(build.status).toBe('outOfDate');
+    expect(build.layout.stability!.rating).toBe('poor');
+    expect(payload.belowMinimum).toBe(false);
+    expect(csv).toContain('Stability mark,');
+    expect(csv.join('\n')).not.toContain('Below your minimum');
+    expect(stabilityRow(sheet)).toBe('Poor');
+    const pdf = new TextDecoder('latin1').decode(
+      await (await renderBuildSheetPdf(sheet, null)).arrayBuffer(),
+    );
+    expect(pdf).not.toContain('Below your minimum');
   });
 });
