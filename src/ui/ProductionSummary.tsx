@@ -38,10 +38,11 @@ export function ProductionSummary() {
       }`}
     >
       <dl
-        className={`grid grid-cols-5 divide-x divide-gray-200 dark:divide-harbor-foam/30 ${stale ? 'opacity-50 dark:opacity-100' : ''}`}
+        // Three to a row on a phone, where five would not hold their labels.
+        className={`grid grid-cols-3 divide-x divide-gray-200 sm:grid-cols-5 dark:divide-harbor-foam/30 ${stale ? 'opacity-50 dark:opacity-100' : ''}`}
       >
         {tiles.map(([label, value], k) => (
-          <div key={label} className="px-4 py-2">
+          <div key={label} className="px-2 py-2 sm:px-4">
             <dt className="text-xs text-gray-500 dark:text-harbor-mist">{label}</dt>
             <dd
               className={`text-xl font-semibold tabular-nums ${

@@ -582,3 +582,71 @@ test('the layer pattern setting changes the ranking, and falls back when no pinw
   await expect(fallback).toHaveCount(0);
   expect(problems).toEqual([]);
 });
+
+for (const [width, height] of [
+  [390, 844],
+  [700, 900],
+  [768, 1024],
+] as const)
+  for (const view of ['Basic', 'Full'] as const)
+    for (const theme of ['harbor', 'light'] as const)
+      test(`below 1024 px the workspace is one column with no sideways page scroll: ${width} px, ${view}, ${theme} (final review F18)`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height });
+        await page.goto('/');
+        await page.getByLabel('Theme', { exact: true }).selectOption(theme);
+        await page
+          .getByRole('radiogroup', { name: 'View' })
+          .getByRole('radio', { name: view })
+          .click();
+        await expect(page.getByTestId('layout-scene').locator('canvas')).toBeVisible();
+        const measure = () =>
+          page.evaluate(() => {
+            const box = (el: Element | null) => {
+              const r = el?.getBoundingClientRect();
+              return r ? { x: r.x, y: r.y + window.scrollY, w: r.width, h: r.height } : null;
+            };
+            return {
+              scrollWidth: document.documentElement.scrollWidth,
+              bodyWidth: document.body.scrollWidth,
+              header: box(document.querySelector('header')),
+              actions: box(document.querySelector('[data-testid=header-actions]')),
+              summary: box(document.querySelector('[aria-label="Production summary"]')),
+              scene: box(document.querySelector('[data-testid=scene-slot]')),
+              main: box(document.querySelector('main')),
+              details: box(document.querySelector('aside[aria-label=Details]')),
+              inputs: box(document.querySelector('aside[aria-label=Inputs]')),
+              table: box(document.querySelector('table[aria-label="Layout comparison"]')),
+            };
+          });
+        const m = await measure();
+        // Nothing is wider than the window.
+        expect(m.scrollWidth).toBe(width);
+        expect(m.bodyWidth).toBe(width);
+        for (const part of [m.header, m.actions, m.summary, m.scene, m.main, m.details, m.inputs]) {
+          expect(part!.x).toBeGreaterThanOrEqual(0);
+          expect(part!.x + part!.w).toBeLessThanOrEqual(width);
+        }
+        // One column, in this order: summary, 3D view (and results), details, inputs.
+        expect(m.main!.w).toBe(width);
+        expect(m.scene!.w).toBeGreaterThanOrEqual(width - 40);
+        expect(m.scene!.h).toBeGreaterThanOrEqual(320);
+        expect(m.summary!.y).toBeLessThan(m.scene!.y);
+        expect(m.main!.y + m.main!.h).toBeLessThanOrEqual(m.details!.y + 1);
+        expect(m.details!.y + m.details!.h).toBeLessThanOrEqual(m.inputs!.y + 1);
+        // The inputs can be reached from the top.
+        await page.getByRole('link', { name: 'Change inputs' }).click();
+        await expect(page.locator('aside[aria-label=Inputs]')).toBeInViewport();
+        if (view === 'Full') {
+          // The comparison table may scroll sideways inside its own box only.
+          const scroller = page.getByRole('table', { name: 'Layout comparison' }).locator('..');
+          const s = await scroller.evaluate((el) => ({
+            client: el.clientWidth,
+            right: el.getBoundingClientRect().right,
+          }));
+          expect(s.right).toBeLessThanOrEqual(width);
+          expect(s.client).toBeLessThanOrEqual(width);
+        }
+        expect((await measure()).scrollWidth).toBe(width);
+      });

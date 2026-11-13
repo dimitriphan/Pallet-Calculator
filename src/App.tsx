@@ -20,6 +20,9 @@ import { useUnitSync } from './ui/UnitControl';
 import { YourLayouts } from './ui/YourLayouts';
 import { WHAT_TO_BUILD_HEADING_ID, WhatToBuildCard } from './ui/WhatToBuildCard';
 
+/** The inputs column: where "Change inputs" goes on a narrow screen. */
+const INPUTS_ID = 'inputs';
+
 function Workspace() {
   useAutoOptimize();
   useTheme();
@@ -71,22 +74,47 @@ function Workspace() {
     // The editor opens at the top of its column, whatever was scrolled to before.
     if (editing && main.current) main.current.scrollTop = 0;
   }, [editing, full]);
+  // Below 1024 px there is no room for three columns (the middle one would be a strip): the
+  // workspace is one column that the page scrolls, in the order summary, 3D view and results,
+  // details, inputs. The editor keeps its own two columns (it is offered from 768 px), except
+  // while it is covered for being too narrow. From 1024 px nothing here changes anything.
+  const stacked = !editing || block === 'narrow';
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gray-100 text-gray-900 dark:bg-harbor-deep dark:text-harbor-foam">
+    <div
+      className={`flex flex-col bg-gray-100 text-gray-900 dark:bg-harbor-deep dark:text-harbor-foam ${
+        stacked ? 'min-h-screen lg:h-screen lg:overflow-hidden' : 'h-screen overflow-hidden'
+      }`}
+    >
       <Header />
       <ProductionSummary />
+      {!editing && (
+        // The inputs are last in the one column: a way to them from the top.
+        <a
+          href={`#${INPUTS_ID}`}
+          className="focus-ticks-inset border-b border-gray-200 bg-white px-4 py-2 text-sm text-blue-800 underline lg:hidden dark:border-harbor-foam/40 dark:bg-harbor-panel dark:text-harbor-teal-text"
+        >
+          Change inputs
+        </a>
+      )}
       <div
-        className={`grid min-h-0 flex-1 ${
+        className={`${
+          stacked ? 'flex flex-col lg:grid lg:min-h-0 lg:flex-1' : 'grid min-h-0 flex-1'
+        } ${
           inputsFrom === null
-            ? 'grid-cols-[320px_minmax(0,1fr)_360px]'
+            ? 'lg:grid-cols-[320px_minmax(0,1fr)_360px]'
             : inputsFrom === 'lg'
               ? 'grid-cols-[minmax(0,1fr)_360px] lg:grid-cols-[320px_minmax(0,1fr)_360px]'
               : 'grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[320px_minmax(0,1fr)_360px]'
         }`}
       >
         <aside
+          id={INPUTS_ID}
           aria-label="Inputs"
-          className={`relative overflow-y-auto border-r border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel ${
+          className={`relative border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel ${
+            stacked
+              ? 'order-3 border-t lg:order-none lg:overflow-y-auto lg:border-r lg:border-t-0'
+              : 'overflow-y-auto border-r'
+          } ${
             inputsFrom === null ? '' : inputsFrom === 'lg' ? 'hidden lg:block' : 'hidden xl:block'
           }`}
         >
@@ -94,7 +122,9 @@ function Workspace() {
         </aside>
         <main
           ref={main}
-          className="relative flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto p-4"
+          className={`relative flex min-h-0 min-w-0 flex-col gap-4 p-4 ${
+            stacked ? 'order-1 lg:order-none lg:overflow-y-auto' : 'overflow-y-auto'
+          }`}
         >
           <div
             data-testid="scene-slot"
@@ -105,7 +135,7 @@ function Workspace() {
                   // scroll the page). Where the window is too low for that, the view keeps a
                   // least height and the column scrolls.
                   'h-full min-h-min shrink-0 overflow-clip border-blue-700 dark:border-harbor-teal'
-                : 'min-h-[320px] flex-1 overflow-hidden border-gray-300 dark:border-harbor-foam/40'
+                : 'min-h-[360px] flex-1 overflow-hidden border-gray-300 lg:min-h-[320px] dark:border-harbor-foam/40'
             }`}
           >
             {session && !block && (
@@ -143,7 +173,11 @@ function Workspace() {
         </main>
         <aside
           aria-label={editing ? 'Editor step' : 'Details'}
-          className="relative overflow-y-auto border-l border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel"
+          className={`relative border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel ${
+            stacked
+              ? 'order-2 border-t lg:order-none lg:overflow-y-auto lg:border-l lg:border-t-0'
+              : 'overflow-y-auto border-l'
+          }`}
         >
           {session && block ? (
             <p className="p-4 text-sm text-gray-700 dark:text-harbor-mist">
