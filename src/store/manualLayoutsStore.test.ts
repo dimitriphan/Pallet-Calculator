@@ -356,6 +356,8 @@ describe('builds under the current inputs', () => {
       name: 'Manual 1',
       flags: over!.build.flags,
       status: 'current',
+      upperLayers: 'alternate',
+      madeFor: DRAFT.madeFor,
     });
     expect(over!.ranked.layout).toBe(over!.build.layout);
     expect(over!.ranked).toMatchObject({ rank: 0, explanation: '', score: { total: 0 } });

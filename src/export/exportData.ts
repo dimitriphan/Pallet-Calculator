@@ -1,4 +1,13 @@
-import type { Dims, Inputs, OptimizeResult, RankedLayout, StabilityRating } from '../domain/types';
+import type {
+  Dims,
+  Inputs,
+  Layout,
+  OptimizeResult,
+  RankedLayout,
+  StabilityRating,
+} from '../domain/types';
+import type { ManualMarker } from '../store/manualLayoutsStore';
+import { isBelowMinimum } from '../ui/minStability';
 import { cartonDisplayDims, computeAnalytics, type Analytics } from '../engine/analytics/analytics';
 import { hasPinwheelLayer } from '../engine/analytics/stack';
 import { resultNoteLines } from '../ui/resultNotes';
@@ -6,11 +15,15 @@ import { resultNoteLines } from '../ui/resultNotes';
 /** What every export says when the result shown is older than the current inputs. */
 export const STALE_NOTE = 'Out of date: inputs changed after this calculation';
 
+/** The same for a manual layout whose carton no longer applies (spec 6.6). */
+export const MANUAL_OUT_OF_DATE_NOTE =
+  'Out of date: the product size, wall thickness or leeway changed after this layout was made';
+
 export interface ExportPayload {
   exportedAt: string;
   /** True when the inputs changed after this calculation (the result is shown out of date). */
   stale: boolean;
-  /** "Current", or STALE_NOTE when stale. */
+  /** "Current", or when stale STALE_NOTE (MANUAL_OUT_OF_DATE_NOTE for an out-of-date manual layout). */
   status: string;
   inputs: Inputs;
   /**
@@ -19,10 +32,18 @@ export interface ExportPayload {
    * neither changed anything.
    */
   notes: string[];
-  /** True when every layout is shown although it rates below the minimum stability. */
+  /**
+   * True when every layout is shown although it rates below the minimum stability; for a
+   * manual layout, when its own rating is under the minimum.
+   */
   belowMinimum: boolean;
-  selectedLayout: RankedLayout;
+  /**
+   * The selected layout. A manual layout was not ranked or scored: its `rank`, `score` and
+   * `explanation` are null and `manual` holds its name, flags and status.
+   */
+  selectedLayout: RankedLayout | ManualSelected;
   analytics: Analytics;
+  /** The calculated layouts side by side; empty for a manual layout, which is not ranked. */
   comparison: {
     rank: number;
     carton: Dims;
@@ -41,16 +62,53 @@ export interface ExportPayload {
   }[];
 }
 
-/** Everything an export file needs, taken from the inputs the result was computed from. */
+/** A manual layout as the selected layout of an export: no rank, no score. */
+export interface ManualSelected {
+  rank: null;
+  score: null;
+  explanation: null;
+  layout: Layout;
+  manual: ManualMarker;
+}
+
+export function isManualSelected(s: ExportPayload['selectedLayout']): s is ManualSelected {
+  return s.rank === null;
+}
+
+/**
+ * Everything an export file needs, taken from the inputs the result was computed from. With
+ * `manual` (the selected layout is a manual one, given as a result of that one layout) nothing
+ * of a ranking is written: no rank, no score, no comparison.
+ */
 export function buildExportPayload(
   inputs: Inputs,
   result: OptimizeResult,
   selectedIndex: number,
   now: Date,
   stale = false,
+  manual?: ManualMarker,
 ): ExportPayload {
   const selectedLayout = result.layouts[selectedIndex];
   if (!selectedLayout) throw new Error(`No layout at index ${selectedIndex}`);
+  if (manual) {
+    const { layout } = selectedLayout;
+    return {
+      exportedAt: now.toISOString(),
+      stale,
+      status: !stale
+        ? 'Current'
+        : manual.status === 'outOfDate'
+          ? MANUAL_OUT_OF_DATE_NOTE
+          : STALE_NOTE,
+      inputs,
+      // The notes are about the calculated result, which this is not.
+      notes: [],
+      belowMinimum: isBelowMinimum(layout.stability?.rating, inputs.minStability),
+      selectedLayout: { rank: null, score: null, explanation: null, layout, manual },
+      analytics: computeAnalytics(layout, inputs),
+      comparison: [],
+    };
+  }
   return {
     exportedAt: now.toISOString(),
     stale,

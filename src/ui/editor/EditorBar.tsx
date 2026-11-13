@@ -1,18 +1,30 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { EditorResult, EditorSession, EditorStep } from '../../store/manualEditorStore';
-import { useNoticesStore } from '../../store/noticesStore';
+import { NOT_SAVED } from '../../persistence/localStorageRepository';
 import { cannotSaveText } from '../manualFlags';
-import { useManualEditor, useStores } from '../StoreContext';
+import { useManualEditor } from '../StoreContext';
+import { useFocusHandOff } from '../useFocusHandOff';
 import { useUnit } from '../useUnit';
 import { ConfirmDialog } from './ConfirmDialog';
 import { EDITOR_PANEL_ID, STEP_ORDER, STEPS, stepTabId } from './steps';
-import { EDITOR_BUTTON, EDITOR_PRIMARY } from './styles';
+import { EDITOR_BUTTON, EDITOR_PRIMARY, NOTE_BOX } from './styles';
 
 export const REPLACE_LAYER_QUESTION =
   "Replace your hand-edited layer with the tool's best layer for this carton?";
 
 export const CARTON_BLOCKED_NOTE =
   'The carton cannot go on the pallet as it is, so the pallet layer and Save are unavailable.';
+
+/** Why the inputs took the session back to the Carton step (see `EditorSession.stepNotice`). */
+export const STEP_NOTICES = {
+  cartonBlocked:
+    'The inputs changed and this carton can no longer go on the pallet, so you are back at the Carton step. Change the carton or the inputs to go on.',
+  cartonChanged:
+    'The inputs changed the size of this carton, so you are back at the Carton step. Going on to the pallet layer loads the tool’s best layer for it.',
+} as const;
+
+export const USING_LAST_VALID =
+  'An input has a mistake. The editor is using the last valid inputs until it is fixed.';
 
 /** What was asked for when the store answered that the hand-edited layer would be replaced. */
 type Pending = 'layer' | 'save' | 'saveAsNew';
@@ -31,7 +43,6 @@ interface EditorBarProps {
 export function EditorBar({ session, inputsToggle }: EditorBarProps) {
   const unit = useUnit();
   const ids = useId();
-  const { manualLayouts } = useStores();
   const goToStep = useManualEditor((s) => s.goToStep);
   const setName = useManualEditor((s) => s.setName);
   const undo = useManualEditor((s) => s.undo);
@@ -42,7 +53,22 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
 
   const [pending, setPending] = useState<Pending | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  // Why the last Save did nothing, when storage refused it; gone at the next attempt.
+  const [saveError, setSaveError] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const undoRef = useRef<HTMLButtonElement>(null);
+  const redoRef = useRef<HTMLButtonElement>(null);
+  // The last Undo (or Redo) disables its own button: the focus goes to the other one.
+  const undoButton = useFocusHandOff(
+    !session.canUndo,
+    () => [redoRef.current, heading.current],
+    undoRef,
+  );
+  const redoButton = useFocusHandOff(
+    !session.canRedo,
+    () => [undoRef.current, heading.current],
+    redoRef,
+  );
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Opening the editor moves the keyboard user into it.
@@ -62,14 +88,11 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
     const opts = replace ? { replace: true } : {};
     const result: EditorResult<{ id?: string }> =
       what === 'layer' ? goToStep('layer', opts) : what === 'save' ? save(opts) : saveAsNew(opts);
-    if (!result.ok) {
-      if (result.reason === 'layerEdited') setPending(what);
-      return;
-    }
-    if (what !== 'layer' && result.id) {
-      const saved = manualLayouts.getState().specs.find((s) => s.id === result.id);
-      useNoticesStore.getState().push(`Saved “${saved?.name ?? session.name}” to your layouts.`);
-    }
+    setSaveError(null);
+    if (result.ok) return;
+    if (result.reason === 'layerEdited') setPending(what);
+    // Nothing was saved: the editor stays open with the work in it, and says so.
+    else if (result.reason === 'notStored') setSaveError(NOT_SAVED);
   };
 
   const choose = (step: EditorStep) => {
@@ -195,6 +218,7 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
         <div className="flex gap-1.5">
           <button
             type="button"
+            {...undoButton}
             disabled={!session.canUndo}
             onClick={() => undo()}
             className={EDITOR_BUTTON}
@@ -203,6 +227,7 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
           </button>
           <button
             type="button"
+            {...redoButton}
             disabled={!session.canRedo}
             onClick={() => redo()}
             className={EDITOR_BUTTON}
@@ -244,6 +269,29 @@ export function EditorBar({ session, inputsToggle }: EditorBarProps) {
       >
         {reason}
       </p>
+      {saveError && (
+        <p
+          role="alert"
+          data-testid="save-error"
+          className="px-3 pb-2 text-sm text-red-800 dark:text-harbor-coral-text"
+        >
+          {saveError}
+        </p>
+      )}
+      {(session.stepNotice || session.usingLastValid) && (
+        <div role="status" className="space-y-1.5 px-3 pb-2">
+          {session.stepNotice && (
+            <p data-testid="step-notice" className={NOTE_BOX}>
+              {STEP_NOTICES[session.stepNotice]}
+            </p>
+          )}
+          {session.usingLastValid && (
+            <p data-testid="last-valid-note" className={NOTE_BOX}>
+              {USING_LAST_VALID}
+            </p>
+          )}
+        </div>
+      )}
 
       {Tools && (
         <div className="border-t border-blue-200 px-3 py-2 dark:border-harbor-foam/40">

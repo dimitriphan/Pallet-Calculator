@@ -11,9 +11,11 @@ import {
   buildManualLayout,
   isValidSpec,
   toPalletFrame,
+  type MadeFor,
   type ManualBuild,
   type ManualFlag,
   type ManualLayoutSpec,
+  type UpperLayers,
 } from '../engine/manual/build';
 import type { Repository } from '../persistence/repository';
 
@@ -24,12 +26,15 @@ export interface ManualMarker {
   name: string;
   flags: ManualFlag[];
   status: 'current' | 'outOfDate';
+  /** What the upper layers do, and the inputs the carton was made for: for the exports. */
+  upperLayers: UpperLayers;
+  madeFor: MadeFor;
 }
 
 /**
  * A manual layout in the shape screens and exports take a selected layout. It was not ranked or
  * scored: `rank` is 0, every score part 0 and the explanation empty, and none of them may be
- * shown; `manual` says so.
+ * shown; `manual` says so. The exports write null for them (see exportData.ts).
  */
 export interface ManualRanked extends RankedLayout {
   manual: ManualMarker;
@@ -158,7 +163,14 @@ function entryOf(spec: ManualLayoutSpec, inputs: Inputs): ManualEntry | null {
       layout: build.layout,
       score: NO_SCORE,
       explanation: '',
-      manual: { id: spec.id, name: spec.name, flags: build.flags, status: build.status },
+      manual: {
+        id: spec.id,
+        name: spec.name,
+        flags: build.flags,
+        status: build.status,
+        upperLayers: spec.upperLayers,
+        madeFor: spec.madeFor,
+      },
     },
   };
 }

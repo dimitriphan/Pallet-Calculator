@@ -1,5 +1,11 @@
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 
+export interface FocusHandOff<E extends HTMLElement = HTMLButtonElement> {
+  ref: RefObject<E>;
+  onFocus(): void;
+  onBlur(): void;
+}
+
 /**
  * For a button that can disable itself while it has the focus (the last Undo, a stepper at its
  * limit): when that happens the focus is handed to a neighbour instead of falling to the page,
@@ -9,8 +15,11 @@ export function useFocusHandOff<E extends HTMLElement = HTMLButtonElement>(
   disabled: boolean,
   /** Where the focus goes: the first of these that is there and can take it. */
   to: () => (HTMLElement | null | undefined)[],
-): { ref: RefObject<E>; onFocus(): void; onBlur(): void } {
-  const ref = useRef<E>(null);
+  /** The button's ref, when the caller needs it too (two buttons that hand off to each other). */
+  given?: RefObject<E>,
+): FocusHandOff<E> {
+  const own = useRef<E>(null);
+  const ref = given ?? own;
   // Browsers drop the focus from a control as it is disabled without a blur event, so the
   // control's own record of having had it is what tells.
   const had = useRef(false);
@@ -27,7 +36,7 @@ export function useFocusHandOff<E extends HTMLElement = HTMLButtonElement>(
       el.focus();
       if (document.activeElement === el) return;
     }
-  }, [disabled]);
+  }, [disabled, ref]);
   return {
     ref,
     onFocus: () => {

@@ -4,7 +4,8 @@ import { BasicInputs } from './ui/BasicInputs';
 import { DetailsPanel } from './ui/DetailsPanel';
 import { EditorBar } from './ui/editor/EditorBar';
 import { EditorPanel } from './ui/editor/EditorPanel';
-import { DESIGN_OWN_ID } from './ui/editor/useEditorEntry';
+import { EditorBlocked, type EditorBlock } from './ui/editor/EditorBlocked';
+import { DESIGN_OWN_ID, returnEditorFocus, useWideEnough } from './ui/editor/useEditorEntry';
 import { Header } from './ui/Header';
 import { InputsPanel } from './ui/InputsPanel';
 import { LayoutComparisonTable } from './ui/LayoutComparisonTable';
@@ -16,7 +17,8 @@ import { StoreProvider, useManualEditor, usePrefs, type AppStores } from './ui/S
 import { useAutoOptimize } from './ui/useAutoOptimize';
 import { useTheme } from './ui/useTheme';
 import { useUnitSync } from './ui/UnitControl';
-import { WhatToBuildCard } from './ui/WhatToBuildCard';
+import { YourLayouts } from './ui/YourLayouts';
+import { WHAT_TO_BUILD_HEADING_ID, WhatToBuildCard } from './ui/WhatToBuildCard';
 
 function Workspace() {
   useAutoOptimize();
@@ -34,10 +36,21 @@ function Workspace() {
   const inputsFrom = !editing ? null : inputsShown ? 'lg' : 'xl';
   const wasEditing = useRef(false);
   useEffect(() => {
-    // The editor has closed: the keyboard user goes back to where editing starts.
-    if (wasEditing.current && !editing) document.getElementById(DESIGN_OWN_ID)?.focus();
+    // The editor has closed: the keyboard user goes back to the control that opened it, or
+    // where editing starts when that is gone (in Basic view, the card's heading).
+    if (wasEditing.current && !editing)
+      returnEditorFocus([DESIGN_OWN_ID, WHAT_TO_BUILD_HEADING_ID]);
     wasEditing.current = editing;
   }, [editing]);
+  // A session that cannot be worked in as the window or the view now is: it is kept, covered
+  // by a notice, rather than left half-usable.
+  const wide = useWideEnough();
+  const block: EditorBlock | null = !editing ? null : !wide ? 'narrow' : !full ? 'basic' : null;
+  const sceneArea = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Nothing under the notice can be focused or pressed.
+    if (sceneArea.current) sceneArea.current.inert = block !== null;
+  }, [block]);
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100 text-gray-900 dark:bg-harbor-deep dark:text-harbor-foam">
       <Header />
@@ -72,13 +85,14 @@ function Workspace() {
                 : 'min-h-[320px] border-gray-300 dark:border-harbor-foam/40'
             }`}
           >
-            {session && (
+            {session && !block && (
               <EditorBar
                 session={session}
                 inputsToggle={{ shown: inputsShown, toggle: () => setInputsShown((v) => !v) }}
               />
             )}
-            <div className="relative min-h-0 flex-1">
+            {session && block && <EditorBlocked block={block} dirty={session.dirty} />}
+            <div ref={sceneArea} className="relative min-h-0 flex-1">
               <div className="absolute inset-0">
                 <SceneSlot />
               </div>
@@ -87,20 +101,26 @@ function Workspace() {
               <StaleBadge className="pointer-events-none absolute bottom-2 left-2 z-10" />
             )}
           </div>
+          {full && <YourLayouts />}
           {full && <LayoutComparisonTable />}
         </main>
         <aside
           aria-label={editing ? 'Editor step' : 'Details'}
           className="overflow-y-auto border-l border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel"
         >
-          {session ? (
+          {session && block ? (
+            <p className="p-4 text-sm text-gray-700 dark:text-harbor-mist">
+              Editing by hand is paused.
+            </p>
+          ) : session ? (
             <EditorPanel session={session} />
           ) : full ? (
             <DetailsPanel />
           ) : (
             // While the status live region is empty, the card needs no space-y margin above it.
             <div className="space-y-3 p-4 [&>[role=status]:empty+*]:!mt-0">
-              <StatusMessages />
+              <StatusMessages forSelection />
+              <YourLayouts compact />
               <WhatToBuildCard />
             </div>
           )}

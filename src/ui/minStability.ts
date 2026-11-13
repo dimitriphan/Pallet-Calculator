@@ -19,6 +19,20 @@ const MINIMUM_RATING: Record<Exclude<MinStability, 'auto'>, string> = {
 /** Beside a layout shown although it rates below the minimum. */
 export const BELOW_MINIMUM = 'Below your minimum';
 
+const RATING_ORDER = { poor: 0, fair: 1, good: 2 } as const;
+
+/**
+ * Whether a rating is under the minimum stability setting: what marks a manual layout "Below
+ * your minimum" (it is never hidden by the setting; spec 6.3). Never under Auto, and never for
+ * a layout with no rating.
+ */
+export function isBelowMinimum(
+  rating: keyof typeof RATING_ORDER | undefined,
+  minimum: MinStability,
+): boolean {
+  return rating !== undefined && minimum !== 'auto' && RATING_ORDER[rating] < RATING_ORDER[minimum];
+}
+
 /** "Minimum stability: Good only." */
 export function minStabilityText(minimum: MinStability): string {
   return `Minimum stability: ${MIN_STABILITY_LABEL[minimum]}.`;

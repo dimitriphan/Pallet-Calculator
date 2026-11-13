@@ -10,7 +10,6 @@ import { jsPDF } from 'jspdf';
 import type { Unit } from '../engine/units/units';
 import { lengthText } from '../ui/format';
 import type { BuildSheet, DrawingKey, SheetPattern, SheetRow } from './buildSheet';
-import { STALE_NOTE } from './exportData';
 
 /** PNG data URLs of the light-rendered 3D view as framed and the side view. */
 export interface SheetPictures {
@@ -197,6 +196,16 @@ function drawHeader(doc: jsPDF, sheet: BuildSheet, mascot?: SheetMascot): number
     wrapW = CONTENT_W - w - MASCOT_GAP;
     mascotBottom = top + MASCOT_H;
   }
+  if (sheet.manual) {
+    // The sheet of a manual layout is headed with its name (spec 6.4).
+    font(doc, 14, 'bold');
+    base += 0.1;
+    for (const line of wrap(doc, sheet.manual.heading, wrapW)) {
+      base += lineH(14);
+      doc.text(line, LEFT, base);
+    }
+    base -= 0.06;
+  }
   if (sheet.jobName) {
     font(doc, 14);
     base += 0.1;
@@ -218,14 +227,52 @@ function drawHeader(doc: jsPDF, sheet: BuildSheet, mascot?: SheetMascot): number
   return ruleY + 0.22;
 }
 
-function drawStaleBox(doc: jsPDF, y: number): number {
-  const h = 0.38;
+function drawStaleBox(doc: jsPDF, text: string, y: number): number {
+  font(doc, 11, 'bold');
+  const lines = wrap(doc, text, CONTENT_W - 0.3);
+  const h = 0.38 + (lines.length - 1) * lineH(11);
   doc.setDrawColor(...BLACK);
   doc.setLineWidth(0.025);
   doc.rect(LEFT, y, CONTENT_W, h, 'S');
-  font(doc, 11, 'bold');
-  doc.text(`${STALE_NOTE}.`, LEFT + 0.15, y + h / 2 + 0.055);
+  lines.forEach((line, k) => doc.text(line, LEFT + 0.15, y + 0.245 + k * lineH(11)));
   return y + h + 0.22;
+}
+
+/** The print error colour: red 700, 6.5:1 on white. Only broken limits are drawn in it. */
+const ERROR: RGB = [185, 28, 28];
+
+/**
+ * The flags of a manual layout, in the error style: a box with a heavy red bar down its left
+ * side, "Limits broken" and one line per flag in red; notes follow in black.
+ */
+function drawFlags(doc: jsPDF, manual: NonNullable<BuildSheet['manual']>, y: number): number {
+  if (manual.flags.length === 0 && manual.notes.length === 0) return y;
+  const textW = CONTENT_W - 0.4;
+  const size = 10.5;
+  font(doc, size, 'bold', ERROR);
+  const rows: { text: string; error: boolean; bold: boolean }[] = [];
+  if (manual.flags.length > 0) rows.push({ text: 'Limits broken', error: true, bold: true });
+  for (const flag of manual.flags) {
+    font(doc, size, 'normal', ERROR);
+    for (const line of wrap(doc, flag, textW)) rows.push({ text: line, error: true, bold: false });
+  }
+  for (const note of manual.notes) {
+    font(doc, size, 'normal');
+    for (const line of wrap(doc, `Note: ${note}`, textW))
+      rows.push({ text: line, error: false, bold: false });
+  }
+  const h = 0.2 + rows.length * lineH(size);
+  const color = manual.flags.length > 0 ? ERROR : BLACK;
+  doc.setDrawColor(...color);
+  doc.setLineWidth(0.015);
+  doc.rect(LEFT, y, CONTENT_W, h, 'S');
+  doc.setFillColor(...color);
+  doc.rect(LEFT, y, 0.08, h, 'F');
+  rows.forEach((row, k) => {
+    font(doc, size, row.bold ? 'bold' : 'normal', row.error ? ERROR : BLACK);
+    doc.text(row.text, LEFT + 0.22, y + 0.24 + k * lineH(size));
+  });
+  return y + h + 0.2;
 }
 
 function drawSummary(doc: jsPDF, rows: SheetRow[], y: number): number {
@@ -333,7 +380,8 @@ function drawOverview(
   mascot?: SheetMascot,
 ): number {
   let y = drawHeader(doc, sheet, mascot);
-  if (sheet.stale) y = drawStaleBox(doc, y);
+  if (sheet.stale) y = drawStaleBox(doc, sheet.staleNote, y);
+  if (sheet.manual) y = drawFlags(doc, sheet.manual, y);
   y = drawSummary(doc, sheet.summary, y);
   const colW = (CONTENT_W - 0.35) / 2;
   const bottom = Math.max(
@@ -624,7 +672,7 @@ export async function renderBuildSheetPdf(
 ): Promise<Blob> {
   const doc = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait', compress: false });
   doc.setProperties({
-    title: sheet.jobName ? `${sheet.title} - ${sheet.jobName}` : sheet.title,
+    title: [sheet.title, sheet.manual?.heading, sheet.jobName].filter(Boolean).join(' - '),
     creator: 'Pallet Calculator',
   });
 

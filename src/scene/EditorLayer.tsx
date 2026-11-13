@@ -20,14 +20,12 @@ import { sceneTheme } from './sceneTheme';
 import { SelectionOutline } from './SelectionOutline';
 import { boundsEdges, boxEdgePositions, toSceneBounds } from './transforms';
 
-/** The usable footprint's outline: the envelope's blue, as in the normal view. */
-const FOOTPRINT_COLOR = '#3b82f6';
 const EDGE_COLOR = '#6b4423';
 /** Pointer travel (px) before a press on a carton becomes a drag; less is a click or a tap. */
 const DRAG_START_PX = 4;
 const NOTHING = () => {};
 
-function FootprintOutline({ session }: { session: EditorSession }) {
+function FootprintOutline({ session, color }: { session: EditorSession; color: string }) {
   const geometry = useMemo(() => {
     const g = new BufferGeometry();
     g.setAttribute(
@@ -39,7 +37,7 @@ function FootprintOutline({ session }: { session: EditorSession }) {
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <lineSegments geometry={geometry}>
-      <lineBasicMaterial color={FOOTPRINT_COLOR} />
+      <lineBasicMaterial color={color} />
     </lineSegments>
   );
 }
@@ -310,7 +308,7 @@ export function LayerStepScene({
         width={inputs.pallet.width}
         onPick={() => actions.select(null)}
       />
-      <FootprintOutline session={session} />
+      <FootprintOutline session={session} color={fixed.footprintOutline} />
       <InstancedBoxes
         boxes={boxes}
         inputs={inputs}

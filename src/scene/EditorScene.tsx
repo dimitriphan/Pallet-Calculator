@@ -171,7 +171,7 @@ function EditorContents({ session, view, layer }: ContentsProps) {
 }
 
 const CHIP =
-  'bg-white/90 px-2 py-1 text-xs text-gray-800 dark:bg-harbor-deep dark:text-harbor-foam';
+  'border-t border-gray-200 bg-white px-2 py-1 text-xs text-gray-800 dark:border-harbor-foam/40 dark:bg-harbor-deep dark:text-harbor-foam';
 const VIEW_BUTTON =
   'focus-ticks inline-flex min-h-[44px] items-center border border-gray-300 bg-white px-2.5 text-sm text-gray-800 hover:bg-gray-50 dark:border-harbor-foam dark:bg-harbor-raised dark:text-harbor-foam dark:hover:bg-harbor-raised dark:hover:underline';
 
@@ -228,7 +228,7 @@ export function EditorScene() {
       data-testid="editor-scene"
       data-step={session.step}
       data-view={carton ? undefined : view.top ? 'top' : 'angle'}
-      className="relative h-full w-full"
+      className="relative flex h-full w-full flex-col"
     >
       <div
         // On the layer step the view takes the focus, so the layer can be edited from the
@@ -251,7 +251,7 @@ export function EditorScene() {
         }}
         // The page must not scroll or zoom under a finger that is dragging a carton.
         style={{ touchAction: 'none', cursor: CURSOR[pointer] }}
-        className="focus-ticks-inset h-full w-full"
+        className="focus-ticks-inset min-h-0 w-full flex-1"
       >
         {canvas}
       </div>
@@ -260,7 +260,8 @@ export function EditorScene() {
           {LAYER_VIEW_KEYS}
         </p>
       )}
-      <p className={`pointer-events-none absolute bottom-2 left-2 max-w-[70%] ${CHIP}`}>
+      {/* Under the view, not over it: on a narrow screen a chip would cover the pallet. */}
+      <p data-testid="view-caption" className={`shrink-0 ${CHIP}`}>
         {carton
           ? boxes > PRODUCT_RENDER_THRESHOLD
             ? `One carton. Too many boxes to draw one by one (${fmtCount(boxes)}).`

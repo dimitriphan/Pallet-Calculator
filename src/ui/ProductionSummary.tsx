@@ -1,11 +1,25 @@
-import { StaleBadge } from './StaleBadge';
-import { useResults } from './StoreContext';
+import { useMemo } from 'react';
+import { computeAnalytics } from '../engine/analytics/analytics';
+import { StaleBadge, useShownStale } from './StaleBadge';
+import { useManualEditor } from './StoreContext';
 import { useSelectedAnalytics } from './useSelectedAnalytics';
 
-/** The five production numbers for the selected layout, always visible. */
+/**
+ * The five production numbers, always visible: of the selected layout, or, while a layout is
+ * edited by hand, of the layout being edited as it stands, marked "Editing" (the selected
+ * layout's totals beside the editor's own would read as the editor's).
+ */
 export function ProductionSummary() {
-  const summary = useSelectedAnalytics()?.analytics.summary ?? null;
-  const stale = useResults((s) => s.stale);
+  const selected = useSelectedAnalytics()?.analytics.summary ?? null;
+  const build = useManualEditor((s) => s.session?.build ?? null);
+  const editing = build !== null;
+  const edited = useMemo(() => {
+    if (!build || build.layout.layers.length === 0) return null;
+    return computeAnalytics(build.layout, build.inputs).summary;
+  }, [build]);
+  const summary = editing ? edited : selected;
+  const shownStale = useShownStale();
+  const stale = !editing && shownStale;
   const tiles: [string, string | number | undefined][] = [
     ['Boxes per carton', summary?.boxesPerCarton],
     ['Cartons per layer', summary?.cartonsPerLayer],
@@ -16,7 +30,12 @@ export function ProductionSummary() {
   return (
     <section
       aria-label="Production summary"
-      className="relative shrink-0 border-b border-gray-200 bg-white dark:border-harbor-foam/40 dark:bg-harbor-panel"
+      data-editing={editing ? 'true' : undefined}
+      className={`relative shrink-0 border-b bg-white dark:bg-harbor-panel ${
+        editing
+          ? 'border-blue-700 dark:border-harbor-teal'
+          : 'border-gray-200 dark:border-harbor-foam/40'
+      }`}
     >
       <dl
         className={`grid grid-cols-5 divide-x divide-gray-200 dark:divide-harbor-foam/30 ${stale ? 'opacity-50 dark:opacity-100' : ''}`}
@@ -37,7 +56,16 @@ export function ProductionSummary() {
           </div>
         ))}
       </dl>
-      <StaleBadge className="absolute right-3 top-2" />
+      {editing ? (
+        <span
+          data-testid="summary-editing"
+          className="heading absolute right-3 top-2 bg-blue-700 px-1.5 py-0.5 text-xs text-white dark:bg-harbor-teal-fill dark:text-harbor-foam"
+        >
+          Editing<span className="sr-only">: these are the totals of the layout being edited</span>
+        </span>
+      ) : (
+        <StaleBadge className="absolute right-3 top-2" />
+      )}
     </section>
   );
 }

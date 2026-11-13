@@ -7,6 +7,7 @@ const FIXED = {
   cartonError: '#EF4444',
   carton: '#d9a066',
   cartonTurned: '#b9783a',
+  footprintOutline: '#3b82f6',
 };
 
 describe('sceneTheme', () => {

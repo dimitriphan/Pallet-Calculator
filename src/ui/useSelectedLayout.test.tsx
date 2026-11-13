@@ -179,7 +179,9 @@ describe('in the app', () => {
       status: string;
       selectedLayout: {
         layout: { id: string };
-        manual: { name: string; flags: { kind: string }[] };
+        rank: number | null;
+        score: unknown;
+        manual: { name: string; flags: { kind: string }[]; status: string };
       };
       analytics: { totals: { products: number } };
       comparison: unknown[];
@@ -188,7 +190,11 @@ describe('in the app', () => {
     expect(parsed.selectedLayout.manual.name).toBe('Dock 4');
     expect(parsed.selectedLayout.manual.flags.map((f) => f.kind)).toContain('overhang');
     expect(parsed.analytics.totals.products).toBe(entry.build.layout.totalProducts);
-    expect(parsed.comparison).toHaveLength(1);
+    // Not ranked or scored, and not compared: nothing that reads as "Layout 0".
+    expect(parsed.selectedLayout.rank).toBeNull();
+    expect(parsed.selectedLayout.score).toBeNull();
+    expect(parsed.selectedLayout.manual.status).toBe('current');
+    expect(parsed.comparison).toEqual([]);
     expect(parsed.status).toBe('Current');
 
     await user.click(screen.getByRole('button', { name: 'Export' }));

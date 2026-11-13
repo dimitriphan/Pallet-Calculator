@@ -7,6 +7,7 @@ import type { RotationMode, StabilityRating } from '../domain/types';
 import { describeWarning } from '../engine/analytics/stability';
 import type { Unit } from '../engine/units/units';
 import {
+  dimsText,
   fmtDecimal,
   fmtPct,
   formatLength,
@@ -21,7 +22,8 @@ import {
 } from '../ui/format';
 import { LAYER_PATTERN_LABEL } from '../ui/layerPattern';
 import { BELOW_MINIMUM, MIN_STABILITY_LABEL } from '../ui/minStability';
-import type { ExportPayload } from './exportData';
+import { flagLines } from '../ui/manualFlags';
+import { isManualSelected, type ExportPayload } from './exportData';
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
 
@@ -49,6 +51,12 @@ const TARGET: Record<TargetStatus, string> = {
 
 type Row = [string, string | number];
 
+/** As the editor's choice is worded. */
+export const UPPER_LAYERS_TEXT = {
+  same: 'All the same',
+  alternate: 'Alternate layers turned',
+} as const;
+
 const RATING: Record<StabilityRating, string> = { good: 'Good', fair: 'Fair', poor: 'Poor' };
 
 /**
@@ -68,10 +76,32 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   const ratio = (v: number) => ratioText(v);
   const share = (v: number) => shareText(v);
   const st = a.stability;
+  // A manual layout was not ranked or scored: it is named, with its flags, and nothing of a
+  // ranking is written (no rank, no score rows, no comparison table).
+  const manual = isManualSelected(sel) ? sel.manual : null;
+  const manualRows: Row[] = manual
+    ? [
+        [
+          'Manual layout flags',
+          flagLines(manual.flags, unit)
+            .map((f) => f.text)
+            .join('; ') || 'None',
+        ],
+        ['Upper layers', UPPER_LAYERS_TEXT[manual.upperLayers]],
+        ...(manual.status === 'outOfDate'
+          ? ([
+              ['Made for product', dimsText(manual.madeFor.product, unit)],
+              [L('Made for carton wall thickness'), len(manual.madeFor.wallThickness)],
+              [L('Made for box leeway'), len(manual.madeFor.leeway)],
+            ] as Row[])
+          : []),
+      ]
+    : [];
   const rows: Row[] = [
     ['Exported at', p.exportedAt],
-    ['Selected layout', sel.rank],
+    ['Selected layout', manual ? `Manual: ${manual.name}` : (sel.rank ?? '')],
     ['Status', p.status],
+    ...manualRows,
     [L('Pallet length'), len(i.pallet.length)],
     [L('Pallet width'), len(i.pallet.width)],
     [L('Pallet height'), len(i.pallet.height)],
@@ -146,10 +176,14 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
         ] as Row[])
       : []),
     ['Layers turned half a turn (180°)', st ? st.turnedLayers.join(' ') : ''],
-    ['Overall score', n(sel.score.total)],
-    ['Quantity contribution', n(sel.score.quantityContribution)],
-    ['Utilization contribution', n(sel.score.utilizationContribution)],
-    ['Space contribution', n(sel.score.spaceContribution)],
+    ...(sel.score
+      ? ([
+          ['Overall score', n(sel.score.total)],
+          ['Quantity contribution', n(sel.score.quantityContribution)],
+          ['Utilization contribution', n(sel.score.utilizationContribution)],
+          ['Space contribution', n(sel.score.spaceContribution)],
+        ] as Row[])
+      : []),
   ];
   // Weight is reported only when the box weight was set; otherwise the file is as before.
   const w = a.weight;
@@ -200,6 +234,8 @@ export function buildCsv(p: ExportPayload, unit: Unit = 'in'): string {
   ]);
 
   const line = (cells: (string | number)[]) => cells.map((c) => csvField(String(c))).join(',');
+  // A manual layout is not ranked against the calculated ones: no comparison table.
+  if (manual) return [line(['Metric', 'Value']), ...rows.map(line), ''].join('\r\n');
   return [
     line(['Metric', 'Value']),
     ...rows.map(line),

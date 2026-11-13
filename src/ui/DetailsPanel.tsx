@@ -8,6 +8,11 @@ import { StaleBadge } from './StaleBadge';
 import { useResults, useScene } from './StoreContext';
 import { useSelectedAnalytics } from './useSelectedAnalytics';
 
+/** Why a selected manual layout that is out of date cannot be edited as it stands. */
+export const EDIT_OUT_OF_DATE =
+  'This layout is out of date. Rebuild it under “Your layouts” to edit it.';
+const EDIT_REASON_ID = 'details-edit-reason';
+
 const TABS = ['Analytics', 'Explanation', 'Selection'] as const;
 type Tab = (typeof TABS)[number];
 
@@ -21,7 +26,14 @@ export function DetailsPanel() {
   const entry = useEditorEntry();
   // A manual layout that is out of date can only be rebuilt, not edited as it stands.
   const outOfDate = selected?.ranked.manual?.status === 'outOfDate';
-  const editOff = entry.blocked !== null || outOfDate;
+  const manualSelected = selected?.ranked.manual !== undefined;
+  // Why the button is off, said in its title and described to a screen reader.
+  const editReason = outOfDate
+    ? EDIT_OUT_OF_DATE
+    : manualSelected
+      ? entry.blocked
+      : entry.blockedCalculated;
+  const editOff = editReason !== null;
   const edit = () => {
     const manual = selected?.ranked.manual;
     if (manual) entry.openSaved(manual.id);
@@ -98,13 +110,21 @@ export function DetailsPanel() {
           <button
             type="button"
             disabled={editOff}
-            aria-describedby={entry.blocked ? EDITOR_ENTRY_REASON_ID : undefined}
-            title={entry.blocked ?? undefined}
+            // Any other reason is the line by the entry buttons over the comparison table.
+            aria-describedby={
+              outOfDate ? EDIT_REASON_ID : editOff ? EDITOR_ENTRY_REASON_ID : undefined
+            }
+            title={editReason ?? undefined}
             onClick={edit}
             className={BUTTON}
           >
             Edit layout by hand
           </button>
+          {outOfDate && (
+            <p id={EDIT_REASON_ID} className="mt-1 text-xs text-gray-600 dark:text-harbor-mist">
+              {editReason}
+            </p>
+          )}
         </div>
       )}
       <div

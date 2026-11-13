@@ -530,9 +530,12 @@ describe('the editor shell', () => {
     });
     expect(entries[0]!.build.layout.totalProducts).toBe(working.build.layout.totalProducts);
     expect(session(app)).toBeNull();
-    // The saved layout is the one shown, and the user is told it was kept.
+    // The saved layout is the one shown, and it is there to see under "Your layouts".
     expect(app.stores.results.getState().selectedManualId).toBe(specs[0]!.id);
-    expect(screen.getByText('Saved “Top shelf” to your layouts.')).toBeInTheDocument();
+    const list = screen.getByRole('region', { name: 'Your layouts' });
+    expect(
+      within(list).getByRole('button', { name: 'Show your layout Top shelf' }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('asks before replacing a hand-edited layer, on the way to the Pallet layer step', async () => {

@@ -78,6 +78,8 @@ describe('the selected layout', () => {
       name: 'Dock 4',
       flags: entry.build.flags,
       status: 'current',
+      upperLayers: entry.spec.upperLayers,
+      madeFor: entry.spec.madeFor,
     });
     expect(s.ranked.manual!.flags).toContainEqual({ kind: 'overhang', cartons: 2, by: 5 });
     expect(s.ranked.layout.id).toBe(`manual:${spec!.id}`);

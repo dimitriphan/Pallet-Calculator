@@ -3,6 +3,7 @@ import type { UpperLayers } from '../../engine/manual/build';
 import type { EditorSession } from '../../store/manualEditorStore';
 import { ConfirmDialog } from './ConfirmDialog';
 import { NEEDS_SELECTION, useLayerActions, useLayerMessage } from './layerActions';
+import { useFocusHandOff } from '../useFocusHandOff';
 import { EDITOR_BUTTON } from './styles';
 
 export const UPPER_LAYERS: readonly UpperLayers[] = ['same', 'alternate'];
@@ -27,6 +28,16 @@ export function LayerTools({ session }: { session: EditorSession }) {
   const [confirmReset, setConfirmReset] = useState(false);
   const radios = useRef<(HTMLButtonElement | null)[]>([]);
   const none = session.selected === null;
+  const addButton = useRef<HTMLButtonElement>(null);
+  // Turn and Remove go off with the selection (Remove takes it away): the focus goes to Add.
+  const turnButton = useFocusHandOff(none, () => [addButton.current]);
+  const removeButton = useFocusHandOff(none, () => [addButton.current]);
+  // After a reset Reset is off, and the dialog cannot hand the focus back to it.
+  const wasAsking = useRef(false);
+  useEffect(() => {
+    if (wasAsking.current && !confirmReset && !session.layerChanged) addButton.current?.focus();
+    wasAsking.current = confirmReset;
+  }, [confirmReset, session.layerChanged]);
   const reasonId = `${ids}reason`;
   const resetReasonId = `${ids}reset`;
 
@@ -58,11 +69,17 @@ export function LayerTools({ session }: { session: EditorSession }) {
     <div data-testid="layer-tools" className="space-y-2">
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
         <div role="group" aria-label="Layer tools" className="flex flex-wrap gap-1.5">
-          <button type="button" onClick={() => actions.add()} className={EDITOR_BUTTON}>
+          <button
+            ref={addButton}
+            type="button"
+            onClick={() => actions.add()}
+            className={EDITOR_BUTTON}
+          >
             Add carton
           </button>
           <button
             type="button"
+            {...turnButton}
             disabled={none}
             aria-describedby={none ? reasonId : undefined}
             onClick={() => actions.turn()}
@@ -72,6 +89,7 @@ export function LayerTools({ session }: { session: EditorSession }) {
           </button>
           <button
             type="button"
+            {...removeButton}
             disabled={none}
             aria-describedby={none ? reasonId : undefined}
             onClick={() => actions.remove()}

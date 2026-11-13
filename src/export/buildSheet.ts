@@ -22,8 +22,12 @@ import { footprintAxes } from '../engine/packing/stacking';
 import type { Unit } from '../engine/units/units';
 import { dimsText, fmtCount, lengthText, pairText, roomText, weightText } from '../ui/format';
 import { settingsSummary } from '../ui/settingsSummary';
-import { BELOW_MINIMUM } from '../ui/minStability';
+import { flagLines } from '../ui/manualFlags';
+import { BELOW_MINIMUM, isBelowMinimum } from '../ui/minStability';
 import { resultNotes } from '../ui/resultNotes';
+import type { ManualMarker } from '../store/manualLayoutsStore';
+import { UPPER_LAYERS_TEXT } from './csv';
+import { STALE_NOTE } from './exportData';
 
 export interface SheetRow {
   label: string;
@@ -64,13 +68,26 @@ export interface DrawingKey {
   limitSize: string;
   text: string;
 }
+/** What the sheet says of a manual layout (spec 6.3, 6.4); null on a calculated layout's. */
+export interface SheetManual {
+  /** "Manual layout: <name>": the sheet's heading. */
+  heading: string;
+  /** Every broken limit, as the screen words it: printed in the error style near the top. */
+  flags: string[];
+  /** Flags that are information, not a broken limit. */
+  notes: string[];
+}
 export interface BuildSheet {
   title: 'Pallet build sheet';
+  /** Present for a manual layout: its heading and flags. */
+  manual: SheetManual | null;
   jobName: string | null;
   dateText: string;
   /** Page 1 note when the selected layout is not layout 1, else null. */
   layoutNote: string | null;
   stale: boolean;
+  /** What the out-of-date box says when `stale`. */
+  staleNote: string;
   summary: SheetRow[];
   carton: SheetRow[];
   palletAndLoad: SheetRow[];
@@ -207,6 +224,11 @@ export function buildSheetContent(a: {
   now: Date;
   /** Display unit of the text; inches when omitted. */
   unit?: Unit;
+  /**
+   * Present when the layout is a manual one (given as a result of that one layout): the sheet
+   * is headed with its name and lists its flags, and says nothing of a rank.
+   */
+  manual?: ManualMarker;
 }): BuildSheet {
   const { inputs, result, selectedIndex } = a;
   const unit = a.unit ?? 'in';
@@ -219,7 +241,13 @@ export function buildSheetContent(a: {
   const analytics = computeAnalytics(layout, inputs);
   const { summary, pallet, weight } = analytics;
   const weightOf = (lb: number) => weightText(lb, unit);
-  const notes = resultNotes(inputs, result);
+  // The notes are about the calculated result; a manual layout is not one of its layouts.
+  const notes = a.manual
+    ? { belowMinimum: null, patternFallback: null, autoMore: null }
+    : resultNotes(inputs, result);
+  const manualLines = a.manual ? flagLines(a.manual.flags, unit) : [];
+  const manualBelow = !!a.manual && isBelowMinimum(layout.stability?.rating, inputs.minStability);
+  const outOfDate = a.manual?.status === 'outOfDate';
 
   const trimmed = a.jobName.trim().slice(0, MAX_JOB_NAME);
   const placements = cartonPlacements(layout, inputs);
@@ -337,7 +365,10 @@ export function buildSheetContent(a: {
       value: `${dimsText({ length: pallet.loadLength, width: pallet.loadWidth, height: pallet.totalLoadHeight }, unit)} including pallet`,
     },
     ...(weight ? weightRows(weight, weightOf) : []),
-    ...stabilityRows(layout, notes.belowMinimum !== null),
+    ...stabilityRows(layout, notes.belowMinimum !== null || manualBelow),
+    ...(a.manual
+      ? [{ label: 'Upper layers', value: UPPER_LAYERS_TEXT[a.manual.upperLayers] }]
+      : []),
     // What the minimum stability and the layer pattern setting did, as the screen says it.
     ...(notes.belowMinimum ? [{ label: 'Minimum stability', value: notes.belowMinimum }] : []),
     ...(notes.patternFallback ? [{ label: 'Layer pattern', value: notes.patternFallback }] : []),
@@ -357,13 +388,24 @@ export function buildSheetContent(a: {
 
   const sheet: BuildSheet = {
     title: 'Pallet build sheet',
+    manual: a.manual
+      ? {
+          heading: `Manual layout: ${a.manual.name}`,
+          flags: manualLines.filter((l) => l.tone === 'error').map((l) => `${l.text}.`),
+          notes: manualLines.filter((l) => l.tone === 'note').map((l) => `${l.text}.`),
+        }
+      : null,
     jobName: trimmed === '' ? null : trimmed,
     dateText: localMinute(a.now),
     layoutNote:
-      selectedIndex > 0 && best
+      !a.manual && selectedIndex > 0 && best
         ? `Layout ${selectedIndex + 1} of ${result.layouts.length} selected. Layout 1 fits ${best.layout.totalProducts} boxes.`
         : null,
     stale: a.stale,
+    staleNote:
+      a.manual && outOfDate
+        ? `Out of date: this layout was made for a product of ${dimsText(a.manual.madeFor.product, unit)} (carton wall ${length(a.manual.madeFor.wallThickness)}, leeway ${length(a.manual.madeFor.leeway)}). The inputs have changed since; it is shown as it was made.`
+        : `${STALE_NOTE}.`,
     summary: [
       { label: 'Boxes per carton', value: String(summary.boxesPerCarton) },
       { label: 'Cartons per layer', value: summary.cartonsPerLayer },
@@ -389,7 +431,10 @@ export function buildSheetContent(a: {
       ` Desired boxes per carton: ${
         inputs.boxesPerCarton !== null ? fmtCount(inputs.boxesPerCarton) : 'best fit'
       }.`,
-    layoutLabel: `Layout ${selectedIndex + 1} of ${result.layouts.length}`,
+    // A manual layout is not one of the ranked layouts: never "Layout 1 of 1".
+    layoutLabel: a.manual
+      ? `Manual layout: ${a.manual.name}`
+      : `Layout ${selectedIndex + 1} of ${result.layouts.length}`,
     unit,
   };
   return safeDeep(sheet);
