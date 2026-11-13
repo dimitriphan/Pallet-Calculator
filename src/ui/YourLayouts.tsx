@@ -253,12 +253,18 @@ export function YourLayouts({ compact = false }: { compact?: boolean }) {
                         aria-describedby={rebuildOff ? REASON_ID : undefined}
                         title={entry.blockedCalculated ?? undefined}
                         onClick={() => entry.rebuild(spec.id)}
+                        aria-label={`Rebuild ${spec.name}`}
                         className={SMALL}
                       >
-                        Rebuild<span className="sr-only">{` ${spec.name}`}</span>
+                        Rebuild
                       </button>
-                      <button type="button" onClick={() => setDeleting(spec.id)} className={SMALL}>
-                        Discard<span className="sr-only">{` ${spec.name}`}</span>
+                      <button
+                        type="button"
+                        onClick={() => setDeleting(spec.id)}
+                        aria-label={`Discard ${spec.name}`}
+                        className={SMALL}
+                      >
+                        Discard
                       </button>
                     </>
                   ) : (
@@ -269,23 +275,35 @@ export function YourLayouts({ compact = false }: { compact?: boolean }) {
                         aria-describedby={editOff ? REASON_ID : undefined}
                         title={entry.blocked ?? undefined}
                         onClick={() => entry.openSaved(spec.id)}
+                        aria-label={`Edit ${spec.name}`}
                         className={SMALL}
                       >
-                        Edit<span className="sr-only">{` ${spec.name}`}</span>
+                        Edit
                       </button>
                       <button
                         type="button"
                         id={`${selectId(spec.id)}-rename`}
                         onClick={() => setRenaming(spec.id)}
+                        aria-label={`Rename ${spec.name}`}
                         className={SMALL}
                       >
-                        Rename<span className="sr-only">{` ${spec.name}`}</span>
+                        Rename
                       </button>
-                      <button type="button" onClick={() => duplicate(spec.id)} className={SMALL}>
-                        Duplicate<span className="sr-only">{` ${spec.name}`}</span>
+                      <button
+                        type="button"
+                        onClick={() => duplicate(spec.id)}
+                        aria-label={`Duplicate ${spec.name}`}
+                        className={SMALL}
+                      >
+                        Duplicate
                       </button>
-                      <button type="button" onClick={() => setDeleting(spec.id)} className={SMALL}>
-                        Delete<span className="sr-only">{` ${spec.name}`}</span>
+                      <button
+                        type="button"
+                        onClick={() => setDeleting(spec.id)}
+                        aria-label={`Delete ${spec.name}`}
+                        className={SMALL}
+                      >
+                        Delete
                       </button>
                     </>
                   )}

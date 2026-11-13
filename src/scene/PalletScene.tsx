@@ -11,6 +11,7 @@ import { CAPTURE_UNIFORM_COLORS, captureGridColors } from './captureVisibility';
 import { Cartons } from './Cartons';
 import { EditorScene } from './EditorScene';
 import { Envelope } from './Envelope';
+import { hiddenSceneProps } from './hiddenScene';
 import { Labels } from './Labels';
 import { Measurements } from './Measurements';
 import { Pallet } from './Pallet';
@@ -141,20 +142,20 @@ const Unavailable = () => (
 /**
  * The interactive 3D workspace: toolbar above a canvas showing the selected layout. While a
  * layout is edited by hand the editor's view covers both and its bar (outside this module)
- * stands in for the toolbar; the view of the selected layout stays mounted and sized
- * underneath, hidden, so exports and the build sheet's pictures are what they always are.
+ * stands in for the toolbar; the view of the selected layout stays mounted underneath,
+ * hidden. Nothing is exported while editing (the hidden view is another size then).
  */
 export default function PalletScene() {
   const { layout } = useSceneData();
   const sceneStore = useStores().scene;
   const editing = useManualEditor((s) => s.session !== null);
+  const hidden = hiddenSceneProps(editing);
   return (
     <div className="relative h-full w-full">
       <div
-        // Hidden, not removed: it keeps its size, so a capture is the same picture as ever,
-        // and nothing in it can be focused or clicked.
-        className={`flex h-full w-full flex-col ${editing ? 'invisible' : ''}`}
-        aria-hidden={editing ? 'true' : undefined}
+        // Hidden, not removed: nothing in it can be focused, clicked or read.
+        {...hidden}
+        className={`flex h-full w-full flex-col ${hidden.className}`}
         data-testid="layout-scene"
       >
         <SceneToolbar totalProducts={layout?.totalProducts ?? 0} />

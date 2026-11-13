@@ -5,8 +5,13 @@ import { madeForOf } from '../engine/manual/build';
 import { OVERHANGING_CARTONS, TEST_DESIGN } from '../engine/manual/testSupport';
 import { cartonPlacements } from '../engine/packing/positions';
 import { buildSheetContent } from '../export/buildSheet';
-import { buildCsv } from '../export/csv';
-import { buildExportPayload, STALE_NOTE } from '../export/exportData';
+import { buildCsv, csvField } from '../export/csv';
+import { renderBuildSheetPdf } from '../export/buildSheetPdf';
+import {
+  buildExportPayload,
+  isManualSelected,
+  MANUAL_OUT_OF_DATE_NOTE,
+} from '../export/exportData';
 import { captionLines } from '../export/png';
 import { FakeStorage } from '../persistence/testStorage';
 import type { ManualLayoutDraft } from './manualLayoutsStore';
@@ -196,32 +201,122 @@ describe('analytics and exports of a selected manual layout', () => {
     expect(src.inputs).toBe(inputs);
     expect(src.result.layouts).toEqual([ranked]);
 
-    const payload = buildExportPayload(src.inputs, src.result, src.selectedIndex, NOW, src.stale);
+    expect(src.manual).toBe(ranked.manual);
+    const payload = buildExportPayload(
+      src.inputs,
+      src.result,
+      src.selectedIndex,
+      NOW,
+      src.stale,
+      src.manual,
+    );
     expect(payload.status).toBe('Current');
-    expect(payload.selectedLayout).toBe(ranked);
+    // Not ranked, not scored, not compared (review I4): null, and the marker says what it is.
+    expect(payload.selectedLayout).toEqual({
+      rank: null,
+      score: null,
+      explanation: null,
+      layout,
+      manual: ranked.manual,
+    });
+    expect(isManualSelected(payload.selectedLayout)).toBe(true);
     expect(payload.analytics).toEqual(analytics);
     expect(payload.notes).toEqual([]);
-    expect(payload.comparison).toHaveLength(1);
-    expect(payload.comparison[0]!.products).toBe(layout.totalProducts);
-    const json = JSON.parse(JSON.stringify(payload)) as typeof payload;
-    expect((json.selectedLayout as typeof ranked).manual).toMatchObject({
+    expect(payload.comparison).toEqual([]);
+    const json = JSON.parse(JSON.stringify(payload)) as {
+      selectedLayout: { rank: unknown; score: unknown; manual: unknown; layout: typeof layout };
+    };
+    expect(json.selectedLayout.rank).toBeNull();
+    expect(json.selectedLayout.score).toBeNull();
+    expect(json.selectedLayout.manual).toMatchObject({
       id: spec!.id,
       name: 'Dock 4',
       status: 'current',
+      upperLayers: 'alternate',
     });
     expect(json.selectedLayout.layout.layers[0]!.kind).toBe('manual');
-    expect(buildCsv(payload, 'in')).toContain(String(layout.totalProducts));
-    expect(captionLines(payload, 'in').join(' ')).toContain(String(layout.totalProducts));
+
+    const csv = buildCsv(payload, 'in');
+    const lines = csv.split('\r\n');
+    expect(lines).toContain('Selected layout,Manual: Dock 4');
+    expect(lines).toContain('Status,Current');
+    expect(lines).toContain('Upper layers,Alternate layers turned');
+    const flagRow = lines.find((l) => l.startsWith('Manual layout flags,'))!;
+    expect(flagRow).toContain('2 cartons overhang the allowed footprint by up to 5.00 in');
+    expect(flagRow).toContain('Carton is over the maximum carton size');
+    expect(lines).toContain(`Total boxes per pallet,${layout.totalProducts}`);
+    // No score, no "Layout 0", and no one-row comparison table of zeros.
+    expect(csv).not.toMatch(/score|contribution/i);
+    expect(lines).not.toContain('Selected layout,0');
+    expect(lines.some((l) => l.startsWith('#,'))).toBe(false);
+    expect(lines.filter((l) => l === '')).toHaveLength(1);
+    expect(lines.some((l) => l.startsWith('Made for'))).toBe(false);
+
+    const caption = captionLines(payload, 'in');
+    expect(caption.at(-1)).toMatch(/^Manual layout: Dock 4 {3}\| {3}Exported /);
+    expect(caption.join(' ')).not.toMatch(/Layout \d/);
+    expect(caption.join(' ')).toContain(String(layout.totalProducts));
 
     const sheet = buildSheetContent({ ...src, jobName: 'Dock 4', now: NOW });
     expect(sheet.stale).toBe(false);
     expect(sheet.layoutNote).toBeNull();
+    expect(sheet.manual).toEqual({
+      heading: 'Manual layout: Dock 4',
+      flags: [
+        'Carton is over the maximum carton size by 1.00 in (longest side).',
+        '2 cartons overhang the allowed footprint by up to 5.00 in.',
+      ],
+      notes: [],
+    });
+    // The footer names it; never "Layout 1 of 1".
+    expect(sheet.layoutLabel).toBe('Manual layout: Dock 4');
+    expect(sheet.palletAndLoad).toContainEqual({
+      label: 'Upper layers',
+      value: 'Alternate layers turned',
+    });
     expect(sheet.summary.find((r) => r.label === 'Total boxes per pallet')!.value).toBe(
       String(layout.totalProducts),
     );
-    // The manual layer and its turned twin are both drawn.
-    expect(sheet.patterns).toHaveLength(2);
+    // The manual layer and its turned twin are both drawn, each with its own letter.
+    expect(sheet.patterns.map((p) => p.letter)).toEqual(['A', 'B']);
+    expect(sheet.patterns[1]!.note).toContain('Pattern A turned half a turn');
     expect(sheet.patterns[0]!.drawing.cartons).toHaveLength(OVERHANGING_CARTONS.length);
+    expect(new Set(sheet.stacking.map((r) => r.pattern))).toEqual(new Set(['A', 'B']));
+
+    const pdf = new TextDecoder('latin1').decode(
+      await (await renderBuildSheetPdf(sheet, null)).arrayBuffer(),
+    );
+    expect(pdf).toContain('(Manual layout: Dock 4)');
+    expect(pdf).toContain('(Limits broken)');
+    expect(pdf).toContain('(2 cartons overhang the allowed footprint by up to 5.00 in.)');
+    expect(pdf).toContain('Manual layout: Dock 4 - Page 1 of');
+    expect(pdf).not.toMatch(/Layout \d+ of \d+/);
+    // The flags are drawn in the print error colour (red 700).
+    expect(pdf).toMatch(/0\.7\d* 0\.1\d* 0\.1\d* rg/);
+  });
+
+  it('a manual layout under the minimum stability is marked in the exports', async () => {
+    const t = await setup();
+    const spec = t.manualLayouts.getState().save(t.draft(), 'Low');
+    t.r().selectManual(spec!.id);
+    const rating = t.selected()!.ranked.layout.stability!.rating;
+    const minimum = rating === 'good' ? 'good' : rating === 'fair' ? 'good' : 'fair';
+    t.change({ minStability: minimum });
+    await t.calculate();
+    const src = t.source()!;
+    const payload = buildExportPayload(src.inputs, src.result, 0, NOW, src.stale, src.manual);
+    const marked = rating !== 'good';
+    expect(payload.belowMinimum).toBe(marked);
+    expect(buildCsv(payload, 'in').split('\r\n')).toContain(
+      `Stability mark,${marked ? 'Below your minimum' : ''}`,
+    );
+    // What the setting did to the calculated list is not said of a manual layout.
+    expect(payload.notes).toEqual([]);
+    const sheet = buildSheetContent({ ...src, jobName: '', now: NOW });
+    expect(sheet.palletAndLoad.some((r) => r.label === 'Minimum stability')).toBe(false);
+    expect(sheet.palletAndLoad.find((r) => r.label === 'Stability')!.value).toContain(
+      marked ? '(Below your minimum)' : '',
+    );
   });
 
   it('an out-of-date layout: exported as it was made and marked out of date', async () => {
@@ -249,15 +344,36 @@ describe('analytics and exports of a selected manual layout', () => {
     const src = t.source()!;
     expect(src.stale).toBe(true);
     expect(src.inputs).toBe(s.inputs);
-    const payload = buildExportPayload(src.inputs, src.result, src.selectedIndex, NOW, src.stale);
-    expect(payload.status).toBe(STALE_NOTE);
+    const payload = buildExportPayload(
+      src.inputs,
+      src.result,
+      src.selectedIndex,
+      NOW,
+      src.stale,
+      src.manual,
+    );
+    expect(payload.status).toBe(MANUAL_OUT_OF_DATE_NOTE);
     expect(payload.inputs.product).toEqual(made.product);
     expect((payload.selectedLayout as typeof s.ranked).manual!.status).toBe('outOfDate');
     expect(payload.analytics).toEqual(analytics);
-    expect(buildCsv(payload, 'in')).toContain(STALE_NOTE);
+    const lines = buildCsv(payload, 'in').split('\r\n');
+    expect(lines).toContain('Selected layout,Manual: Old');
+    expect(lines).toContain(`Status,${csvField(MANUAL_OUT_OF_DATE_NOTE)}`);
+    expect(lines).toContain('Made for product,12.00 × 8.00 × 4.00 in');
+    expect(lines).toContain('Made for carton wall thickness (in),0.25');
+    expect(lines).toContain('Made for box leeway (in),0.50');
+    expect(captionLines(payload, 'in').at(-1)).toContain(MANUAL_OUT_OF_DATE_NOTE);
     const sheet = buildSheetContent({ ...src, jobName: '', now: NOW });
     expect(sheet.stale).toBe(true);
+    expect(sheet.staleNote).toBe(
+      'Out of date: this layout was made for a product of 12.00 × 8.00 × 4.00 in (carton wall 0.25 in, leeway 0.50 in). The inputs have changed since; it is shown as it was made.',
+    );
     expect(sheet.patterns).toHaveLength(1);
+    const pdf = new TextDecoder('latin1').decode(
+      await (await renderBuildSheetPdf(sheet, null)).arrayBuffer(),
+    );
+    expect(pdf).toContain('Out of date: this layout was made for a product of');
+    expect(pdf).toContain('(Manual layout: Old)');
   });
 
   it('a calculated selection exports with its whole result, as before', async () => {

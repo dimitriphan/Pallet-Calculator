@@ -1,0 +1,263 @@
+/** The editor fixes from the review of Tasks 5 and 6, on the whole app. */
+import { act, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { madeForOf } from '../../engine/manual/build';
+import { TEST_DESIGN } from '../../engine/manual/testSupport';
+import { NOT_SAVED } from '../../persistence/localStorageRepository';
+import { useNoticesStore } from '../../store/noticesStore';
+import { flush, renderApp } from '../testUtils';
+import { STEP_NOTICES, USING_LAST_VALID } from './EditorBar';
+import { EDITOR_BLOCKS } from './EditorBlocked';
+import { LAYER_MESSAGES } from './layerActions';
+import { ENTRY_REASONS } from './useEditorEntry';
+
+type App = Awaited<ReturnType<typeof renderApp>>;
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  useNoticesStore.setState({ notices: [] });
+});
+
+const editor = (app: App) => app.stores.manualEditor.getState();
+const bar = () => screen.getByRole('region', { name: 'Editing by hand' });
+const inBar = (name: string) => within(bar()).getByRole('button', { name });
+
+describe('ways in while the result is behind the inputs (review I1)', () => {
+  it('are off, saying to wait, from the moment an input changes until the result is back', async () => {
+    const app = await renderApp();
+    const own = screen.getByRole('button', { name: 'Design my own carton' });
+    const row = screen.getByRole('button', { name: 'Edit layout 1 by hand' });
+    const details = screen.getByRole('button', { name: 'Edit layout by hand' });
+    expect(own).toBeEnabled();
+
+    // Typed, and the 300 ms wait before the calculation has not passed.
+    act(() => app.stores.inputs.getState().setField('product.height', '5'));
+    expect(app.stores.results.getState()).toMatchObject({ status: 'ready', stale: false });
+    for (const b of [own, row, details]) {
+      expect(b).toBeDisabled();
+      expect(b).toHaveAccessibleDescription(ENTRY_REASONS.waiting);
+    }
+    expect(ENTRY_REASONS.waiting).toBe('Wait for the calculation to finish.');
+    // Whatever presses it, the store refuses too.
+    expect(editor(app).openFromCalculated(0)).toEqual({ ok: false, reason: 'resultBehind' });
+
+    await flush();
+    expect(own).toBeEnabled();
+    await app.user.click(own);
+    expect(editor(app).session!.build.flags.some((f) => f.kind === 'overlap')).toBe(false);
+  });
+
+  it('say to fix the inputs while one is invalid', async () => {
+    const app = await renderApp();
+    act(() => app.stores.inputs.getState().setField('pallet.length', 'abc'));
+    await flush();
+    const own = screen.getByRole('button', { name: 'Design my own carton' });
+    expect(own).toBeDisabled();
+    expect(own).toHaveAccessibleDescription(ENTRY_REASONS.invalid);
+  });
+});
+
+describe('saving when storage refuses (review I6)', () => {
+  it('keeps the editor open with the message, and nothing is listed as saved', async () => {
+    const app = await renderApp();
+    act(() => {
+      editor(app).openFromCalculated(0);
+      editor(app).remove(0);
+    });
+    const real = app.stores.manualLayouts.getState().save;
+    app.stores.manualLayouts.setState({ save: () => null });
+    await app.user.click(inBar('Save'));
+    expect(editor(app).session).not.toBeNull();
+    expect(within(bar()).getByRole('alert')).toHaveTextContent(NOT_SAVED);
+    expect(NOT_SAVED).toBe('Could not save: browser storage is full or unavailable.');
+    expect(screen.queryByRole('region', { name: 'Your layouts' })).toBeNull();
+    expect(app.stores.results.getState().selectedManualId).toBeNull();
+
+    app.stores.manualLayouts.setState({ save: real });
+    await app.user.click(inBar('Save'));
+    expect(editor(app).session).toBeNull();
+    expect(screen.getByRole('region', { name: 'Your layouts' })).toBeInTheDocument();
+  });
+});
+
+describe('Cancel', () => {
+  it('asks when only the name was changed (review M4)', async () => {
+    const app = await renderApp();
+    act(() => void editor(app).openFromCalculated(0));
+    const name = screen.getByRole('textbox', { name: 'Layout name' });
+    await app.user.clear(name);
+    await app.user.type(name, 'Dock 4');
+    await app.user.click(inBar('Cancel'));
+    const dialog = screen.getByRole('dialog', { name: 'Discard your changes?' });
+    await app.user.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    expect(editor(app).session!.name).toBe('Dock 4');
+  });
+});
+
+describe('focus', () => {
+  it('goes to Redo when the last Undo disables Undo, and back the other way', async () => {
+    const app = await renderApp();
+    act(() => {
+      editor(app).openFromCalculated(0);
+      editor(app).remove(0);
+    });
+    await app.user.click(inBar('Undo'));
+    expect(inBar('Undo')).toBeDisabled();
+    expect(inBar('Redo')).toHaveFocus();
+    await app.user.click(inBar('Redo'));
+    expect(inBar('Redo')).toBeDisabled();
+    expect(inBar('Undo')).toHaveFocus();
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it('goes to Add carton when Remove takes the selection away', async () => {
+    const app = await renderApp();
+    act(() => {
+      editor(app).openFromCalculated(0);
+      editor(app).select(0);
+    });
+    await app.user.click(inBar('Remove'));
+    expect(inBar('Remove')).toBeDisabled();
+    expect(inBar('Add carton')).toHaveFocus();
+  });
+
+  it('returns to the control that opened the editor when it closes', async () => {
+    const app = await renderApp();
+    const row = screen.getByRole('button', { name: 'Edit layout 2 by hand' });
+    await app.user.click(row);
+    expect(editor(app).session).not.toBeNull();
+    await app.user.click(inBar('Cancel'));
+    expect(row).toHaveFocus();
+
+    // Opened by something that is gone afterwards: the fallback takes it.
+    act(() => void editor(app).openFromCalculated(0));
+    act(() => editor(app).cancel());
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it('in Basic view goes to the card heading when the editor closes', async () => {
+    const app = await renderApp(undefined, { viewMode: 'basic' });
+    act(() => void editor(app).openFromCalculated(0));
+    const blocked = screen.getByTestId('editor-blocked');
+    await app.user.click(within(blocked).getByRole('button', { name: 'Stop editing' }));
+    expect(editor(app).session).toBeNull();
+    expect(screen.getByRole('heading', { name: 'What to build' })).toHaveFocus();
+  });
+});
+
+describe('a session that cannot be worked in', () => {
+  it('Basic view: a blocking notice, the session kept, and the way back', async () => {
+    const app = await renderApp();
+    act(() => {
+      editor(app).openFromCalculated(0);
+      editor(app).remove(0);
+    });
+    const before = editor(app).session!.cartons;
+    act(() => app.stores.prefs.getState().setViewMode('basic'));
+    const blocked = screen.getByTestId('editor-blocked');
+    expect(within(blocked).getByRole('heading')).toHaveTextContent('Editing is in Full view');
+    expect(within(blocked).getByRole('heading')).toHaveFocus();
+    expect(blocked).toHaveTextContent(EDITOR_BLOCKS.basic.text);
+    // Nothing of the editor is left half-usable.
+    expect(screen.queryByRole('region', { name: 'Editing by hand' })).toBeNull();
+    expect(screen.queryByRole('tabpanel')).toBeNull();
+    expect(editor(app).session!.cartons).toBe(before);
+
+    // Stopping asks first: there are unsaved changes.
+    await app.user.click(within(blocked).getByRole('button', { name: 'Stop editing' }));
+    await app.user.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Keep the layout' }),
+    );
+    expect(editor(app).session).not.toBeNull();
+
+    await app.user.click(within(blocked).getByRole('button', { name: 'Switch to Full view' }));
+    expect(screen.queryByTestId('editor-blocked')).toBeNull();
+    expect(bar()).toBeInTheDocument();
+    expect(editor(app).session!.cartons).toBe(before);
+  });
+
+  it('below 768 px: "Editing needs a wider screen"', async () => {
+    let narrow = false;
+    const listeners = new Set<() => void>();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      get matches() {
+        return !narrow;
+      },
+      media: query,
+      addEventListener: (_: string, l: () => void) => listeners.add(l),
+      removeEventListener: (_: string, l: () => void) => listeners.delete(l),
+    }));
+    const app = await renderApp();
+    act(() => void editor(app).openFromCalculated(0));
+    expect(screen.queryByTestId('editor-blocked')).toBeNull();
+    act(() => {
+      narrow = true;
+      listeners.forEach((l) => l());
+    });
+    const blocked = screen.getByTestId('editor-blocked');
+    expect(blocked).toHaveTextContent('Editing needs a wider screen');
+    expect(within(blocked).queryByRole('button', { name: 'Switch to Full view' })).toBeNull();
+    expect(editor(app).session).not.toBeNull();
+    act(() => {
+      narrow = false;
+      listeners.forEach((l) => l());
+    });
+    expect(screen.queryByTestId('editor-blocked')).toBeNull();
+    expect(bar()).toBeInTheDocument();
+  });
+});
+
+describe('inputs changed mid-session', () => {
+  it('back at the Carton step with the reason when the carton no longer fits', async () => {
+    const app = await renderApp();
+    act(() => void editor(app).openFromCalculated(0));
+    expect(editor(app).session!.step).toBe('layer');
+    act(() => app.stores.inputs.getState().setField('pallet.height', '7'));
+    await flush();
+    expect(editor(app).session!.step).toBe('carton');
+    expect(within(bar()).getByTestId('step-notice')).toHaveTextContent(STEP_NOTICES.cartonBlocked);
+    expect(within(bar()).getByRole('tab', { name: /Carton/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('says the editor is on the last valid inputs while one is invalid', async () => {
+    const app = await renderApp();
+    act(() => void editor(app).openFromCalculated(0));
+    expect(within(bar()).queryByTestId('last-valid-note')).toBeNull();
+    act(() => app.stores.inputs.getState().setField('pallet.length', 'abc'));
+    await flush();
+    expect(within(bar()).getByTestId('last-valid-note')).toHaveTextContent(USING_LAST_VALID);
+    act(() => app.stores.inputs.getState().setField('pallet.length', '50'));
+    await flush();
+    expect(within(bar()).queryByTestId('last-valid-note')).toBeNull();
+  });
+});
+
+describe('Turn 90°', () => {
+  it('says there is no room when the turn would only fit outside the footprint', async () => {
+    const app = await renderApp();
+    let id = '';
+    act(() => {
+      id = app.stores.manualLayouts.getState().save({
+        design: TEST_DESIGN,
+        cartons: [
+          { x: 33, y: 17, rotated: true },
+          { x: 8, y: 17, rotated: false },
+        ],
+        frame: 'pallet',
+        upperLayers: 'same',
+        madeFor: madeForOf(TEST_DESIGN, app.stores.manualLayouts.getState().inputs!),
+      })!.id;
+      editor(app).openSaved(id);
+      editor(app).select(0);
+    });
+    await app.user.click(inBar('Turn 90°'));
+    expect(screen.getByTestId('layer-message')).toHaveTextContent(
+      'No room to turn this carton here. Move it first.',
+    );
+    expect(LAYER_MESSAGES.turnNoRoom).toBe('No room to turn this carton here. Move it first.');
+    expect(editor(app).session!.canUndo).toBe(false);
+  });
+});
