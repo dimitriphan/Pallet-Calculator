@@ -85,6 +85,8 @@ There are two ways in:
 - **Design my own carton**, above the layout comparison table. It opens the editor at the Carton step, starting from the carton of the best calculated layout.
 - **Edit by hand**, on each row of the comparison table (also **Edit layout by hand** in the details panel). It opens the editor at the Pallet layer step with a copy of that layout's bottom layer.
 
+A calculated layout that mixes layer patterns is copied as a stack of its bottom layer only, which can hold fewer boxes. Both steps say so. With the default inputs, the best layout holds 260 boxes and its hand copy 250: "This result mixes layer patterns. Editing by hand starts from its bottom layer: 250 boxes instead of 260."
+
 The editor has two steps, **Carton** and **Pallet layer**, shown as tabs in the bar above the 3D view. The bar also holds the **Layout name**, **Undo**, **Redo**, **Save** and **Cancel**. While the editor is open, exports are switched off; save or cancel first.
 
 **The Carton step** shows one carton in 3D, drawn open with its boxes inside. You set:
@@ -94,7 +96,7 @@ The editor has two steps, **Carton** and **Pallet layer**, shown as tabs in the 
 - **Carton on the pallet**: whether the carton stands on its base, its side or its end. With "Keep cartons upright" on, it stays on its base.
 - **Use a calculated carton**: starts again from one of the cartons the tool found.
 
-The figures beside it (boxes per carton, outer and inner size, carton weight when weights are set, and how well the boxes fill the carton) update as you change things. A carton over your maximum carton size is allowed and flagged. A carton that cannot fit on the pallet, or is taller than the stacking height, cannot go on to the next step.
+The figures beside it (boxes per carton, outer and inner size, carton weight when weights are set, and how well the boxes fill the carton) update as you change things. A carton's size is written as it stands on the pallet: longer side × shorter side × height. The comparison table and the exports write it the same way. A carton over your maximum carton size is allowed and flagged. A carton that cannot fit on the pallet, or is taller than the stacking height, cannot go on to the next step.
 
 **The Pallet layer step** shows the pallet, a blue outline of the allowed footprint (the pallet plus the overhang you allow) and one layer of cartons. If you changed the carton, the layer starts as the tool's best layer for it.
 
@@ -111,13 +113,15 @@ The keys work while the 3D view or the carton list has the focus. Other controls
 
 - **Add carton** puts one more carton in the first free place inside the allowed footprint.
 - **Snapping** (on by default): while you drag, a carton's edge within 0.5 inch of an edge of the allowed footprint, the pallet or another carton jumps onto it. Untick it to place cartons freely.
-- **From left edge** and **From front edge**: the selected carton's exact position, which you can type.
-- **Upper layers**: **All the same**, or **Alternate layers turned** (every second layer is turned half a turn).
+- **From the pallet's left edge** and **From the pallet's front edge**: the selected carton's exact position, which you can type. Both are measured from the pallet itself, not from the allowed footprint. A negative distance means the carton hangs over that edge.
+- **Upper layers**: **All the same**, or **Alternate layers turned** (every second layer is turned half a turn). When the layer is the same after a half turn, the choice changes nothing and the editor says so.
 - **Reset** puts the layer back as it was when it was loaded. **Top view** and **Reset view** change the camera only.
 
-Cartons can never overlap. A carton dropped on another goes back to where it was. Cartons may hang over the allowed footprint, and the load may be over the maximum weight: the tool allows this and flags it in red. The panel beside the view shows the cartons in the layer, the layers, the total boxes, the total weight, the stability rating and any flags as you work.
+Cartons can never overlap. A carton dropped on another goes back to where it was. Cartons may hang over the allowed footprint, and the load may be over the maximum weight: the tool allows this and flags it in red. A carton must stay at least partly on the pallet: a move that would put it wholly off the allowed footprint is refused ("Keep the carton at least partly on the pallet."). Letting go of a dragged carton outside the 3D view cancels the drag ("Drop the carton inside the view."). The panel beside the view shows the cartons in the layer, the layers, the total boxes, the total weight, the stability rating and any flags as you work.
 
-**Save** adds the layout to "Your layouts" under its name ("Manual 1", "Manual 2" and so on, unless you type one).
+**Save** adds the layout to "Your layouts" under its name ("Manual 1", "Manual 2" and so on, unless you type one). No two layouts have the same name: a name already in use gets " (2)", " (3)" and so on added, and a notice says so.
+
+If you try to leave or reload the page with unsaved changes in the editor, the browser asks first. If the layout you are editing was changed or deleted in another tab, Save tells you ("This layout was changed in another tab.") and offers **Save as new** or **Overwrite**.
 
 ### Your layouts
 
@@ -131,7 +135,7 @@ Your layouts are saved in this browser only.
 
 ### Build sheet
 
-**Export > Build sheet (PDF)** asks for an optional job name, then saves a PDF on US Letter paper. Page 1 is an overview with the numbers, the carton and two pictures. The following pages show each layer pattern from above, with a stacking table. Every page footer lists the settings used.
+**Export > Build sheet (PDF)** asks for an optional job name, then saves a PDF on US Letter paper. Page 1 is an overview with the numbers, the carton and two pictures. The side view is seen from the front of the pallet, so left and right are the same as in the layer plans. The following pages show each layer pattern from above, with a stacking table. Every page footer lists the settings used.
 
 ### Exports of a layout built by hand
 
@@ -142,7 +146,13 @@ With one of your layouts selected, every export describes that layout:
 - **CSV**: names the layout, lists its flags and the upper-layers choice, and has no score rows and no comparison table.
 - **JSON**: the layout's rank, score and explanation are empty (`null`); a `manual` entry holds its name, flags, status and upper-layers choice. The comparison list is empty.
 
-An out-of-date layout is exported as it was made and marked out of date.
+An out-of-date layout is exported as it was made and marked out of date, with what it was made for and without flags.
+
+When cartons hang over the allowed footprint, "Volume used" counts only the part inside it. The part outside is given in its own row, "Carton volume outside the allowed footprint", on the Analytics tab, in the CSV and on the build sheet.
+
+### Narrow screens
+
+Below 1024 pixels wide the page is one column: the summary, the 3D view, your layouts and the results, the details, then the inputs. A **Change inputs** link at the top jumps to the inputs. The comparison table scrolls sideways inside its own box. Editing by hand still needs 768 pixels.
 
 ## Quick start (run it on your computer)
 
